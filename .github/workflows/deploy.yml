@@ -1,0 +1,58 @@
+name: Deploy Flutter Web
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: production
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Flutter stable
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Flutter Web
+        run: flutter config --enable-web
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze project
+        run: flutter analyze
+
+      - name: Run tests if present
+        shell: bash
+        run: |
+          if [ -d test ] && find test -type f -name '*.dart' | grep -q .; then
+            flutter test
+          else
+            echo "No Flutter tests found; skipping flutter test."
+          fi
+
+      - name: Build Flutter web release
+        run: bash scripts/build_web.sh
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-web-build
+          path: build/web
+          if-no-files-found: error
+          retention-days: 7
