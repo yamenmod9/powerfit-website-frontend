@@ -245,7 +245,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   ),
             ),
             const SizedBox(height: 16),
-            _buildStatsGrid(provider),
+            _buildStatsGrid(context, provider),
             const SizedBox(height: 24),
             // Recent Alerts
             if (provider.alerts.isNotEmpty) ...[
@@ -322,15 +322,17 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     );
   }
 
-  Widget _buildStatsGrid(OwnerDashboardProvider provider) {
+  Widget _buildStatsGrid(BuildContext context, OwnerDashboardProvider provider) {
     final revenueData = provider.revenueData ?? {};
     final totalRevenue = (revenueData['total_revenue'] as num?)?.toDouble() ?? 0.0;
     final activeSubscriptions = revenueData['active_subscriptions'] ?? 0;
     final totalCustomers = revenueData['total_customers'] ?? 0;
     final totalBranches = revenueData['total_branches'] ?? provider.branchComparison.length;
+    final width = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = width >= 1200 ? 4 : width >= 800 ? 3 : 2;
 
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: crossAxisCount,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,

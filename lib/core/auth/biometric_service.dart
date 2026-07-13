@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -24,6 +25,7 @@ class BiometricService {
 
   /// Whether the device has biometric hardware available.
   Future<bool> isDeviceSupported() async {
+    if (kIsWeb) return false;
     try {
       return await _localAuth.isDeviceSupported();
     } on PlatformException {
@@ -34,6 +36,7 @@ class BiometricService {
   /// Whether the device can currently check biometrics
   /// (i.e., at least one biometric is enrolled).
   Future<bool> canCheckBiometrics() async {
+    if (kIsWeb) return false;
     try {
       return await _localAuth.canCheckBiometrics;
     } on PlatformException {
@@ -44,6 +47,7 @@ class BiometricService {
   /// Returns the list of enrolled biometric types
   /// (e.g. [BiometricType.fingerprint], [BiometricType.face]).
   Future<List<BiometricType>> getAvailableBiometrics() async {
+    if (kIsWeb) return [];
     try {
       return await _localAuth.getAvailableBiometrics();
     } on PlatformException {
@@ -65,6 +69,7 @@ class BiometricService {
   Future<bool> authenticate({
     String reason = 'Please authenticate to log in',
   }) async {
+    if (kIsWeb) return false;
     try {
       return await _localAuth.authenticate(
         localizedReason: reason,
@@ -82,6 +87,7 @@ class BiometricService {
 
   /// Whether the user has enabled biometric login.
   Future<bool> isBiometricEnabled() async {
+    if (kIsWeb) return false;
     final value = await _storage.read(key: _biometricEnabledKey);
     return value == 'true';
   }
@@ -91,6 +97,7 @@ class BiometricService {
     required String username,
     required String password,
   }) async {
+    if (kIsWeb) return;
     await _storage.write(key: _biometricEnabledKey, value: 'true');
     await _storage.write(key: _biometricUsernameKey, value: username);
     await _storage.write(key: _biometricPasswordKey, value: password);
@@ -98,6 +105,7 @@ class BiometricService {
 
   /// Disable biometric login and wipe stored credentials.
   Future<void> disableBiometric() async {
+    if (kIsWeb) return;
     await _storage.write(key: _biometricEnabledKey, value: 'false');
     await _storage.delete(key: _biometricUsernameKey);
     await _storage.delete(key: _biometricPasswordKey);
@@ -106,6 +114,7 @@ class BiometricService {
   /// Retrieve stored credentials.
   /// Returns `null` if either value is missing.
   Future<Map<String, String>?> getStoredCredentials() async {
+    if (kIsWeb) return null;
     final username = await _storage.read(key: _biometricUsernameKey);
     final password = await _storage.read(key: _biometricPasswordKey);
     if (username != null && password != null) {
@@ -116,6 +125,7 @@ class BiometricService {
 
   /// Whether biometric is both enabled and we have stored credentials.
   Future<bool> canBiometricLogin() async {
+    if (kIsWeb) return false;
     final enabled = await isBiometricEnabled();
     if (!enabled) return false;
     final available = await isBiometricAvailable();

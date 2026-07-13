@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,7 +11,7 @@ class FcmNotificationService {
   factory FcmNotificationService() => _instance;
   FcmNotificationService._();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging? _messaging;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   static const String _fcmTokenKey = 'fcm_device_token';
   static const String _notifEnabledKey = 'notifications_enabled';
@@ -31,6 +32,12 @@ class FcmNotificationService {
 
   bool _initialized = false;
 
+  bool get _supportsMessaging =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   /// Global ScaffoldMessenger key — set from each app's MaterialApp
   static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
@@ -42,12 +49,22 @@ class FcmNotificationService {
     if (_initialized) return;
     _initialized = true;
 
+    if (!_supportsMessaging) {
+      return;
+    }
+
+    if (kIsWeb) {
+      return;
+    }
+
+    _messaging ??= FirebaseMessaging.instance;
+
     // Load stored notification preference
     final storedPref = await _storage.read(key: _notifEnabledKey);
     _notificationsEnabled = storedPref != 'false'; // default true
 
     // Request permission (Android 13+ & iOS)
-    final settings = await _messaging.requestPermission(
+    final settings = await _messaging!.requestPermission(
       alert: true,
       badge: true,
       sound: true,
@@ -56,14 +73,14 @@ class FcmNotificationService {
     debugPrint('FCM permission status: ${settings.authorizationStatus}');
 
     // Get current token
-    _currentToken = await _messaging.getToken();
+    _currentToken = await _messaging!.getToken();
     if (_currentToken != null) {
       await _storage.write(key: _fcmTokenKey, value: _currentToken);
     }
     debugPrint('FCM Token: $_currentToken');
 
     // Listen for token refresh
-    _messaging.onTokenRefresh.listen((newToken) async {
+    _messaging!.onTokenRefresh.listen((newToken) async {
       _currentToken = newToken;
       await _storage.write(key: _fcmTokenKey, value: newToken);
       debugPrint('FCM Token refreshed: $newToken');
@@ -80,7 +97,7 @@ class FcmNotificationService {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
     // Check if app was opened from a terminated state via notification
-    final initialMessage = await _messaging.getInitialMessage();
+    final initialMessage = await _messaging!.getInitialMessage();
     if (initialMessage != null) {
       _handleMessageOpenedApp(initialMessage);
     }
@@ -108,6 +125,8 @@ class FcmNotificationService {
     required dynamic apiService,
     required String appType,
   }) async {
+    if (kIsWeb || !_supportsMessaging) return;
+
     // Cache for later (settings toggle, token refresh)
     _apiService = apiService;
     _appType = appType;
@@ -117,7 +136,7 @@ class FcmNotificationService {
       return;
     }
 
-    final token = _currentToken ?? await _messaging.getToken();
+    final token = _currentToken ?? await _messaging!.getToken();
     if (token == null) {
       debugPrint('FCM: No token available to register');
       return;
@@ -152,6 +171,8 @@ class FcmNotificationService {
 
   /// Unregister the device token on logout (or when user disables notifications).
   Future<void> unregisterToken({required dynamic apiService}) async {
+    if (kIsWeb || !_supportsMessaging) return;
+
     final token = _currentToken;
     if (token == null) return;
 
@@ -176,11 +197,13 @@ class FcmNotificationService {
     _notificationsEnabled = enabled;
     await _storage.write(key: _notifEnabledKey, value: enabled.toString());
 
+    if (kIsWeb || !_supportsMessaging) return;
+
     if (_apiService == null || _appType == null) return;
 
     if (enabled) {
       // Re-request permission in case user had previously denied
-      await _messaging.requestPermission(
+      await _messaging!.requestPermission(
         alert: true,
         badge: true,
         sound: true,

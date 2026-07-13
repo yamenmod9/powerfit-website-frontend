@@ -258,7 +258,11 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             GridView.count(
-              crossAxisCount: 2,
+              crossAxisCount: MediaQuery.sizeOf(context).width >= 1200
+                  ? 4
+                  : MediaQuery.sizeOf(context).width >= 800
+                      ? 3
+                      : 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: 12,

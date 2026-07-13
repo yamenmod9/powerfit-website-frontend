@@ -170,7 +170,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                     ),
               ),
               const SizedBox(height: 16),
-              _buildStatsGrid(provider),
+              _buildStatsGrid(context, provider),
               const SizedBox(height: 24),
               // Could add charts or other widgets here
             ],
@@ -230,7 +230,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     );
   }
 
-  Widget _buildStatsGrid(BranchManagerProvider provider) {
+  Widget _buildStatsGrid(BuildContext context, BranchManagerProvider provider) {
     final performance = provider.branchPerformance ?? {};
     final dailyOps = provider.dailyOperations ?? {};
 
@@ -241,9 +241,11 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         c['status']?.toString().toLowerCase() == 'pending' ||
         c['status']?.toString().toLowerCase() == 'open').length;
     final expiringCount = performance['expiring_subscriptions'] ?? 0;
+    final width = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = width >= 1200 ? 4 : width >= 800 ? 3 : 2;
 
     return GridView.count(
-      crossAxisCount: 2,
+      crossAxisCount: crossAxisCount,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,

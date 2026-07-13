@@ -1,24 +1,32 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'client/core/api/client_api_service.dart';
 import 'client/core/auth/client_auth_provider.dart';
 import 'client/core/theme/client_theme.dart';
+import 'firebase_options.dart';
 import 'client/routes/client_router.dart';
 import 'core/providers/gym_branding_provider.dart';
 import 'core/services/fcm_notification_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: FirebaseOptionsFor.client);
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  if (kIsWeb) {
+    setUrlStrategy(PathUrlStrategy());
+  }
+  await Firebase.initializeApp(options: FirebaseOptionsFor.client);
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  }
   await FcmNotificationService().initialize();
   runApp(const GymClientApp());
 }

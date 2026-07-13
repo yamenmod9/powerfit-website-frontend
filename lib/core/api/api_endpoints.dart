@@ -1,6 +1,8 @@
+import '../config/app_config.dart';
+
 class ApiEndpoints {
   // Base URL
-  static const String baseUrl = 'https://yamenmod91.pythonanywhere.com';
+  static String get baseUrl => AppConfig.apiBaseUrl;
   
   // Auth Endpoints
   static const String login = '/api/auth/login';

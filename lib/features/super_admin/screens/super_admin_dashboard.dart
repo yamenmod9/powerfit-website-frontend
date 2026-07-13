@@ -247,7 +247,11 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           const SizedBox(height: 16),
 
           GridView.count(
-            crossAxisCount: 2,
+            crossAxisCount: MediaQuery.sizeOf(context).width >= 1200
+                ? 4
+                : MediaQuery.sizeOf(context).width >= 800
+                    ? 3
+                    : 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,

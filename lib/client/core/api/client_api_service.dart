@@ -1,8 +1,9 @@
+import '../../../core/config/app_config.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ClientApiService {
-  static const String baseUrl = 'https://yamenmod91.pythonanywhere.com/api';
+  static String get baseUrl => '${AppConfig.apiBaseUrl}/api';
   static const String _tokenKey = 'client_access_token';
   static const String _refreshTokenKey = 'client_refresh_token';
 

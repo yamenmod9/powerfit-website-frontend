@@ -1,0 +1,4 @@
+{
+  "APP_ENV": "staging",
+  "STAGING_API_BASE_URL": "https://yamenmod91.pythonanywhere.com"
+}

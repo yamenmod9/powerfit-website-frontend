@@ -1,6 +1,7 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -36,7 +37,8 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
   final _gymNameFormKey = GlobalKey<FormState>();
 
   // Step 2 — Logo
-  File? _selectedLogoFile;
+  XFile? _selectedLogoFile;
+  Uint8List? _selectedLogoBytes;
   String? _uploadedLogoUrl; // set after uploading to backend
   bool _isUploadingLogo = false;
 
@@ -354,6 +356,15 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
 
   Future<void> _pickLogo(ImageSource source) async {
     try {
+      if (kIsWeb && source == ImageSource.camera) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Camera upload is not supported on web.')),
+          );
+        }
+        return;
+      }
+
       final picker = ImagePicker();
       final picked = await picker.pickImage(
         source: source,
@@ -363,8 +374,8 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
       );
       if (picked == null) return;
 
-      final file = File(picked.path);
-      if (!await file.exists()) {
+      final bytes = await picked.readAsBytes();
+      if (bytes.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text(S.fileNotFound), backgroundColor: Colors.red),
@@ -374,7 +385,8 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
       }
 
       setState(() {
-        _selectedLogoFile = file;
+        _selectedLogoFile = picked;
+        _selectedLogoBytes = bytes;
         _uploadedLogoUrl = null; // reset — will upload on submit
       });
     } catch (e) {
@@ -404,6 +416,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
             ListTile(
               leading: const Icon(Icons.camera_alt),
               title: const Text(S.takePhoto),
+              enabled: !kIsWeb,
               onTap: () {
                 Navigator.pop(ctx);
                 _pickLogo(ImageSource.camera);
@@ -417,6 +430,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                   Navigator.pop(ctx);
                   setState(() {
                     _selectedLogoFile = null;
+                    _selectedLogoBytes = null;
                     _uploadedLogoUrl = null;
                   });
                 },
@@ -433,9 +447,9 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
 
     try {
       final formData = FormData.fromMap({
-        'logo': await MultipartFile.fromFile(
-          _selectedLogoFile!.path,
-          filename: _selectedLogoFile!.path.split(Platform.pathSeparator).last,
+        'logo': MultipartFile.fromBytes(
+          _selectedLogoBytes ?? await _selectedLogoFile!.readAsBytes(),
+          filename: _selectedLogoFile!.name,
         ),
       });
 
@@ -497,11 +511,11 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                   strokeAlign: BorderSide.strokeAlignOutside,
                 ),
               ),
-              child: _selectedLogoFile != null
+              child: _selectedLogoFile != null && _selectedLogoBytes != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(24),
-                      child: Image.file(
-                        _selectedLogoFile!,
+                      child: Image.memory(
+                        _selectedLogoBytes!,
                         fit: BoxFit.cover,
                         width: 180,
                         height: 180,
