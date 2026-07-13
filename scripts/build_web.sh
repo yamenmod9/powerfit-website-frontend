@@ -18,12 +18,10 @@ fi
 
 # Keep the build configurable without changing Flutter source code.
 ENVIRONMENT="${ENVIRONMENT:-production}"
-API_BASE_URL="${API_BASE_URL:-}"
+API_BASE_URL="${API_BASE_URL:-https://yamenmod91.pythonanywhere.com}"
 
-if [[ -z "$API_BASE_URL" ]]; then
-  echo "API_BASE_URL is required. Copy .env.example to .env or set API_BASE_URL in CI."
-  exit 1
-fi
+echo "Using ENVIRONMENT: $ENVIRONMENT"
+echo "Using API_BASE_URL: $API_BASE_URL"
 
 # Build the production web bundle that Vercel will serve.
 flutter config --enable-web
