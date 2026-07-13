@@ -2,4 +2,4 @@
 
 set -euo pipefail
 
-"$(dirname "$0")/scripts/install_web.sh"
+bash "$(dirname "$0")/scripts/install_web.sh"
