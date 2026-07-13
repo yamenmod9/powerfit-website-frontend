@@ -48,3 +48,4 @@ app.*.map.json
 
 service_account.json
 *.json.bak
+Gym_backend/
