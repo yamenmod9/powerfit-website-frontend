@@ -32,5 +32,9 @@ fi
 
 export PATH="$FLUTTER_DIR/bin:$PATH"
 
+# Vercel runs as root; git 2.35.2+ rejects repos owned by a different user.
+# Mark all directories as safe so Flutter's internal git calls succeed.
+git config --global --add safe.directory '*'
+
 # Emit the resolved SDK version so CI logs show which toolchain was used.
 flutter --version
