@@ -31,6 +31,7 @@ from .gyms_routes import gyms_bp
 from .seed_trigger import seed_trigger_bp
 from .notifications_routes import notifications_bp
 from .privacy_routes import privacy_bp
+from .pricing_routes import pricing_bp
 
 
 def register_blueprints(app):
@@ -68,3 +69,4 @@ def register_blueprints(app):
     app.register_blueprint(seed_trigger_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(privacy_bp)
+    app.register_blueprint(pricing_bp)

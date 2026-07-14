@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/models/pricing_model.dart';
+import '../../../core/services/pricing_service.dart';
 
 /// Public marketing homepage served at '/'. Full bilingual (AR/EN) PowerFit
 /// site — hero, features, how-it-works, screenshots, testimonials, pricing,
@@ -48,6 +50,35 @@ class _LandingScreenState extends State<LandingScreen> {
   });
 
   Map<String, String> get _t => _ar ? _arText : _enText;
+
+  // ── Region-aware pricing ────────────────────────────────────────────────
+  final _pricingService = PricingService();
+  PricingData? _pricing;
+  bool _pricingLoading = true;
+  String? _regionOverride; // null = auto-detect
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPricing();
+  }
+
+  Future<void> _loadPricing() async {
+    setState(() => _pricingLoading = true);
+    final override = await PricingPreferences.getOverride();
+    final data = await _pricingService.fetchPricing(countryOverride: override);
+    if (!mounted) return;
+    setState(() {
+      _regionOverride = override;
+      _pricing = data;
+      _pricingLoading = false;
+    });
+  }
+
+  Future<void> _setRegion(String? countryCode) async {
+    await PricingPreferences.setOverride(countryCode);
+    await _loadPricing();
+  }
 
   void _scrollTo(GlobalKey key) {
     final ctx = key.currentContext;
@@ -98,7 +129,7 @@ class _LandingScreenState extends State<LandingScreen> {
                     _RevealOnScroll(child: _how(context)),
                     _RevealOnScroll(child: _screenshots(context)),
                     _RevealOnScroll(child: _testimonials(context)),
-                    _RevealOnScroll(child: _pricing(context)),
+                    _RevealOnScroll(child: _pricingSection(context)),
                     _RevealOnScroll(child: _faq(context)),
                     _gateway(context),
                     _footer(context),
@@ -842,38 +873,189 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   // ── Pricing ──────────────────────────────────────────────────────────────
-  Widget _pricing(BuildContext context) {
-    final wide = _isWide(context);
+  bool _billingAnnual = false;
+
+  Widget _pricingSection(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final data = _pricing;
+
+    Widget priceRowFor(PricingTier? tier) {
+      if (_pricingLoading) return const _PriceSkeleton();
+      if (data == null || tier == null) {
+        return const Text(
+          '—',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 38,
+            fontWeight: FontWeight.w900,
+          ),
+        );
+      }
+      final amount =
+          _billingAnnual ? tier.annualMonthlyEquivalent : tier.monthly;
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(
+              data.format(amount),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 38,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Text(
+            ' ${_t['perMo']!}',
+            style: const TextStyle(color: _subtle, fontSize: 15),
+          ),
+        ],
+      );
+    }
+
+    Widget? trialHintFor(bool trialEligible) {
+      if (!trialEligible || data == null) return null;
+      final label = _ar
+          ? '${data.trialDays} يوماً مجاناً · ${_t['noCardRequired']!}'
+          : '${data.trialDays}-day free trial · ${_t['noCardRequired']!}';
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: _subtle, fontSize: 11.5),
+        ),
+      );
+    }
+
+    Widget? annualNoteFor(PricingTier? tier) {
+      if (!_billingAnnual || tier == null) return null;
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(
+          _t['billingAnnualNote']!,
+          style: const TextStyle(color: _subtle, fontSize: 11.5),
+        ),
+      );
+    }
+
     final cards = [
       _priceCard(
-        _t['p1name']!,
-        _t['p1desc']!,
-        _t['p1price']!,
-        _t['perMo']!,
-        [_t['p1f1']!, _t['p1f2']!, _t['p1f3']!, _t['p1f4']!],
+        name: _t['p1name']!,
+        desc: _t['p1desc']!,
+        priceRow: priceRowFor(data?.starter),
+        priceSubtitle: annualNoteFor(data?.starter),
+        features: [_t['p1f1']!, _t['p1f2']!, _t['p1f3']!, _t['p1f4']!],
+        ctaLabel: _t['cta1']!,
+        highlighted: false,
+        trialHint: trialHintFor(data?.starter.trialEligible ?? false),
+      ),
+      _priceCard(
+        name: _t['p2name']!,
+        desc: _t['p2desc']!,
+        priceRow: priceRowFor(data?.growth),
+        priceSubtitle: annualNoteFor(data?.growth),
+        features: [
+          _t['p2f1']!,
+          _t['p2f2']!,
+          _t['p2f3']!,
+          _t['p2f4']!,
+          _t['p2f5']!,
+        ],
+        ctaLabel: _t['cta1']!,
+        highlighted: true,
+        badge: _t['mostPopular']!,
+        trialHint: trialHintFor(data?.growth.trialEligible ?? false),
+      ),
+      _priceCard(
+        name: _t['p3name']!,
+        desc: _t['p3desc']!,
+        priceRow: priceRowFor(data?.pro),
+        priceSubtitle: annualNoteFor(data?.pro),
+        features: [_t['p3f1']!, _t['p3f2']!, _t['p3f3']!, _t['p3f4']!],
         ctaLabel: _t['cta1']!,
         highlighted: false,
       ),
       _priceCard(
-        _t['p2name']!,
-        _t['p2desc']!,
-        _t['p2price']!,
-        _t['perMo']!,
-        [_t['p2f1']!, _t['p2f2']!, _t['p2f3']!, _t['p2f4']!, _t['p2f5']!],
-        ctaLabel: _t['cta1']!,
-        highlighted: true,
-        badge: _t['mostPopular']!,
-      ),
-      _priceCard(
-        _t['p3name']!,
-        _t['p3desc']!,
-        _t['p3price']!,
-        null,
-        [_t['p3f1']!, _t['p3f2']!, _t['p3f3']!, _t['p3f4']!],
+        name: _t['p4name']!,
+        desc: _t['p4desc']!,
+        priceRow: Text(
+          _t['enterprisePriceLabel']!,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 34,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        priceSubtitle: data == null
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    '${_t['enterpriseFrom']!} ${data.format(data.enterprisePerBranchFrom)}${_t['perBranchMonthly']!}',
+                    style: const TextStyle(color: _subtle, fontSize: 12.5),
+                  ),
+                ),
+              ),
+        features: [_t['p4f1']!, _t['p4f2']!, _t['p4f3']!, _t['p4f4']!],
         ctaLabel: _t['contactSales']!,
         highlighted: false,
       ),
     ];
+
+    Widget layout;
+    if (width >= 1300) {
+      layout = IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < cards.length; i++) ...[
+              Expanded(child: cards[i]),
+              if (i < cards.length - 1) const SizedBox(width: 20),
+            ],
+          ],
+        ),
+      );
+    } else if (width >= 700) {
+      layout = Column(
+        children: [
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: cards[0]),
+                const SizedBox(width: 20),
+                Expanded(child: cards[1]),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: cards[2]),
+                const SizedBox(width: 20),
+                Expanded(child: cards[3]),
+              ],
+            ),
+          ),
+        ],
+      );
+    } else {
+      layout = Column(
+        children: [
+          for (final c in cards) ...[c, const SizedBox(height: 20)],
+        ],
+      );
+    }
+
     return _section(
       key: _pricingKey,
       child: Column(
@@ -888,38 +1070,149 @@ class _LandingScreenState extends State<LandingScreen> {
               letterSpacing: -0.4,
             ),
           ),
-          const SizedBox(height: 56),
-          wide
-              ? IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (var i = 0; i < cards.length; i++) ...[
-                        Expanded(child: cards[i]),
-                        if (i < cards.length - 1) const SizedBox(width: 22),
-                      ],
-                    ],
-                  ),
-                )
-              : Column(
-                  children: [
-                    for (final c in cards) ...[c, const SizedBox(height: 22)],
-                  ],
-                ),
+          const SizedBox(height: 22),
+          Wrap(
+            spacing: 14,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [_billingToggle(), _regionSwitcher()],
+          ),
+          const SizedBox(height: 40),
+          layout,
+          if (data != null && !data.isFinalized) ...[
+            const SizedBox(height: 20),
+            Text(
+              _t['pricingDisclaimerUsd']!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _subtle, fontSize: 13),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _priceCard(
-    String name,
-    String desc,
-    String price,
-    String? per,
-    List<String> features, {
+  Widget _billingToggle() {
+    final savePct = _pricing?.annualDiscountPercent;
+    final annualLabel = savePct == null
+        ? _t['billingAnnual']!
+        : '${_t['billingAnnual']!} · ${_ar ? "وفّر" : "Save"} $savePct%';
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _billingPill(
+            _t['billingMonthly']!,
+            !_billingAnnual,
+            () => setState(() => _billingAnnual = false),
+          ),
+          _billingPill(
+            annualLabel,
+            _billingAnnual,
+            () => setState(() => _billingAnnual = true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _billingPill(String label, bool selected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? _red : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : _muted,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _regionSwitcher() {
+    final current = _regionOverride == null
+        ? _t['regionAuto']!
+        : (_regionOverride == 'EG' ? _t['regionEgypt']! : _t['regionIntl']!);
+    return PopupMenuButton<String?>(
+      onSelected: _setRegion,
+      color: _card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: null,
+          child: Text(
+            _t['regionAuto']!,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'EG',
+          child: Text(
+            _t['regionEgypt']!,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'INTL',
+          child: Text(
+            _t['regionIntl']!,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              current,
+              style: const TextStyle(
+                color: _muted,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.expand_more, size: 16, color: _muted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _priceCard({
+    required String name,
+    required String desc,
+    required Widget priceRow,
+    Widget? priceSubtitle,
+    required List<String> features,
     required String ctaLabel,
     required bool highlighted,
     String? badge,
+    Widget? trialHint,
   }) {
     final card = Container(
       padding: const EdgeInsets.all(32),
@@ -961,25 +1254,8 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 6),
           Text(desc, style: const TextStyle(color: _muted, fontSize: 14)),
           const SizedBox(height: 18),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                price,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 38,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              if (per != null)
-                Text(
-                  ' $per',
-                  style: const TextStyle(color: _subtle, fontSize: 15),
-                ),
-            ],
-          ),
+          priceRow,
+          ?priceSubtitle,
           const SizedBox(height: 22),
           SizedBox(
             width: double.infinity,
@@ -987,6 +1263,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 ? _primaryCta(ctaLabel, () => _scrollTo(_gatewayKey))
                 : _outlineCta(ctaLabel, () => _scrollTo(_gatewayKey)),
           ),
+          ?trialHint,
           const SizedBox(height: 22),
           for (final f in features)
             Padding(
@@ -1681,6 +1958,49 @@ class _HoverLiftState extends State<_HoverLift> {
   }
 }
 
+/// Pulsing placeholder shown in place of a price number while
+/// GET /api/pricing is in flight — sized to roughly match the real price
+/// text so nothing jumps when the real number arrives.
+class _PriceSkeleton extends StatefulWidget {
+  const _PriceSkeleton();
+  @override
+  State<_PriceSkeleton> createState() => _PriceSkeletonState();
+}
+
+class _PriceSkeletonState extends State<_PriceSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        return Opacity(
+          opacity: 0.35 + (_c.value * 0.35),
+          child: Container(
+            width: 96,
+            height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 // ── Content ────────────────────────────────────────────────────────────────
 const Map<String, String> _arText = {
   'navFeatures': 'الميزات',
@@ -1744,28 +2064,43 @@ const Map<String, String> _arText = {
   'mostPopular': 'الأكثر شيوعاً',
   'perMo': '/شهرياً',
   'contactSales': 'تواصل معنا',
+  'billingMonthly': 'شهري',
+  'billingAnnual': 'سنوي',
+  'billingAnnualNote': 'يُحاسب سنوياً',
+  'noCardRequired': 'بدون بطاقة ائتمان',
+  'pricingDisclaimerUsd':
+      'الأسعار معروضة بالدولار الأمريكي — تواصل معنا للعملات المحلية',
+  'regionAuto': '🌍 تلقائي',
+  'regionEgypt': '🇪🇬 جنيه مصري',
+  'regionIntl': '🌐 دولار أمريكي',
+  'enterprisePriceLabel': 'مخصّص',
+  'enterpriseFrom': 'ابتداءً من',
+  'perBranchMonthly': '/فرع شهرياً',
   'p1name': 'المبتدئ',
   'p1desc': 'فرع واحد',
-  'p1price': '\$29',
-  'p1f1': 'فرع واحد',
-  'p1f2': 'حتى 200 عضو',
-  'p1f3': 'دخول عبر QR',
-  'p1f4': 'دعم بالبريد',
-  'p2name': 'الاحترافي',
-  'p2desc': 'متعدد الفروع',
-  'p2price': '\$79',
-  'p2f1': 'فروع غير محدودة',
-  'p2f2': 'أعضاء بلا حدود',
-  'p2f3': 'تقارير مالية',
-  'p2f4': 'صلاحيات الموظفين',
-  'p2f5': 'دعم ذو أولوية',
-  'p3name': 'المؤسسات',
-  'p3desc': 'حلول مخصصة',
-  'p3price': 'مخصّص',
-  'p3f1': 'كل مزايا الاحترافي',
-  'p3f2': 'تكاملات مخصصة',
-  'p3f3': 'مدير حساب مخصص',
-  'p3f4': 'اتفاقية خدمة وتدريب',
+  'p1f1': 'فرع واحد · حتى 150 عضو',
+  'p1f2': 'لوحة تحكم المالك',
+  'p1f3': 'تطبيق مخصص لأعضاء ناديك',
+  'p1f4': 'تسجيل الدخول، الاشتراكات، وسجل الدفع',
+  'p2name': 'النمو',
+  'p2desc': 'فرع واحد، أدوات أذكى',
+  'p2f1': 'كل مزايا المبتدئ',
+  'p2f2': 'حتى 450 عضو',
+  'p2f3': 'أتمتة التجديد عبر واتساب / SMS',
+  'p2f4': 'جدولة المدربين والحصص',
+  'p2f5': 'تحليلات الإيرادات',
+  'p3name': 'الاحترافي',
+  'p3desc': 'حتى 3 فروع',
+  'p3f1': 'كل مزايا النمو',
+  'p3f2': 'حتى 3 فروع وحتى 1,200 عضو',
+  'p3f3': 'تقارير متعددة الفروع',
+  'p3f4': 'علامة تجارية مخصصة ودعم ذو أولوية',
+  'p4name': 'المؤسسات',
+  'p4desc': '4 فروع فأكثر',
+  'p4f1': '4 فروع فأكثر · أعضاء غير محدودين',
+  'p4f2': 'مدير حساب مخصص',
+  'p4f3': 'وصول عبر API',
+  'p4f4': 'خصم على الحجم',
   'faqHead': 'الأسئلة الشائعة',
   'faq0q': 'كيف يعمل الدخول عبر QR؟',
   'faq0a':
@@ -1852,28 +2187,43 @@ const Map<String, String> _enText = {
   'mostPopular': 'Most popular',
   'perMo': '/mo',
   'contactSales': 'Contact sales',
+  'billingMonthly': 'Monthly',
+  'billingAnnual': 'Annual',
+  'billingAnnualNote': 'billed annually',
+  'noCardRequired': 'No credit card required',
+  'pricingDisclaimerUsd':
+      'Prices shown in USD — contact us for local currency options',
+  'regionAuto': '🌍 Auto',
+  'regionEgypt': '🇪🇬 EGP',
+  'regionIntl': '🌐 USD',
+  'enterprisePriceLabel': 'Custom',
+  'enterpriseFrom': 'From',
+  'perBranchMonthly': '/branch monthly',
   'p1name': 'Starter',
   'p1desc': 'Single branch',
-  'p1price': '\$29',
-  'p1f1': '1 branch',
-  'p1f2': 'Up to 200 members',
-  'p1f3': 'QR check-in',
-  'p1f4': 'Email support',
-  'p2name': 'Pro',
-  'p2desc': 'Multi-branch',
-  'p2price': '\$79',
-  'p2f1': 'Unlimited branches',
-  'p2f2': 'Unlimited members',
-  'p2f3': 'Financial reports',
-  'p2f4': 'Staff roles',
-  'p2f5': 'Priority support',
-  'p3name': 'Enterprise',
-  'p3desc': 'Custom solutions',
-  'p3price': 'Custom',
-  'p3f1': 'Everything in Pro',
-  'p3f2': 'Custom integrations',
-  'p3f3': 'Dedicated manager',
-  'p3f4': 'SLA & training',
+  'p1f1': '1 branch · up to 150 members',
+  'p1f2': 'Owner dashboard',
+  'p1f3': 'A branded app for your members',
+  'p1f4': 'Check-in, subscriptions & payment history',
+  'p2name': 'Growth',
+  'p2desc': 'Single branch, smarter tools',
+  'p2f1': 'Everything in Starter',
+  'p2f2': 'Up to 450 members',
+  'p2f3': 'WhatsApp/SMS renewal automation',
+  'p2f4': 'Trainer & class scheduling',
+  'p2f5': 'Revenue analytics',
+  'p3name': 'Pro',
+  'p3desc': 'Up to 3 branches',
+  'p3f1': 'Everything in Growth',
+  'p3f2': 'Up to 3 branches & 1,200 members',
+  'p3f3': 'Multi-branch reporting',
+  'p3f4': 'Custom branding & priority support',
+  'p4name': 'Enterprise',
+  'p4desc': '4+ branches',
+  'p4f1': '4+ branches · unlimited members',
+  'p4f2': 'Dedicated account manager',
+  'p4f3': 'API access',
+  'p4f4': 'Volume discount',
   'faqHead': 'Frequently asked questions',
   'faq0q': 'How does QR check-in work?',
   'faq0a':
