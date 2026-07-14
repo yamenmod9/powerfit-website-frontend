@@ -15,7 +15,7 @@ validation_bp = Blueprint('validation', __name__, url_prefix='/api/validation')
 
 @validation_bp.route('/qr', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def validate_qr_code():
     """
     Validate QR code and process entry
@@ -109,7 +109,7 @@ def validate_qr_code():
 
 @validation_bp.route('/barcode', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def validate_barcode():
     """
     Validate static barcode (customer's QR code) and process entry
@@ -219,7 +219,7 @@ def validate_barcode():
 
 @validation_bp.route('/manual', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def manual_entry():
     """
     Manually process entry (for when QR/barcode doesn't work)
@@ -319,7 +319,7 @@ def manual_entry():
 
 @validation_bp.route('/entry-logs', methods=['GET'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK, UserRole.BRANCH_ACCOUNTANT, UserRole.CENTRAL_ACCOUNTANT)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK, UserRole.BRANCH_ACCOUNTANT, UserRole.CENTRAL_ACCOUNTANT)
 def get_entry_logs():
     """
     Get entry logs (for staff to review)

@@ -26,13 +26,13 @@ def role_required(*allowed_roles):
             user = db.session.get(User, user_id)
             
             if not user:
-                return jsonify({'error': 'User not found'}), 404
+                return jsonify({'success': False, 'error': 'Session expired. Please log in again.'}), 401
             
             if not user.is_active:
-                return jsonify({'error': 'User account is inactive'}), 403
+                return jsonify({'success': False, 'error': 'User account is inactive'}), 403
             
             if user.role not in allowed_roles:
-                return jsonify({'error': 'Insufficient permissions'}), 403
+                return jsonify({'success': False, 'error': 'Insufficient permissions'}), 403
             
             return fn(*args, **kwargs)
         return wrapper
@@ -52,7 +52,7 @@ def branch_access_required(fn):
         user = db.session.get(User, user_id)
         
         if not user:
-            return jsonify({'error': 'User not found'}), 404
+            return jsonify({'success': False, 'error': 'Session expired. Please log in again.'}), 401
         
         # Owner, super admin, and central accountant can access all branches
         if user.role in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
@@ -60,12 +60,12 @@ def branch_access_required(fn):
         
         # Branch-specific roles must have branch_id
         if not user.branch_id:
-            return jsonify({'error': 'User not assigned to any branch'}), 403
+            return jsonify({'success': False, 'error': 'User not assigned to any branch'}), 403
         
         # Check if the requested branch_id matches user's branch
         requested_branch_id = kwargs.get('branch_id')
         if requested_branch_id and requested_branch_id != user.branch_id:
-            return jsonify({'error': 'Access denied to this branch'}), 403
+            return jsonify({'success': False, 'error': 'Access denied to this branch'}), 403
         
         return fn(*args, **kwargs)
     return wrapper
@@ -76,6 +76,24 @@ def get_current_user():
     verify_jwt_in_request()
     user_id = int(get_jwt_identity())
     return db.session.get(User, user_id)
+
+
+def get_current_gym_id(user=None):
+    """Resolve the gym_id for the current user.
+    
+    - OWNER → gym they own
+    - Staff  → their gym_id field (set at creation)
+    - SUPER_ADMIN → None (sees everything)
+    """
+    if user is None:
+        user = get_current_user()
+    if user.role == UserRole.SUPER_ADMIN:
+        return None  # super admin is above gym scope
+    if user.role == UserRole.OWNER:
+        from app.models.gym import Gym
+        gym = Gym.query.filter_by(owner_id=user.id).first()
+        return gym.id if gym else None
+    return user.gym_id
 
 
 def paginate(query, page=1, per_page=20):

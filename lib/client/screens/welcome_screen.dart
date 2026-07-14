@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../core/auth/client_auth_provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/localization/app_strings.dart';
+import '../core/auth/client_auth_provider.dart';
+import '../core/theme/client_theme.dart';
+import '../../core/providers/gym_branding_provider.dart';
+import '../../shared/models/gym_model.dart';
+import '../../shared/widgets/loading_indicator.dart';
 
+/// Member login, styled to the PowerFit Member App welcome design: a crimson
+/// logo glowing on a dark radial ground above the sign-in form.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -23,6 +30,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     super.dispose();
   }
 
+  void _loadGymBranding(Map<String, dynamic> loginData) {
+    final gymJson = loginData['gym'] as Map<String, dynamic>?;
+    if (gymJson == null) return;
+    final branding = context.read<GymBrandingProvider>();
+    branding.loadFromGym(GymModel.fromJson(gymJson));
+  }
+
   Future<void> _login() async {
     final identifier = _identifierController.text.trim();
     final password = _passwordController.text.trim();
@@ -30,7 +44,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     if (identifier.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter phone/email and password'),
+          content: Text(S.pleaseEnterCredentials),
           backgroundColor: Colors.orange,
         ),
       );
@@ -40,46 +54,29 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     setState(() => _isLoading = true);
 
     try {
-      print('🔐 WelcomeScreen: Starting login...');
       final authProvider = context.read<ClientAuthProvider>();
-
-      await authProvider.login(identifier, password);
-
+      final data = await authProvider.login(identifier, password);
       if (!mounted) return;
 
-      print('🔐 WelcomeScreen: Login completed successfully');
-      print('🔐 WelcomeScreen: isAuth=${authProvider.isAuthenticated}');
-      print('🔐 WelcomeScreen: passwordChanged=${authProvider.passwordChanged}');
-      print('🔐 WelcomeScreen: currentClient=${authProvider.currentClient?.fullName}');
+      _loadGymBranding(data);
 
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Login successful!'),
-          backgroundColor: Colors.green,
+          content: Text(S.loginSuccessful),
+          backgroundColor: Color(0xFF10B981),
           duration: Duration(seconds: 1),
         ),
       );
 
-      // Wait a bit for state propagation and success message
       await Future.delayed(const Duration(milliseconds: 300));
-
       if (!mounted) return;
 
-      // Navigate based on password change status
-      print('🔐 WelcomeScreen: Navigating based on password status...');
       if (!authProvider.passwordChanged) {
-        print('➡️ WelcomeScreen: User needs password change - navigating to change-password');
         context.goNamed('change-password', extra: true);
       } else {
-        print('➡️ WelcomeScreen: Password already changed - navigating to home');
         context.goNamed('home');
       }
-
-      print('🔐 WelcomeScreen: Navigation triggered successfully');
-    } catch (e, stackTrace) {
-      print('❌ WelcomeScreen: Login error: $e');
-      print('❌ WelcomeScreen: Stack trace: $stackTrace');
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -90,148 +87,198 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 40),
-
-              // Logo/Icon
-              Icon(
-                Icons.fitness_center,
-                size: 100,
-                color: Theme.of(context).primaryColor,
-              ),
-              const SizedBox(height: 24),
-
-              // Title
-              Text(
-                'Gym Member Portal',
-                style: Theme.of(context).textTheme.displaySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-
-              // Subtitle
-              Text(
-                'Login to access your membership',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-
-              // Phone/Email field
-              TextField(
-                controller: _identifierController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number or Email',
-                  prefixIcon: Icon(Icons.person),
-                  hintText: 'Enter your phone or email',
-                  helperText: 'Use the credentials provided by reception',
+      backgroundColor: ClientTheme.darkGrey,
+      body: Column(
+        children: [
+          _header(context),
+          Expanded(
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(0, -0.7),
+                  radius: 1.0,
+                  colors: [Color(0xFF2A0A12), ClientTheme.darkGrey],
+                  stops: [0.0, 0.6],
                 ),
-                keyboardType: TextInputType.text,
-                enabled: !_isLoading,
               ),
-              const SizedBox(height: 16),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 24),
 
-              // Password field
-              TextField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: const Icon(Icons.lock),
-                  helperText: 'First-time users: Use temporary password from reception',
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                  ),
-                ),
-                obscureText: _obscurePassword,
-                enabled: !_isLoading,
-                onSubmitted: (_) => _login(),
-              ),
-              const SizedBox(height: 32),
+                      // Logo mark.
+                      Center(child: _logoMark(88)),
+                      const SizedBox(height: 26),
 
-              // Login button
-              ElevatedButton(
-                onPressed: _isLoading ? null : _login,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
+                      const Text(
+                        S.gymMemberPortal,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        S.yourGymInPocket,
+                        style: TextStyle(
+                          color: ClientTheme.textGrey,
+                          fontSize: 15,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 40),
+
+                      TextField(
+                        controller: _identifierController,
+                        decoration: const InputDecoration(
+                          labelText: S.phoneOrEmail,
+                          prefixIcon: Icon(Icons.person_outline),
+                          hintText: S.enterPhoneOrEmail,
+                          helperText: S.credentialsFromReception,
+                        ),
+                        keyboardType: TextInputType.text,
+                        enabled: !_isLoading,
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: S.password,
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          helperText: S.firstTimeHint,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                         ),
-                      )
-                    : const Text('Login'),
-              ),
-              const SizedBox(height: 24),
-
-              // Divider
-              Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'First Time?',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                  const Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Info card
-              Card(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Theme.of(context).primaryColor,
-                        size: 32,
+                        obscureText: _obscurePassword,
+                        enabled: !_isLoading,
+                        onSubmitted: (_) => _login(),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'New Member?',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(height: 28),
+
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: _isLoading
+                            ? const SmallLoadingIndicator()
+                            : const Text(S.login),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // New-member hint.
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: ClientTheme.cardGrey,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: ClientTheme.primaryRed.withValues(
+                              alpha: 0.25,
                             ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Please visit the gym reception to get your login credentials',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        textAlign: TextAlign.center,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              color: ClientTheme.primaryRed,
+                              size: 30,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              S.newMember,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              S.visitReception,
+                              style: TextStyle(
+                                color: ClientTheme.textGrey,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _header(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0x12FFFFFF))),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          child: Row(
+            children: [
+              InkWell(
+                onTap: () => context.go('/'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _logoMark(32),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'PowerFit',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => context.go('/'),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  size: 16,
+                  color: ClientTheme.textGrey,
+                ),
+                label: const Text(
+                  S.backToHome,
+                  style: TextStyle(color: ClientTheme.textGrey),
                 ),
               ),
             ],
@@ -240,6 +287,23 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       ),
     );
   }
+
+  Widget _logoMark(double size) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(size * 0.28),
+      boxShadow: [
+        BoxShadow(
+          color: ClientTheme.primaryRed.withValues(alpha: 0.5),
+          blurRadius: size * 0.4,
+          offset: Offset(0, size * 0.14),
+        ),
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.28),
+      child: Image.asset('assets/icon/powerfit.jpeg', fit: BoxFit.cover),
+    ),
+  );
 }
-
-

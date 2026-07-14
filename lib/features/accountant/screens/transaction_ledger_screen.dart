@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/api/api_service.dart';
 import '../../../core/api/api_endpoints.dart';
 
 class TransactionLedgerScreen extends StatefulWidget {
-  const TransactionLedgerScreen({super.key});
+  final int? branchId;
+
+  const TransactionLedgerScreen({super.key, this.branchId});
 
   @override
   State<TransactionLedgerScreen> createState() => _TransactionLedgerScreenState();
@@ -17,13 +20,11 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
   bool _isLoading = true;
   String? _error;
   List<dynamic> _transactions = [];
+  Map<String, dynamic> _summary = {};
 
   // Filters
-  String? _selectedBranch;
-  String? _selectedService;
+  DateTime _selectedDate = DateTime.now();
   String? _selectedPaymentMethod;
-  DateTime _startDate = DateTime.now().subtract(const Duration(days: 30));
-  DateTime _endDate = DateTime.now();
   String _searchQuery = '';
 
   final TextEditingController _searchController = TextEditingController();
@@ -48,29 +49,40 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
 
     try {
       final apiService = context.read<ApiService>();
+
+      // Use /api/reports/daily which returns individual transactions
       final response = await apiService.get(
-        ApiEndpoints.financeDailySales,
+        ApiEndpoints.reportsDaily,
         queryParameters: {
-          'start_date': _startDate.toIso8601String().split('T')[0],
-          'end_date': _endDate.toIso8601String().split('T')[0],
-          if (_selectedBranch != null) 'branch': _selectedBranch,
-          if (_selectedService != null) 'service': _selectedService,
-          if (_selectedPaymentMethod != null) 'payment_method': _selectedPaymentMethod,
+          'date': _selectedDate.toIso8601String().split('T')[0],
+          if (widget.branchId != null) 'branch_id': widget.branchId,
         },
       );
 
+      debugPrint('📋 Ledger response status: ${response.statusCode}');
+
       if (response.statusCode == 200 && response.data != null) {
+        final d = response.data['data'] ?? response.data;
         setState(() {
-          _transactions = response.data['transactions'] ?? response.data['data'] ?? [];
+          _transactions = List<dynamic>.from(d['transactions'] ?? []);
+          _summary = {
+            'total_revenue': (d['total_revenue'] ?? 0).toDouble(),
+            'total_transactions': d['total_transactions'] ?? _transactions.length,
+            'total_discount': (d['total_discount'] ?? 0).toDouble(),
+            'new_subscriptions': d['new_subscriptions'] ?? 0,
+            'payment_breakdown': d['payment_breakdown'] ?? {},
+          };
           _isLoading = false;
         });
+        debugPrint('✅ Ledger loaded: ${_transactions.length} transactions');
       } else {
         setState(() {
-          _error = 'Failed to load transactions';
+          _error = 'Failed to load transactions (${response.statusCode})';
           _isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint('❌ Ledger error: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -79,22 +91,40 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
   }
 
   List<dynamic> get _filteredTransactions {
-    if (_searchQuery.isEmpty) return _transactions;
+    var list = _transactions;
 
-    return _transactions.where((tx) {
-      final customerName = (tx['customer_name'] ?? '').toString().toLowerCase();
-      final service = (tx['service_name'] ?? '').toString().toLowerCase();
-      final query = _searchQuery.toLowerCase();
-      return customerName.contains(query) || service.contains(query);
-    }).toList();
+    // Payment method filter
+    if (_selectedPaymentMethod != null) {
+      list = list.where((tx) {
+        final method = (tx['payment_method'] ?? '').toString().toLowerCase();
+        return method == _selectedPaymentMethod!.toLowerCase();
+      }).toList();
+    }
+
+    // Search filter
+    if (_searchQuery.isNotEmpty) {
+      list = list.where((tx) {
+        final customerName = (tx['customer_name'] ?? '').toString().toLowerCase();
+        final id = (tx['id'] ?? '').toString();
+        final query = _searchQuery.toLowerCase();
+        return customerName.contains(query) || id.contains(query);
+      }).toList();
+    }
+
+    return list;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Transaction Ledger'),
+        title: Text(S.transactionLedger),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            tooltip: S.changeDate,
+            onPressed: _pickDate,
+          ),
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: _showFilterDialog,
@@ -107,13 +137,77 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
       ),
       body: Column(
         children: [
+          // Date indicator + summary
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: _pickDate,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 16, color: Theme.of(context).primaryColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          DateHelper.formatDate(_selectedDate),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (!_isLoading && _error == null)
+                  Text(
+                    S.transactionsCountLabel(_filteredTransactions.length),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+              ],
+            ),
+          ),
+
+          // Summary cards
+          if (!_isLoading && _error == null && _summary.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              child: Row(
+                children: [
+                  Expanded(child: _buildSummaryChip(S.revenue,
+                    NumberHelper.formatCurrency((_summary['total_revenue'] ?? 0).toDouble()),
+                    Colors.green)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildSummaryChip(S.cash,
+                    NumberHelper.formatCurrency(((_summary['payment_breakdown'] ?? {})['cash'] ?? 0).toDouble()),
+                    Colors.teal)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildSummaryChip(S.card,
+                    NumberHelper.formatCurrency(((_summary['payment_breakdown'] ?? {})['network'] ?? 0).toDouble()),
+                    Colors.blue)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildSummaryChip(S.transfer,
+                    NumberHelper.formatCurrency(((_summary['payment_breakdown'] ?? {})['transfer'] ?? 0).toDouble()),
+                    Colors.purple)),
+                ],
+              ),
+            ),
+
           // Search Bar
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by customer or service...',
+                hintText: S.searchByCustomer,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -124,78 +218,56 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
                         },
                       )
                     : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
               ),
-              onChanged: (value) {
-                setState(() => _searchQuery = value);
-              },
+              onChanged: (value) => setState(() => _searchQuery = value),
             ),
           ),
 
-          // Active Filters Chips
-          if (_selectedBranch != null || _selectedService != null || _selectedPaymentMethod != null)
-            Container(
+          // Active filter chips
+          if (_selectedPaymentMethod != null)
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  if (_selectedBranch != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Chip(
-                        label: Text('Branch: $_selectedBranch'),
-                        deleteIcon: const Icon(Icons.close, size: 18),
-                        onDeleted: () {
-                          setState(() => _selectedBranch = null);
-                          _loadTransactions();
-                        },
-                      ),
-                    ),
-                  if (_selectedService != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Chip(
-                        label: Text('Service: $_selectedService'),
-                        deleteIcon: const Icon(Icons.close, size: 18),
-                        onDeleted: () {
-                          setState(() => _selectedService = null);
-                          _loadTransactions();
-                        },
-                      ),
-                    ),
-                  if (_selectedPaymentMethod != null)
-                    Chip(
-                      label: Text('Payment: $_selectedPaymentMethod'),
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        setState(() => _selectedPaymentMethod = null);
-                        _loadTransactions();
-                      },
-                    ),
+                  Chip(
+                    label: Text(S.paymentFilter(_selectedPaymentMethod ?? S.allMethods)),
+                    deleteIcon: const Icon(Icons.close, size: 18),
+                    onDeleted: () => setState(() => _selectedPaymentMethod = null),
+                  ),
                 ],
               ),
             ),
 
-          // Transactions List
+          // Transaction list
           Expanded(
             child: _isLoading
-                ? const LoadingIndicator(message: 'Loading transactions...')
+                ? const DashboardSkeleton()
                 : _error != null
-                    ? ErrorDisplay(
-                        message: _error!,
-                        onRetry: _loadTransactions,
-                      )
+                    ? ErrorDisplay(message: _error!, onRetry: _loadTransactions)
                     : _filteredTransactions.isEmpty
-                        ? const Center(
-                            child: Text('No transactions found'),
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.receipt_long, size: 64, color: Colors.grey[300]),
+                                const SizedBox(height: 16),
+                                Text(S.noTransactionsForDate,
+                                  style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: _pickDate,
+                                  icon: const Icon(Icons.calendar_today, size: 16),
+                                  label: Text(S.pickAnotherDate),
+                                ),
+                              ],
+                            ),
                           )
                         : RefreshIndicator(
                             onRefresh: _loadTransactions,
                             child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                               itemCount: _filteredTransactions.length,
                               itemBuilder: (context, index) {
                                 final tx = _filteredTransactions[index];
@@ -209,66 +281,114 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
     );
   }
 
-  Widget _buildTransactionCard(Map<String, dynamic> tx) {
-    final id = tx['id'] ?? tx['transaction_id'] ?? 0;
-    final customerName = tx['customer_name'] ?? 'Unknown';
-    final serviceName = tx['service_name'] ?? 'Unknown Service';
+  Widget _buildSummaryChip(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: color)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionCard(dynamic tx) {
+    final id = tx['id'] ?? 0;
+    final customerName = tx['customer_name'] ?? S.walkIn;
     final amount = (tx['amount'] ?? 0).toDouble();
-    final paymentMethod = tx['payment_method'] ?? 'cash';
-    final timestamp = tx['created_at'] ?? tx['timestamp'];
-    final branchName = tx['branch_name'] ?? 'N/A';
+    final discount = (tx['discount'] ?? 0).toDouble();
+    final netAmount = amount - discount;
+    final paymentMethod = (tx['payment_method'] ?? 'cash').toString();
+    final time = tx['time'] ?? '';
+
+    Color methodColor;
+    IconData methodIcon;
+    switch (paymentMethod.toLowerCase()) {
+      case 'network':
+      case 'card':
+        methodColor = Colors.blue;
+        methodIcon = Icons.credit_card;
+        break;
+      case 'transfer':
+      case 'online':
+        methodColor = Colors.purple;
+        methodIcon = Icons.send;
+        break;
+      default:
+        methodColor = Colors.green;
+        methodIcon = Icons.payments;
+    }
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: ExpansionTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: _getPaymentMethodColor(paymentMethod).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+            color: methodColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            _getPaymentMethodIcon(paymentMethod),
-            color: _getPaymentMethodColor(paymentMethod),
-          ),
+          child: Icon(methodIcon, color: methodColor, size: 22),
         ),
-        title: Text(
-          customerName,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text(customerName,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         subtitle: Row(
           children: [
-            Icon(Icons.fitness_center, size: 12, color: Colors.grey[600]),
-            const SizedBox(width: 4),
-            Expanded(child: Text(serviceName)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: methodColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(paymentMethod,
+                style: TextStyle(fontSize: 10, color: methodColor, fontWeight: FontWeight.w500)),
+            ),
+            if (time.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
+              const SizedBox(width: 2),
+              Text(time, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+            ],
           ],
         ),
         trailing: Text(
-          NumberHelper.formatCurrency(amount),
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
-            fontSize: 16,
-          ),
+          NumberHelper.formatCurrency(netAmount),
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 15),
         ),
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDetailRow('Transaction ID', '#$id'),
                 const Divider(),
-                _buildDetailRow('Branch', branchName),
-                const Divider(),
-                _buildDetailRow('Payment Method', paymentMethod.toUpperCase()),
-                const Divider(),
-                _buildDetailRow(
-                  'Date & Time',
-                  timestamp != null
-                      ? DateHelper.formatDateTime(DateHelper.parseDate(timestamp)!)
-                      : 'N/A',
-                ),
+                _buildDetailRow(S.transactionNumber(id), '#$id'),
+                const SizedBox(height: 6),
+                _buildDetailRow(S.grossAmount, NumberHelper.formatCurrency(amount)),
+                if (discount > 0) ...[
+                  const SizedBox(height: 6),
+                  _buildDetailRow(S.discount, '- ${NumberHelper.formatCurrency(discount)}'),
+                ],
+                const SizedBox(height: 6),
+                _buildDetailRow(S.netAmount, NumberHelper.formatCurrency(netAmount)),
+                const SizedBox(height: 6),
+                _buildDetailRow(S.payment, paymentMethod.toUpperCase()),
+                if (time.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _buildDetailRow(S.time, time),
+                ],
               ],
             ),
           ),
@@ -278,118 +398,71 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
   }
 
   Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+      ],
     );
   }
 
-  Color _getPaymentMethodColor(String method) {
-    switch (method.toLowerCase()) {
-      case 'cash':
-        return Colors.green;
-      case 'card':
-        return Colors.blue;
-      case 'transfer':
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getPaymentMethodIcon(String method) {
-    switch (method.toLowerCase()) {
-      case 'cash':
-        return Icons.money;
-      case 'card':
-        return Icons.credit_card;
-      case 'transfer':
-        return Icons.account_balance;
-      default:
-        return Icons.payment;
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() => _selectedDate = picked);
+      _loadTransactions();
     }
   }
 
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Transactions'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Branch', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _selectedBranch,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'All Branches',
-                ),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('All Branches')),
-                  DropdownMenuItem(value: 'Downtown', child: Text('Downtown Branch')),
-                  DropdownMenuItem(value: 'Uptown', child: Text('Uptown Branch')),
-                ],
-                onChanged: (value) {
-                  setState(() => _selectedBranch = value);
-                },
+      builder: (ctx) => AlertDialog(
+        title: Text(S.filterTransactions),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(S.paymentMethod, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _selectedPaymentMethod,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: S.allMethods,
               ),
-              const SizedBox(height: 16),
-              const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _selectedPaymentMethod,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'All Methods',
-                ),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('All Methods')),
-                  DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                  DropdownMenuItem(value: 'card', child: Text('Card')),
-                  DropdownMenuItem(value: 'transfer', child: Text('Transfer')),
-                ],
-                onChanged: (value) {
-                  setState(() => _selectedPaymentMethod = value);
-                },
-              ),
-            ],
-          ),
+              items: [
+                DropdownMenuItem(value: null, child: Text(S.allMethods)),
+                DropdownMenuItem(value: 'cash', child: Text(S.cash)),
+                DropdownMenuItem(value: 'network', child: Text(S.networkCard)),
+                DropdownMenuItem(value: 'transfer', child: Text(S.transfer)),
+              ],
+              onChanged: (value) {
+                _selectedPaymentMethod = value;
+              },
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () {
-              setState(() {
-                _selectedBranch = null;
-                _selectedService = null;
-                _selectedPaymentMethod = null;
-              });
-              Navigator.pop(context);
-              _loadTransactions();
+              setState(() => _selectedPaymentMethod = null);
+              Navigator.pop(ctx);
             },
-            child: const Text('Clear All'),
+            child: Text(S.clear),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
-              _loadTransactions();
+              setState(() {});
+              Navigator.pop(ctx);
             },
-            child: const Text('Apply'),
+            child: Text(S.apply),
           ),
         ],
       ),

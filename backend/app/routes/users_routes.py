@@ -8,7 +8,8 @@ from app.schemas import UserSchema
 from app.services import AuthService
 from app.utils import (
     success_response, error_response, role_required,
-    paginate, format_pagination_response
+    paginate, format_pagination_response,
+    get_current_user, get_current_gym_id
 )
 from app.models.user import User, UserRole
 from app.extensions import db
@@ -20,13 +21,20 @@ users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 @jwt_required()
 @role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER)
 def get_users():
-    """Get all users (paginated)"""
+    """Get all users (paginated, gym-scoped)"""
+    user = get_current_user()
+    gym_id = get_current_gym_id(user)
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     role = request.args.get('role', type=str)
     branch_id = request.args.get('branch_id', type=int)
     
     query = User.query
+
+    # Scope to gym (super admin sees all)
+    if gym_id is not None:
+        query = query.filter_by(gym_id=gym_id)
     
     if role:
         try:
@@ -52,15 +60,18 @@ def get_users():
 @jwt_required()
 @role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER)
 def get_employees():
-    """Get all staff members (alias for /api/users)"""
-    from app.utils import get_current_user
+    """Get all staff members (gym-scoped)"""
+    user = get_current_user()
+    gym_id = get_current_gym_id(user)
     
     role = request.args.get('role', type=str)
     branch_id = request.args.get('branch_id', type=int)
     
-    user = get_current_user()
-    
     query = User.query
+
+    # Scope to gym
+    if gym_id is not None:
+        query = query.filter_by(gym_id=gym_id)
     
     # Branch managers can only see their own branch staff
     if user.role == UserRole.BRANCH_MANAGER:
@@ -108,12 +119,19 @@ def get_user(user_id):
 @jwt_required()
 @role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER)
 def create_user():
-    """Create new user"""
+    """Create new user (auto-scoped to creator's gym)"""
+    creator = get_current_user()
+    gym_id = get_current_gym_id(creator)
+
     try:
         schema = UserSchema()
         data = schema.load(request.json)
     except ValidationError as e:
         return error_response("Validation error", 400, e.messages)
+    
+    # Inject gym_id so the new user belongs to the same gym
+    if gym_id is not None:
+        data['gym_id'] = gym_id
     
     user, error = AuthService.create_user(data)
     

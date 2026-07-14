@@ -53,22 +53,11 @@ def get_customers():
     # Get paginated customers
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     
-    # ✅ ADD: Include has_active_subscription for each customer
+    # has_active_subscription is already computed inside customer.to_dict()
+    # using the correct SubscriptionStatus.ACTIVE enum comparison.
     customers_data = []
     for customer in pagination.items:
         customer_dict = customer.to_dict(include_temp_password=True)
-        
-        # Check if customer has active subscription
-        has_active_sub = db.session.query(Subscription).filter(
-            Subscription.customer_id == customer.id,
-            Subscription.status == 'active',
-            or_(
-                Subscription.end_date >= datetime.utcnow().date(),
-                Subscription.subscription_type == 'coins'
-            )
-        ).first() is not None
-        
-        customer_dict['has_active_subscription'] = has_active_sub
         customers_data.append(customer_dict)
     
     return success_response({
@@ -121,7 +110,7 @@ def get_customer_by_phone(phone):
 
 @customers_bp.route('', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def create_customer():
     """Create new customer"""
     try:
@@ -159,7 +148,7 @@ def create_customer():
 
 @customers_bp.route('/register', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def register_customer():
     """
     Register a new customer (Flutter-compatible endpoint)
@@ -283,7 +272,7 @@ def register_customer():
 
 @customers_bp.route('/<int:customer_id>', methods=['PUT'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def update_customer(customer_id):
     """Update customer"""
     customer = db.session.get(Customer, customer_id)
@@ -369,7 +358,7 @@ def search_customers():
 
 @customers_bp.route('/<int:customer_id>', methods=['DELETE'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER)
 def delete_customer(customer_id):
     """Deactivate customer (soft delete)"""
     customer = db.session.get(Customer, customer_id)

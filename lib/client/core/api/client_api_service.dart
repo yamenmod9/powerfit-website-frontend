@@ -1,8 +1,9 @@
+import '../../../core/config/app_config.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ClientApiService {
-  static const String baseUrl = 'https://yamenmod91.pythonanywhere.com/api';
+  static String get baseUrl => '${AppConfig.apiBaseUrl}/api';
   static const String _tokenKey = 'client_access_token';
   static const String _refreshTokenKey = 'client_refresh_token';
 
@@ -209,6 +210,37 @@ class ClientApiService {
       return response.data;
     } on DioException catch (e) {
       throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> requestAccountDeletion() async {
+    try {
+      final response = await _dio.post('/client/account/delete-request');
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> cancelAccountDeletion() async {
+    try {
+      final response = await _dio.delete('/client/account/delete-request');
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Generic POST request (used by FCM notification service)
+  Future<Response> post(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      return await _dio.post(path, data: data, queryParameters: queryParameters);
+    } catch (e) {
+      rethrow;
     }
   }
 

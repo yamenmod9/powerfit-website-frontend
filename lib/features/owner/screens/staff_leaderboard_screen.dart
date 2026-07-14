@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
 import '../../../core/utils/helpers.dart';
 import '../providers/owner_dashboard_provider.dart';
+import '../../../core/localization/app_strings.dart';
 
 class StaffLeaderboardScreen extends StatelessWidget {
   const StaffLeaderboardScreen({super.key});
@@ -12,7 +13,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Staff Leaderboard'),
+        title: const Text(S.staffLeaderboard),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -29,7 +30,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
       body: Consumer<OwnerDashboardProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const LoadingIndicator(message: 'Loading staff performance...');
+            return const DashboardSkeleton();
           }
 
           if (provider.error != null) {
@@ -43,7 +44,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
 
           if (employees.isEmpty) {
             return const Center(
-              child: Text('No employee performance data available'),
+              child: Text(S.noPerformanceData),
             );
           }
 
@@ -63,7 +64,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
                           Icon(Icons.emoji_events, color: Colors.amber[700]),
                           const SizedBox(width: 8),
                           Text(
-                            'Top Performers',
+                            S.topPerformers,
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],
@@ -83,7 +84,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
 
               // All Staff Performance
               Text(
-                'All Staff Members',
+                S.allStaffMembers,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -166,7 +167,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
                     const SizedBox(width: 16),
                     Icon(Icons.people, size: 14, color: Colors.blue),
                     const SizedBox(width: 4),
-                    Text('$transactions transactions'),
+                    Text(S.transactionsCount(transactions as int)),
                   ],
                 ),
               ],
@@ -224,7 +225,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
                       child: _buildMetricItem(
                         context,
                         icon: Icons.attach_money,
-                        label: 'Revenue',
+                        label: S.revenue,
                         value: NumberHelper.formatCurrency(revenue),
                         color: Colors.green,
                       ),
@@ -234,7 +235,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
                       child: _buildMetricItem(
                         context,
                         icon: Icons.people,
-                        label: 'Transactions',
+                        label: S.transactions,
                         value: transactions.toString(),
                         color: Colors.blue,
                       ),
@@ -248,7 +249,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
                       child: _buildMetricItem(
                         context,
                         icon: Icons.trending_up,
-                        label: 'Retention',
+                        label: S.retention,
                         value: '${retentionRate.toStringAsFixed(1)}%',
                         color: Colors.purple,
                       ),
@@ -305,13 +306,13 @@ class StaffLeaderboardScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Filter Options'),
+        title: const Text(S.filterOptions),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.sort),
-              title: const Text('Sort by Revenue'),
+              title: const Text(S.sortByRevenue),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Implement sorting
@@ -319,7 +320,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.people),
-              title: const Text('Sort by Customers'),
+              title: const Text(S.sortByCustomers),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Implement sorting
@@ -327,7 +328,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.trending_up),
-              title: const Text('Sort by Retention Rate'),
+              title: const Text(S.sortByRetention),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Implement sorting
@@ -338,7 +339,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text(S.close),
           ),
         ],
       ),

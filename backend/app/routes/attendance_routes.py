@@ -15,7 +15,7 @@ attendance_bp = Blueprint('attendance', __name__, url_prefix='/api/attendance')
 
 @attendance_bp.route('', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.FRONT_DESK, UserRole.BRANCH_MANAGER, UserRole.OWNER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.FRONT_DESK, UserRole.BRANCH_MANAGER, UserRole.OWNER)
 def record_attendance():
     """
     Record customer check-in/attendance (Alias for /api/entry-logs/scan)

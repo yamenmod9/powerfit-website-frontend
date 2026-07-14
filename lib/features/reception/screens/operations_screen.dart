@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../widgets/record_payment_dialog.dart';
 import '../widgets/submit_complaint_dialog.dart';
 import '../providers/reception_provider.dart';
+import '../../../core/localization/app_strings.dart';
 
 class OperationsScreen extends StatelessWidget {
   const OperationsScreen({super.key});
@@ -11,7 +12,7 @@ class OperationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daily Operations'),
+        title: Text(S.dailyOperations),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), // Extra bottom padding for navbar
@@ -38,7 +39,7 @@ class OperationsScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Daily Closing',
+                              S.dailyClosing,
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
@@ -50,7 +51,7 @@ class OperationsScreen extends StatelessWidget {
                             const SizedBox(height: 2),
                             Flexible(
                               child: Text(
-                                'Finalize today\'s transactions',
+                                S.finalizeTodayTransactions,
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.white70,
@@ -82,14 +83,14 @@ class OperationsScreen extends StatelessWidget {
             children: [
               _buildOperationCard(
                 context,
-                title: 'Record Payment',
+                title: S.recordPayment,
                 icon: Icons.payment,
                 color: Colors.orange,
                 onTap: () => _showRecordPaymentDialog(context),
               ),
               _buildOperationCard(
                 context,
-                title: 'Submit Complaint',
+                title: S.submitComplaint,
                 icon: Icons.report_problem,
                 color: Colors.deepOrange,
                 onTap: () => _showSubmitComplaintDialog(context),
@@ -164,18 +165,18 @@ class OperationsScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Daily Closing'),
-        content: const Text(
-          'Are you sure you want to perform daily closing? This will finalize today\'s transactions.',
+        title: Text(S.dailyClosing),
+        content: Text(
+          S.dailyClosingConfirm,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(S.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
+            child: Text(S.confirm),
           ),
         ],
       ),
@@ -189,14 +190,14 @@ class OperationsScreen extends StatelessWidget {
         if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Daily closing completed'),
+              content: Text(result['message'] ?? S.dailyClosingCompleted),
               backgroundColor: Colors.green,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Failed to complete daily closing'),
+              content: Text(result['message'] ?? S.dailyClosingFailed),
               backgroundColor: Colors.red,
             ),
           );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/localization/app_strings.dart';
 import '../core/auth/client_auth_provider.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -38,7 +39,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please fill all fields'),
+          content: Text(S.fillAllFields),
           backgroundColor: Colors.orange,
         ),
       );
@@ -48,7 +49,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (newPassword.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('New password must be at least 6 characters'),
+          content: Text(S.newPasswordMin6),
           backgroundColor: Colors.orange,
         ),
       );
@@ -58,7 +59,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (newPassword != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('New passwords do not match'),
+          content: Text(S.passwordsDoNotMatch),
           backgroundColor: Colors.orange,
         ),
       );
@@ -68,7 +69,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (currentPassword == newPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('New password must be different from current password'),
+          content: Text(S.newPasswordMustDiffer),
           backgroundColor: Colors.orange,
         ),
       );
@@ -84,7 +85,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Password changed successfully!'),
+            content: Text(S.passwordChangedSuccess),
             backgroundColor: Colors.green,
           ),
         );
@@ -92,7 +93,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         // Navigate based on context
         if (widget.isFirstLogin) {
           // First login - go to home
-          context.go('/home');
+          context.go('/client/home');
         } else {
           // Regular password change - go back
           context.pop();
@@ -120,7 +121,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       canPop: !widget.isFirstLogin,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.isFirstLogin ? 'Set New Password' : 'Change Password'),
+          title: Text(widget.isFirstLogin ? S.setNewPassword : S.changePassword),
           automaticallyImplyLeading: !widget.isFirstLogin,
         ),
         body: SafeArea(
@@ -144,7 +145,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: Text(
-                              'Please change your temporary password before continuing',
+                              S.changeTempPassword,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
@@ -159,7 +160,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 TextField(
                   controller: _currentPasswordController,
                   decoration: InputDecoration(
-                    labelText: widget.isFirstLogin ? 'Temporary Password' : 'Current Password',
+                    labelText: widget.isFirstLogin ? S.temporaryPasswordLabel : S.currentPassword,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -181,7 +182,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 TextField(
                   controller: _newPasswordController,
                   decoration: InputDecoration(
-                    labelText: 'New Password',
+                    labelText: S.newPassword,
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -193,7 +194,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         });
                       },
                     ),
-                    helperText: 'Minimum 6 characters',
+                    helperText: S.min6Characters,
                   ),
                   obscureText: _obscureNew,
                   enabled: !_isLoading,
@@ -204,7 +205,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 TextField(
                   controller: _confirmPasswordController,
                   decoration: InputDecoration(
-                    labelText: 'Confirm New Password',
+                    labelText: S.confirmNewPassword,
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -237,7 +238,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             ),
                           ),
                         )
-                      : const Text('Change Password'),
+                      : const Text(S.changePassword),
                 ),
               ],
             ),

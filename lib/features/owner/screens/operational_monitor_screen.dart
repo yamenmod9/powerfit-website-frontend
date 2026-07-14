@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/api/api_service.dart';
 import '../../../core/api/api_endpoints.dart';
+import '../../../core/localization/app_strings.dart';
 
 class OperationalMonitorScreen extends StatefulWidget {
   const OperationalMonitorScreen({super.key});
@@ -62,7 +63,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
         });
       } else {
         setState(() {
-          _error = 'Failed to load operational data';
+          _error = S.failedToLoadOperational;
           _isLoading = false;
         });
       }
@@ -79,7 +80,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Operational Monitor'),
+        title: const Text(S.operationalMonitor),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -88,7 +89,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
         ],
       ),
       body: _isLoading
-          ? const LoadingIndicator(message: 'Loading operational data...')
+          ? const DashboardSkeleton()
           : _error != null
               ? Center(
                   child: Padding(
@@ -108,7 +109,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _loadOperationalData,
-                          child: const Text('Retry'),
+                          child: const Text(S.retry),
                         ),
                       ],
                     ),
@@ -127,20 +128,20 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                         const SizedBox(height: 24),
 
                         // Gym Capacity Section
-                        _buildCapacitySection('Gym Floor', Icons.fitness_center, Colors.blue),
+                        _buildCapacitySection(S.gymFloor, Icons.fitness_center, Colors.blue),
                         const SizedBox(height: 16),
 
                         // Pool Capacity Section
-                        _buildCapacitySection('Swimming Pool', Icons.pool, Colors.cyan),
+                        _buildCapacitySection(S.swimmingPool, Icons.pool, Colors.cyan),
                         const SizedBox(height: 16),
 
                         // Karate Area Section
-                        _buildCapacitySection('Karate Area', Icons.sports_kabaddi, Colors.orange),
+                        _buildCapacitySection(S.karateArea, Icons.sports_kabaddi, Colors.orange),
                         const SizedBox(height: 24),
 
                         // Today's Classes Schedule
                         Text(
-                          'Today\'s Classes',
+                          S.todaysClasses,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 12),
@@ -149,7 +150,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
 
                         // Staff Attendance
                         Text(
-                          'Staff Attendance',
+                          S.staffAttendance,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 12),
@@ -182,7 +183,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Live Monitoring',
+                    S.liveMonitoring,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -197,7 +198,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
             TextButton.icon(
               onPressed: _loadOperationalData,
               icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+              label: const Text(S.refresh),
             ),
           ],
         ),
@@ -257,7 +258,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                       ),
                 ),
                 Text(
-                  '${maxCapacity - currentOccupancy} spots left',
+                  S.spotsLeft(maxCapacity - currentOccupancy),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.grey[600],
                       ),
@@ -290,28 +291,28 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
     // Mock data - in production this would come from _operationalData
     final classes = [
       {
-        'name': 'Yoga Class',
+        'name': S.yogaClass,
         'time': '09:00 AM',
         'instructor': 'Sarah Johnson',
         'capacity': '15/20',
         'status': 'ongoing',
       },
       {
-        'name': 'Karate Basics',
+        'name': S.karateBasics,
         'time': '11:00 AM',
         'instructor': 'Ahmed Ali',
         'capacity': '12/15',
         'status': 'upcoming',
       },
       {
-        'name': 'Swimming Lessons',
+        'name': S.swimmingLessons,
         'time': '02:00 PM',
         'instructor': 'Mike Chen',
         'capacity': '8/10',
         'status': 'upcoming',
       },
       {
-        'name': 'Advanced Karate',
+        'name': S.advancedKarate,
         'time': '05:00 PM',
         'instructor': 'Ahmed Ali',
         'capacity': '0/12',
@@ -375,7 +376,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
-                      'LIVE',
+                      S.live,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -430,7 +431,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
               children: [
                 Chip(
                   label: Text(
-                    isPresent ? 'Present' : 'Absent',
+                    isPresent ? S.present : S.absent,
                     style: const TextStyle(fontSize: 12),
                   ),
                   backgroundColor: isPresent

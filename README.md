@@ -119,6 +119,56 @@ flutter build apk --release
 flutter build ios --release
 ```
 
+## 🌐 Web Deployment
+
+### Local web development
+
+Use the web target during development:
+
+```bash
+flutter config --enable-web
+flutter run -d chrome --dart-define=APP_ENV=development --dart-define=ENVIRONMENT=development --dart-define=API_BASE_URL=http://localhost:8000
+```
+
+If you prefer a reusable shell wrapper, copy [.env.example](.env.example) to `.env` and run:
+
+```bash
+bash scripts/build_web.sh
+```
+
+### Production build
+
+The production build used for Vercel and CI is:
+
+```bash
+bash scripts/build_web.sh
+```
+
+This script reads `API_BASE_URL` and `ENVIRONMENT`, then builds the web bundle with `flutter build web --release`.
+
+### GitHub Actions
+
+The workflow at [.github/workflows/deploy.yml](.github/workflows/deploy.yml) checks out the repo, installs Flutter stable, enables web, runs dependency resolution, analysis, tests when present, builds the web release, and uploads `build/web` as an artifact.
+
+### Vercel deployment
+
+Vercel should serve the generated Flutter web output as a single-page application. The root [vercel.json](vercel.json) file rewrites all routes to `index.html` so browser refresh and direct links do not return 404s.
+
+Use these Vercel settings:
+
+- Install command: `bash install_web.sh`
+- Build command: `bash build_web.sh`
+- Output directory: `build/web`
+
+### Environment variables
+
+Use these variables for local builds, CI, and deployment settings:
+
+- `API_BASE_URL` - the FastAPI server base URL
+- `ENVIRONMENT` - `development`, `staging`, or `production`
+
+See [.env.example](.env.example) for the exact placeholders.
+
 ## 🔐 Security
 
 - Secure JWT storage (platform-specific encryption)

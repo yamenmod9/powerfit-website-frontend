@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/localization/app_strings.dart';
 import '../../core/utils/helpers.dart';
 
 class DateRangePicker extends StatefulWidget {
@@ -67,7 +68,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Select Date Range',
+            S.selectDateRange,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 24),
@@ -78,7 +79,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Start Date',
+                      S.startDateLabel,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
@@ -99,7 +100,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'End Date',
+                      S.endDateLabel,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
@@ -122,7 +123,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
             children: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: const Text(S.cancel),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
@@ -130,7 +131,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
                   widget.onDateRangeSelected(_startDate, _endDate);
                   Navigator.pop(context);
                 },
-                child: const Text('Apply'),
+                child: const Text(S.apply),
               ),
             ],
           ),

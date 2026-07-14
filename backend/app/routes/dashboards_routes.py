@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 from app.services import DashboardService
 from app.utils import (
     success_response, error_response, role_required, get_current_user,
+    get_current_gym_id,
     calculate_branch_revenue, get_expiring_subscriptions
 )
 from app.models.user import UserRole
@@ -22,30 +23,46 @@ dashboards_bp = Blueprint('dashboards', __name__, url_prefix='/api/dashboards')
 @jwt_required()
 @role_required(UserRole.SUPER_ADMIN, UserRole.OWNER)
 def get_dashboard_overview():
-    """Get overall gym system metrics (Owner only)"""
+    """Get overall gym system metrics (gym-scoped for owners)"""
     from app.models import Branch, Customer, Subscription, Transaction
     from app.models.expense import Expense, ExpenseStatus
     from sqlalchemy import func
-    
-    # Total metrics
-    total_customers = Customer.query.count()
-    total_branches = Branch.query.filter_by(is_active=True).count()
-    active_subscriptions = Subscription.query.filter_by(status=SubscriptionStatus.ACTIVE).count()
-    
-    # Total revenue calculation
-    revenue_query = db.session.query(func.sum(Transaction.amount)).scalar()
+
+    user = get_current_user()
+    gym_id = get_current_gym_id(user)
+
+    # Build branch filter
+    branch_query = Branch.query.filter_by(is_active=True)
+    if gym_id is not None:
+        branch_query = branch_query.filter_by(gym_id=gym_id)
+    branches = branch_query.all()
+    branch_ids = [b.id for b in branches]
+
+    if branch_ids:
+        total_customers = Customer.query.filter(Customer.branch_id.in_(branch_ids)).count()
+        active_subscriptions = Subscription.query.filter(
+            Subscription.branch_id.in_(branch_ids),
+            Subscription.status == SubscriptionStatus.ACTIVE,
+        ).count()
+        revenue_query = db.session.query(func.sum(Transaction.amount)).filter(
+            Transaction.branch_id.in_(branch_ids)
+        ).scalar()
+        expenses_query = db.session.query(func.sum(Expense.amount)).filter(
+            Expense.branch_id.in_(branch_ids),
+            Expense.status == ExpenseStatus.APPROVED,
+        ).scalar()
+    else:
+        total_customers = 0
+        active_subscriptions = 0
+        revenue_query = None
+        expenses_query = None
+
     total_revenue = float(revenue_query) if revenue_query else 0.0
-    
-    # Total approved expenses
-    expenses_query = db.session.query(func.sum(Expense.amount)).filter(
-        Expense.status == ExpenseStatus.APPROVED
-    ).scalar()
     total_expenses = float(expenses_query) if expenses_query else 0.0
     net_profit = total_revenue - total_expenses
 
     # Revenue by branch
     revenue_by_branch = []
-    branches = Branch.query.filter_by(is_active=True).all()
     
     for branch in branches:
         branch_revenue = db.session.query(func.sum(Transaction.amount)).filter(
@@ -72,7 +89,7 @@ def get_dashboard_overview():
         'total_revenue': total_revenue,
         'total_customers': total_customers,
         'active_subscriptions': active_subscriptions,
-        'total_branches': total_branches,
+        'total_branches': len(branches),
         'total_expenses': total_expenses,
         'net_profit': net_profit,
         'revenue_by_branch': revenue_by_branch

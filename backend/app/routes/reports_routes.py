@@ -8,7 +8,7 @@ from app.models import Transaction, Subscription, Customer, Branch, User
 from app.models.transaction import PaymentMethod
 from app.models.subscription import SubscriptionStatus
 from app.models.complaint import ComplaintStatus
-from app.utils import success_response, error_response, get_current_user, role_required
+from app.utils import success_response, error_response, get_current_user, role_required, get_current_gym_id
 from app.models.user import UserRole
 from app.extensions import db
 from datetime import datetime, timedelta
@@ -153,7 +153,7 @@ def get_daily_report():
         query = query.filter(Transaction.branch_id == current_user.branch_id)
     elif branch_id:
         query = query.filter(Transaction.branch_id == branch_id)
-    
+
     transactions = query.all()
     
     # Calculate metrics
@@ -394,7 +394,13 @@ def get_branch_comparison():
         month_end = datetime.utcnow()
         month_start = month_end - timedelta(days=90)
     
-    branches = Branch.query.filter_by(is_active=True).all()
+    current_user = get_current_user()
+    gym_id = get_current_gym_id(current_user)
+    
+    branch_query = Branch.query.filter_by(is_active=True)
+    if gym_id:
+        branch_query = branch_query.filter_by(gym_id=gym_id)
+    branches = branch_query.all()
     
     branch_data = []
     
@@ -480,7 +486,9 @@ def get_employee_performance():
     # Branch managers can only see their branch
     if current_user.role == UserRole.BRANCH_MANAGER:
         branch_id = current_user.branch_id
-    
+
+    gym_id = get_current_gym_id(current_user)
+
     if not branch_id and current_user.role not in [UserRole.OWNER, UserRole.SUPER_ADMIN, UserRole.CENTRAL_ACCOUNTANT]:
         return error_response('branch_id is required', 400)
     
@@ -512,6 +520,9 @@ def get_employee_performance():
         UserRole.CENTRAL_ACCOUNTANT,
         UserRole.BRANCH_ACCOUNTANT
     ]))
+    
+    if gym_id:
+        staff_query = staff_query.filter_by(gym_id=gym_id)
     
     if branch_id:
         staff_query = staff_query.filter_by(branch_id=branch_id)

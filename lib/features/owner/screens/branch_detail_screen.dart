@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/stat_card.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/api/api_service.dart';
 import '../../../core/api/api_endpoints.dart';
+import '../../../core/localization/app_strings.dart';
 
 class BranchDetailScreen extends StatefulWidget {
   final int branchId;
@@ -61,7 +62,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
         });
       } else {
         setState(() {
-          _error = 'Failed to load branch data';
+          _error = S.failedToLoadBranch;
           _isLoading = false;
         });
       }
@@ -88,15 +89,15 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
           controller: _tabController,
           isScrollable: true,
           tabs: const [
-            Tab(text: 'Overview', icon: Icon(Icons.dashboard)),
-            Tab(text: 'Revenue', icon: Icon(Icons.attach_money)),
-            Tab(text: 'Staff', icon: Icon(Icons.people)),
-            Tab(text: 'Operations', icon: Icon(Icons.settings)),
+            Tab(text: S.overview, icon: Icon(Icons.dashboard)),
+            Tab(text: S.revenue, icon: Icon(Icons.attach_money)),
+            Tab(text: S.staff, icon: Icon(Icons.people)),
+            Tab(text: S.operations, icon: Icon(Icons.settings)),
           ],
         ),
       ),
       body: _isLoading
-          ? const LoadingIndicator(message: 'Loading branch details...')
+          ? const DashboardSkeleton()
           : _error != null
               ? Center(
                   child: Padding(
@@ -116,7 +117,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _loadBranchData,
-                          child: const Text('Retry'),
+                          child: const Text(S.retry),
                         ),
                       ],
                     ),
@@ -156,25 +157,25 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
             childAspectRatio: 1.4,
             children: [
               StatCard(
-                title: 'Total Revenue',
+                title: S.totalRevenue,
                 value: NumberHelper.formatCurrency(totalRevenue),
                 icon: Icons.attach_money,
                 color: Colors.green,
               ),
               StatCard(
-                title: 'Total Customers',
+                title: S.totalCustomers,
                 value: NumberHelper.formatNumber(totalCustomers),
                 icon: Icons.people,
                 color: Colors.blue,
               ),
               StatCard(
-                title: 'Active Subscriptions',
+                title: S.activeSubscriptions,
                 value: NumberHelper.formatNumber(activeSubscriptions),
                 icon: Icons.card_membership,
                 color: Colors.purple,
               ),
               StatCard(
-                title: 'Capacity',
+                title: S.capacity,
                 value: NumberHelper.formatNumber(capacity),
                 icon: Icons.fitness_center,
                 color: Colors.orange,
@@ -185,7 +186,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
 
           // Additional Info
           Text(
-            'Branch Information',
+            S.branchInformation,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
@@ -194,14 +195,14 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildInfoRow('Branch ID', '#${widget.branchId}'),
+                  _buildInfoRow(S.branchId, '#${widget.branchId}'),
                   const Divider(),
-                  _buildInfoRow('Branch Name', widget.branchName),
+                  _buildInfoRow(S.branchName, widget.branchName),
                   const Divider(),
-                  _buildInfoRow('Status', data['status'] ?? 'Active'),
+                  _buildInfoRow(S.status, data['status'] ?? S.active),
                   if (data['address'] != null) ...[
                     const Divider(),
-                    _buildInfoRow('Address', data['address']),
+                    _buildInfoRow(S.address, data['address']),
                   ],
                 ],
               ),
@@ -235,7 +236,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Revenue by Service',
+            S.revenueByService,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
@@ -243,7 +244,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: Text('No revenue data available')),
+                child: Center(child: Text(S.noRevenueData)),
               ),
             )
           else
@@ -260,7 +261,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   title: Text(name),
-                  subtitle: Text('$customers customers'),
+                  subtitle: Text(S.customersCount(customers as int)),
                   trailing: Text(
                     NumberHelper.formatCurrency(revenue),
                     style: const TextStyle(
@@ -287,7 +288,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Branch Staff',
+            S.branchStaff,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
@@ -295,7 +296,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: Text('No staff data available')),
+                child: Center(child: Text(S.noStaffData)),
               ),
             )
           else
@@ -313,7 +314,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
                     child: Text(name[0].toUpperCase()),
                   ),
                   title: Text(name),
-                  subtitle: Text('$role • $txCount transactions'),
+                  subtitle: Text('$role • ${S.txCount(txCount as int)}'),
                   trailing: revenue > 0
                       ? Text(
                           NumberHelper.formatCurrency(revenue),
@@ -323,7 +324,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
                           ),
                         )
                       : Chip(
-                          label: Text(isActive ? 'Active' : 'Inactive'),
+                          label: Text(isActive ? S.active : S.inactive),
                           backgroundColor: isActive
                               ? Colors.green.withValues(alpha: 0.2)
                               : Colors.red.withValues(alpha: 0.2),
@@ -345,7 +346,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Daily Operations',
+            S.dailyOperations,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
@@ -354,17 +355,17 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildInfoRow('Check-ins This Month', (data['check_ins_count'] ?? 0).toString()),
+                  _buildInfoRow(S.checkInsThisMonth, (data['check_ins_count'] ?? 0).toString()),
                   const Divider(),
-                  _buildInfoRow('Active Subscriptions', (data['active_subscriptions'] ?? 0).toString()),
+                  _buildInfoRow(S.activeSubscriptions, (data['active_subscriptions'] ?? 0).toString()),
                   const Divider(),
-                  _buildInfoRow('Open Complaints', (data['open_complaints'] ?? 0).toString()),
+                  _buildInfoRow(S.openComplaints, (data['open_complaints'] ?? 0).toString()),
                   const Divider(),
-                  _buildInfoRow('Expired This Month', (data['expired_subscriptions'] ?? 0).toString()),
+                  _buildInfoRow(S.expiredThisMonth, (data['expired_subscriptions'] ?? 0).toString()),
                   const Divider(),
-                  _buildInfoRow('Frozen Subscriptions', (data['frozen_subscriptions'] ?? 0).toString()),
+                  _buildInfoRow(S.frozenSubscriptions, (data['frozen_subscriptions'] ?? 0).toString()),
                   const Divider(),
-                  _buildInfoRow('New Customers', (data['new_customers'] ?? 0).toString()),
+                  _buildInfoRow(S.newCustomers, (data['new_customers'] ?? 0).toString()),
                 ],
               ),
             ),

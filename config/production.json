@@ -1,0 +1,4 @@
+{
+  "APP_ENV": "production",
+  "PROD_API_BASE_URL": "https://yamenmod91.pythonanywhere.com"
+}

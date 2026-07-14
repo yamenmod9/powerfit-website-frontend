@@ -132,3 +132,4 @@ def privacy_policy_page():
 def privacy_policy_short_alias():
     """Short alias for convenience."""
     return Response(_privacy_policy_html(), mimetype='text/html; charset=utf-8')
+

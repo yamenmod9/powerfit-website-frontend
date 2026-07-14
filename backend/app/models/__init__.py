@@ -3,6 +3,7 @@ Database models initialization
 """
 from .user import User, UserRole
 from .branch import Branch
+from .gym import Gym
 from .customer import Customer, Gender
 from .service import Service, ServiceType
 from .subscription import Subscription, SubscriptionStatus
@@ -14,11 +15,13 @@ from .daily_closing import DailyClosing
 from .fingerprint import Fingerprint
 from .activation_code import ActivationCode, ActivationCodeType
 from .entry_log import EntryLog, EntryType, EntryStatus
+from .device_token import DeviceToken
 
 __all__ = [
     'User',
     'UserRole',
     'Branch',
+    'Gym',
     'Customer',
     'Gender',
     'Service',
@@ -40,5 +43,6 @@ __all__ = [
     'ActivationCodeType',
     'EntryLog',
     'EntryType',
-    'EntryStatus'
+    'EntryStatus',
+    'DeviceToken',
 ]

@@ -108,6 +108,7 @@ application = create_app('production')
 Once deployed, test your API at:
 - Base URL: `https://YOUR_USERNAME.pythonanywhere.com`
 - Test Page: `https://YOUR_USERNAME.pythonanywhere.com/test`
+- Privacy Policy: `https://YOUR_USERNAME.pythonanywhere.com/privacy-policy`
 - API Endpoints: `https://YOUR_USERNAME.pythonanywhere.com/api/...`
 
 ## Common Issues & Solutions

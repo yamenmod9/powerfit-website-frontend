@@ -18,6 +18,10 @@ class Fingerprint(db.Model):
     
     # Fingerprint hash (simulated unique identifier)
     fingerprint_hash = db.Column(db.String(255), unique=True, nullable=False, index=True)
+
+    # Deterministic template hash for duplicate detection across customers
+    # This is a hash of just the biometric data (without timestamp/customer_id)
+    template_hash = db.Column(db.String(255), nullable=True, index=True)
     
     # Status
     is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
@@ -40,6 +44,15 @@ class Fingerprint(db.Model):
         # For simulation, we use customer_id + unique_data
         data = f"{customer_id}:{unique_data}:{datetime.utcnow().timestamp()}"
         return hashlib.sha256(data.encode()).hexdigest()
+
+    @staticmethod
+    def generate_template_hash(unique_data):
+        """Generate a deterministic hash of the biometric template data only.
+
+        Used to detect whether the same fingerprint is already registered
+        to a different customer.
+        """
+        return hashlib.sha256(unique_data.encode()).hexdigest()
 
     def validate_access(self):
         """Check if fingerprint can grant access"""

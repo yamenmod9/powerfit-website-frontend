@@ -713,7 +713,8 @@ class ReceptionProvider extends ChangeNotifier {
         ApiEndpoints.customers,
         queryParameters: {
           'branch_id': branchId,
-          'limit': 1000, // Get all customers
+          'per_page': 1000,
+          'limit': 1000, // Keep backward compatibility with older backends
         },
       );
 
@@ -760,23 +761,42 @@ class ReceptionProvider extends ChangeNotifier {
             ApiEndpoints.subscriptions,
             queryParameters: {
               'branch_id': branchId,
-              'status': 'active',
-              'limit': 1000,
+              'status': 'ACTIVE',
+              'per_page': 1000,
+              'limit': 1000, // Keep backward compatibility with older backends
             },
           );
 
           if (subResponse.statusCode == 200 && subResponse.data != null) {
             List<dynamic> subs = [];
             final subData = subResponse.data;
-            if (subData['data'] != null && subData['data']['items'] is List) {
-              subs = subData['data']['items'];
+
+            if (subData['data'] is Map<String, dynamic> && subData['data']['items'] is List) {
+              subs = subData['data']['items'] as List<dynamic>;
+            } else if (subData['data'] is List) {
+              subs = subData['data'] as List<dynamic>;
+            } else if (subData['items'] is List) {
+              subs = subData['items'] as List<dynamic>;
             } else if (subData['subscriptions'] is List) {
-              subs = subData['subscriptions'];
+              subs = subData['subscriptions'] as List<dynamic>;
             }
 
             for (var sub in subs) {
-              if (sub['customer_id'] != null) {
-                subscribedCustomerIds.add(sub['customer_id']);
+              if (sub is! Map) continue;
+              final subMap = Map<String, dynamic>.from(sub);
+              final customerIdRaw = subMap['customer_id'] ??
+                  subMap['customerId'] ??
+                  subMap['customer']?['id'];
+              final status = (subMap['status'] ?? '').toString().toLowerCase();
+              final isActiveStatus =
+                  status.isEmpty || status == 'active' || status == 'valid' || status == 'running';
+
+              final customerId = customerIdRaw is int
+                  ? customerIdRaw
+                  : int.tryParse(customerIdRaw?.toString() ?? '');
+
+              if (isActiveStatus && customerId != null) {
+                subscribedCustomerIds.add(customerId);
               }
             }
             debugPrint('✅ Found ${subscribedCustomerIds.length} active subscriptions to map');
@@ -789,11 +809,51 @@ class ReceptionProvider extends ChangeNotifier {
         final List<Map<String, dynamic>> processedList = [];
         for (var item in data) {
           final Map<String, dynamic> customerMap = Map<String, dynamic>.from(item as Map);
-          // Check if backend already sent it, otherwise use our local mapping
-          if (customerMap['has_active_subscription'] == null) {
-             final customerId = customerMap['id'];
-             customerMap['has_active_subscription'] = subscribedCustomerIds.contains(customerId);
+
+          bool hasActiveSubscription = false;
+
+          final rawActiveFlag = customerMap['has_active_subscription'];
+          if (rawActiveFlag is bool) {
+            hasActiveSubscription = rawActiveFlag;
+          } else if (rawActiveFlag is num) {
+            hasActiveSubscription = rawActiveFlag > 0;
+          } else if (rawActiveFlag != null) {
+            final normalized = rawActiveFlag.toString().toLowerCase();
+            hasActiveSubscription = normalized == 'true' || normalized == '1' || normalized == 'yes';
           }
+
+          final subscriptionStatus = (customerMap['subscription_status'] ?? '').toString().toLowerCase();
+          if (!hasActiveSubscription && (subscriptionStatus == 'active' || subscriptionStatus == 'subscribed')) {
+            hasActiveSubscription = true;
+          }
+
+          final activeSubscriptionsCountRaw = customerMap['active_subscriptions_count'] ??
+              customerMap['activeSubscriptionsCount'] ??
+              customerMap['subscriptions_count'];
+          if (!hasActiveSubscription && activeSubscriptionsCountRaw != null) {
+            final activeSubscriptionsCount = activeSubscriptionsCountRaw is num
+                ? activeSubscriptionsCountRaw.toInt()
+                : int.tryParse(activeSubscriptionsCountRaw.toString()) ?? 0;
+            if (activeSubscriptionsCount > 0) {
+              hasActiveSubscription = true;
+            }
+          }
+
+          if (!hasActiveSubscription && customerMap['active_subscription'] is Map) {
+            hasActiveSubscription = true;
+          }
+
+          final customerIdRaw = customerMap['id'] ??
+              customerMap['customer_id'] ??
+              customerMap['customerId'];
+          final customerId = customerIdRaw is int
+              ? customerIdRaw
+              : int.tryParse(customerIdRaw?.toString() ?? '');
+          if (!hasActiveSubscription && customerId != null) {
+            hasActiveSubscription = subscribedCustomerIds.contains(customerId);
+          }
+
+          customerMap['has_active_subscription'] = hasActiveSubscription;
           processedList.add(customerMap);
         }
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/localization/app_strings.dart';
 import '../core/api/client_api_service.dart';
 import '../models/subscription_model.dart';
+import '../../shared/widgets/skeleton_loader.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -52,7 +54,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           });
         } else {
           setState(() {
-            _error = 'No active subscription found';
+            _error = S.noActiveSubFound;
           });
         }
       } else {
@@ -81,14 +83,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/home');
+              context.go('/client/home');
             }
           },
         ),
-        title: const Text('Subscription Details'),
+        title: const Text(S.subscriptionDetails),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const DashboardSkeleton()
           : _error != null
               ? Center(
                   child: Column(
@@ -101,7 +103,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadSubscription,
-                        child: const Text('Retry'),
+                        child: const Text(S.retry),
                       ),
                     ],
                   ),
@@ -152,7 +154,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                       if (_subscription!.isExpiringSoon) ...[
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Expires in ${_subscription!.daysRemaining} days',
+                                          S.expiresInDays(_subscription!.daysRemaining),
                                           style: const TextStyle(color: Colors.orange),
                                         ),
                                       ],
@@ -160,8 +162,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                         const SizedBox(height: 8),
                                         Text(
                                           _subscription!.displayMetric == 'coins'
-                                              ? 'Only ${_subscription!.remainingCoins} coins remaining'
-                                              : 'Only ${_subscription!.displayValue} sessions remaining',
+                                              ? S.onlyCoinsRemaining(_subscription!.remainingCoins)
+                                              : S.onlySessionsRemaining(_subscription!.displayValue),
                                           style: const TextStyle(color: Colors.orange),
                                         ),
                                       ],
@@ -180,7 +182,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Subscription Information',
+                                        S.subscriptionInformation,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge,
@@ -192,7 +194,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                         _buildInfoRow(
                                           context,
                                           icon: Icons.fitness_center,
-                                          label: 'Plan',
+                                          label: S.planLabel,
                                           value: _subscription!.serviceName!,
                                         ),
                                         const Divider(height: 24),
@@ -202,7 +204,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                       _buildInfoRow(
                                         context,
                                         icon: Icons.card_membership,
-                                        label: 'Type',
+                                        label: S.type,
                                         value: _getSubscriptionTypeLabel(
                                             _subscription!.subscriptionType,
                                             _subscription!.displayMetric),
@@ -213,7 +215,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                       _buildInfoRow(
                                         context,
                                         icon: Icons.calendar_today,
-                                        label: 'Start Date',
+                                        label: S.startDate,
                                         value: _formatDate(_subscription!.startDate),
                                       ),
 
@@ -224,7 +226,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                         _buildInfoRow(
                                           context,
                                           icon: Icons.event,
-                                          label: 'Expiry Date',
+                                          label: S.expiryDate,
                                           value: _formatDate(_subscription!.expiryDate!),
                                           valueColor: _subscription!.isExpiringSoon
                                               ? Colors.orange
@@ -303,7 +305,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                             ),
                                             const SizedBox(width: 12),
                                             Text(
-                                              'Allowed Services',
+                                              S.allowedServices,
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleLarge,
@@ -355,7 +357,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                             ),
                                             const SizedBox(width: 12),
                                             Text(
-                                              'Freeze History',
+                                              S.freezeHistory,
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .titleLarge,
@@ -379,7 +381,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             ],
                           )
                         : const Center(
-                            child: Text('No subscription data available'),
+                            child: Text(S.noSubscriptionData),
                           ),
                   ),
                 ),
@@ -436,7 +438,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               const Icon(Icons.calendar_today, size: 16, color: Colors.blue),
               const SizedBox(width: 8),
               Text(
-                'Frozen: ${freeze.freezeDate.day}/${freeze.freezeDate.month}/${freeze.freezeDate.year}',
+                S.frozenDate('${freeze.freezeDate.day}/${freeze.freezeDate.month}/${freeze.freezeDate.year}'),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -448,7 +450,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 const Icon(Icons.event, size: 16, color: Colors.green),
                 const SizedBox(width: 8),
                 Text(
-                  'Unfrozen: ${freeze.unfreezeDate!.day}/${freeze.unfreezeDate!.month}/${freeze.unfreezeDate!.year}',
+                  S.unfrozenDate('${freeze.unfreezeDate!.day}/${freeze.unfreezeDate!.month}/${freeze.unfreezeDate!.year}'),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -457,7 +459,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           if (freeze.reason.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              'Reason: ${freeze.reason}',
+              S.reason(freeze.reason),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -473,13 +475,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   String _getSubscriptionTypeLabel(String rawType, String? metric) {
     switch (metric) {
       case 'coins':
-        return 'Coin-based';
+        return S.coinBased;
       case 'time':
-        return 'Time-based';
+        return S.timeBased;
       case 'sessions':
-        return 'Session-based';
+        return S.sessionBased;
       case 'training':
-        return 'Personal Training';
+        return S.personalTrainingType;
       default:
         // Fall back to prettifying the raw type
         return rawType
@@ -511,7 +513,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          '$current / $total remaining',
+          S.progressLabel(current, total),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).textTheme.bodySmall?.color,
               ),
@@ -537,15 +539,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   String _getDisplayLabel(String? metric) {
     switch (metric) {
       case 'coins':
-        return 'Remaining Coins';
+        return S.remainingCoinsLabel;
       case 'time':
-        return 'Time Remaining';
+        return S.timeRemainingLabel;
       case 'sessions':
-        return 'Sessions Remaining';
+        return S.sessionsRemainingLabel;
       case 'training':
-        return 'Training Sessions';
+        return S.trainingSessionsLabel;
       default:
-        return 'Remaining';
+        return S.remainingLabel;
     }
   }
 }

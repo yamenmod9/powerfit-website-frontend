@@ -4,6 +4,7 @@ class AppConstants {
   static const String appVersion = '1.0.0';
   
   // User Roles - MUST MATCH BACKEND API EXACTLY
+  static const String roleSuperAdmin = 'super_admin';
   static const String roleOwner = 'owner';
   static const String roleBranchManager = 'branch_manager';
   static const String roleFrontDesk = 'front_desk';  // Changed from 'reception'

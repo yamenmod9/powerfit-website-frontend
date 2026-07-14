@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../shared/models/customer_model.dart';
 import '../../../core/utils/helpers.dart';
+import '../../../core/localization/app_strings.dart';
 
 class HealthReportScreen extends StatelessWidget {
   final CustomerModel customer;
@@ -16,7 +17,7 @@ class HealthReportScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Health Report'),
+        title: Text(S.healthReport),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
@@ -64,7 +65,7 @@ class HealthReportScreen extends StatelessWidget {
                         Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
                         const SizedBox(width: 4),
                         Text(
-                          '${customer.age} years old',
+                          S.yearsOld(customer.age?.toString() ?? S.na),
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Colors.grey[600],
                               ),
@@ -77,7 +78,7 @@ class HealthReportScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          customer.gender?.toUpperCase() ?? 'N/A',
+                          customer.gender?.toUpperCase() ?? S.na,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Colors.grey[600],
                               ),
@@ -93,7 +94,7 @@ class HealthReportScreen extends StatelessWidget {
             // QR Code Section
             if (customer.id != null) ...[
               Text(
-                'Customer QR Code',
+                S.customerQRCode,
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
@@ -145,19 +146,19 @@ class HealthReportScreen extends StatelessWidget {
                                 Clipboard.setData(ClipboardData(text: 'CUSTOMER-${customer.id}'));
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('QR code data copied to clipboard'),
+                                    content: Text(S.qrCopied),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
                               },
-                              tooltip: 'Copy QR Code',
+                              tooltip: S.copyQRCode,
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Scan this QR code for quick customer identification and access',
+                        S.scanQRForIdentification,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.grey[600],
                               fontStyle: FontStyle.italic,
@@ -183,7 +184,7 @@ class HealthReportScreen extends StatelessWidget {
                   child: _buildMeasurementCard(
                     context,
                     icon: Icons.monitor_weight,
-                    label: 'Weight',
+                    label: S.weight,
                     value: '${customer.weight?.toStringAsFixed(1) ?? "N/A"} kg',
                     color: Colors.blue,
                   ),
@@ -193,7 +194,7 @@ class HealthReportScreen extends StatelessWidget {
                   child: _buildMeasurementCard(
                     context,
                     icon: Icons.height,
-                    label: 'Height',
+                    label: S.height,
                     value: '${customer.height?.toStringAsFixed(2) ?? "N/A"} m',
                     color: Colors.green,
                   ),
@@ -220,7 +221,7 @@ class HealthReportScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'BMI Score',
+                              S.bmiScore,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             const SizedBox(height: 8),
@@ -243,7 +244,7 @@ class HealthReportScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            customer.bmiCategory ?? 'Unknown',
+                            customer.bmiCategory ?? S.unknown,
                             style: TextStyle(
                               color: _getBMIColor(customer.bmiCategory),
                               fontWeight: FontWeight.bold,
@@ -274,17 +275,17 @@ class HealthReportScreen extends StatelessWidget {
                     _buildInfoRow(
                       context,
                       icon: Icons.local_fire_department,
-                      label: 'Basal Metabolic Rate (BMR)',
+                      label: S.basalMetabolicRate,
                       value: '${customer.bmr?.toStringAsFixed(0) ?? "N/A"} kcal/day',
-                      subtitle: 'Calories burned at rest',
+                      subtitle: S.caloriesBurnedAtRest,
                     ),
                     const Divider(height: 32),
                     _buildInfoRow(
                       context,
                       icon: Icons.restaurant,
-                      label: 'Daily Calorie Needs',
+                      label: S.dailyCalorieNeeds,
                       value: '${customer.dailyCalories?.toStringAsFixed(0) ?? "N/A"} kcal/day',
-                      subtitle: 'For moderate activity',
+                      subtitle: S.forModerateActivity,
                     ),
                   ],
                 ),
@@ -310,7 +311,7 @@ class HealthReportScreen extends StatelessWidget {
                         Icon(Icons.lightbulb, color: Colors.blue),
                         const SizedBox(width: 8),
                         Text(
-                          'Health Tips',
+                          S.healthTips,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ],
@@ -338,7 +339,7 @@ class HealthReportScreen extends StatelessWidget {
             // Footer
             Center(
               child: Text(
-                'Generated on ${DateHelper.formatDate(DateTime.now())}',
+                S.generatedOn(DateHelper.formatDate(DateTime.now())),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.grey[600],
                     ),
@@ -432,10 +433,10 @@ class HealthReportScreen extends StatelessWidget {
 
   Widget _buildBMIChart(double? bmi) {
     final ranges = [
-      {'label': 'Underweight', 'color': Colors.blue, 'max': 18.5},
-      {'label': 'Normal', 'color': Colors.green, 'max': 24.9},
-      {'label': 'Overweight', 'color': Colors.orange, 'max': 29.9},
-      {'label': 'Obese', 'color': Colors.red, 'max': 40.0},
+      {'label': S.underweight, 'color': Colors.blue, 'max': 18.5},
+      {'label': S.normal, 'color': Colors.green, 'max': 24.9},
+      {'label': S.overweight, 'color': Colors.orange, 'max': 29.9},
+      {'label': S.obese, 'color': Colors.red, 'max': 40.0},
     ];
 
     return Column(
@@ -490,33 +491,33 @@ class HealthReportScreen extends StatelessWidget {
     switch (category?.toLowerCase()) {
       case 'underweight':
         return [
-          'Increase caloric intake with nutrient-dense foods',
-          'Focus on strength training exercises',
-          'Consult with a nutritionist for a meal plan',
+          S.tipIncreaseCaloric,
+          S.tipStrengthTraining,
+          S.tipConsultNutritionist,
         ];
       case 'normal':
         return [
-          'Maintain current healthy habits',
-          'Continue regular exercise routine',
-          'Eat a balanced diet with variety',
+          S.tipMaintainHealthy,
+          S.tipContinueExercise,
+          S.tipBalancedDiet,
         ];
       case 'overweight':
         return [
-          'Create a moderate calorie deficit',
-          'Increase cardiovascular exercise',
-          'Focus on portion control',
+          S.tipCalorieDeficit,
+          S.tipIncreaseCardio,
+          S.tipPortionControl,
         ];
       case 'obese':
         return [
-          'Consult with healthcare provider',
-          'Start with low-impact exercises',
-          'Consider working with a dietitian',
+          S.tipConsultHealthcare,
+          S.tipLowImpact,
+          S.tipWorkWithDietitian,
         ];
       default:
         return [
-          'Maintain a balanced diet',
-          'Exercise regularly',
-          'Stay hydrated',
+          S.tipMaintainBalanced,
+          S.tipExerciseRegularly,
+          S.tipStayHydrated,
         ];
     }
   }
@@ -524,7 +525,7 @@ class HealthReportScreen extends StatelessWidget {
   void _shareReport(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Share via WhatsApp feature coming soon...'),
+        content: Text(S.shareWhatsAppSoon),
       ),
     );
   }
@@ -532,7 +533,7 @@ class HealthReportScreen extends StatelessWidget {
   void _printReport(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Print feature coming soon...'),
+        content: Text(S.printSoon),
       ),
     );
   }

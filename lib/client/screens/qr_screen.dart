@@ -3,9 +3,14 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:async';
 import 'package:go_router/go_router.dart';
+import '../../core/localization/app_strings.dart';
 import '../core/auth/client_auth_provider.dart';
 import '../core/api/client_api_service.dart';
+import '../core/theme/client_theme.dart';
 
+/// QR check-in screen, styled to the PowerFit Member App design: a white QR
+/// card glowing crimson on a dark radial ground, with the member's name,
+/// status pill, live validity countdown, and refresh.
 class QrScreen extends StatefulWidget {
   const QrScreen({super.key});
 
@@ -35,15 +40,11 @@ class _QrScreenState extends State<QrScreen> {
   Future<void> _loadQrCode() async {
     final client = context.read<ClientAuthProvider>().currentClient;
     if (client != null && mounted) {
-      print('🔍 Loading QR Code: ${client.qrCode}');
       setState(() {
         _qrCode = client.qrCode;
-        // Set expiry to 1 hour from now by default
         _expiresAt = DateTime.now().add(const Duration(hours: 1));
         _startCountdown();
       });
-    } else {
-      print('❌ No client found or widget not mounted');
     }
   }
 
@@ -61,7 +62,6 @@ class _QrScreenState extends State<QrScreen> {
       setState(() {
         _secondsRemaining = remaining > 0 ? remaining : 0;
       });
-
       if (_secondsRemaining == 0) {
         _countdownTimer?.cancel();
       }
@@ -76,7 +76,6 @@ class _QrScreenState extends State<QrScreen> {
 
   Future<void> _refreshQrCode() async {
     setState(() => _isRefreshing = true);
-
     try {
       final apiService = context.read<ClientApiService>();
       final response = await apiService.refreshQrCode();
@@ -87,12 +86,11 @@ class _QrScreenState extends State<QrScreen> {
           _expiresAt = DateTime.parse(response['data']['expires_at']);
           _startCountdown();
         });
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('QR code refreshed successfully'),
-              backgroundColor: Colors.green,
+              content: Text(S.qrRefreshed),
+              backgroundColor: Color(0xFF10B981),
             ),
           );
         }
@@ -101,15 +99,13 @@ class _QrScreenState extends State<QrScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to refresh: $e'),
+            content: Text(S.failedToRefresh(e.toString())),
             backgroundColor: Colors.red,
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isRefreshing = false);
-      }
+      if (mounted) setState(() => _isRefreshing = false);
     }
   }
 
@@ -117,298 +113,204 @@ class _QrScreenState extends State<QrScreen> {
   Widget build(BuildContext context) {
     final client = context.watch<ClientAuthProvider>().currentClient;
     final isExpired = _secondsRemaining == 0;
-    
-    // Always generate a valid QR code even if inactive
+
     String displayQrCode;
     if (_qrCode?.isNotEmpty == true) {
       displayQrCode = _qrCode!;
     } else if (client != null && client.qrCode.isNotEmpty) {
       displayQrCode = client.qrCode;
     } else {
-      // Fallback: generate QR code from customer ID
       displayQrCode = 'customer_id:${client?.id ?? 0}';
     }
-    
-    // Ensure QR code has correct format for scanner
-    if (!displayQrCode.startsWith('customer_id:') && 
+    if (!displayQrCode.startsWith('customer_id:') &&
         !displayQrCode.startsWith('GYM-') &&
         !displayQrCode.startsWith('CUST-')) {
-      // If it's just a number or invalid format, wrap it
       if (RegExp(r'^\d+$').hasMatch(displayQrCode)) {
         displayQrCode = 'customer_id:$displayQrCode';
       } else if (client?.id != null) {
         displayQrCode = 'customer_id:${client!.id}';
       }
     }
-    
-    final canScan = client != null && !isExpired; // Remove isActive requirement
-    final showInactiveWarning = client != null && !client.isActive;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/home');
-            }
-          },
+    final canScan = client != null && !isExpired;
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, -0.35),
+          radius: 1.1,
+          colors: [Color(0xFF2A0A12), ClientTheme.darkGrey],
+          stops: [0.0, 0.7],
         ),
-        title: const Text('My QR Code'),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Status indicator
-              if (client != null) ...[
-                _buildStatusIndicator(client.subscriptionStatus),
-                const SizedBox(height: 12),
-                // Warning if inactive
-                if (showInactiveWarning) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header (back button only when this screen was pushed as a route).
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
+                children: [
+                  if (context.canPop())
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => context.pop(),
+                    )
+                  else
+                    const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      S.entryCode,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning, color: Colors.orange, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'QR code is valid, but you have no active subscription. Please activate a subscription to use gym services.',
-                            style: TextStyle(
-                              color: Colors.orange[800],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  ),
+                  IconButton(
+                    icon: _isRefreshing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.refresh, color: Colors.white),
+                    tooltip: S.refreshQRCode,
+                    onPressed: _isRefreshing ? null : _refreshQrCode,
                   ),
                 ],
-                const SizedBox(height: 24),
-              ],
-
-              // QR Code - Always show in full color for scanning
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Theme.of(context).primaryColor.withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: QrImageView(
-                  data: displayQrCode,
-                  version: QrVersions.auto,
-                  size: 250,
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black, // Always black for best scanning
-                  errorCorrectionLevel: QrErrorCorrectLevel.H, // High error correction for better scanning
-                  gapless: true, // Ensures QR code works on all devices
-                  embeddedImageStyle: const QrEmbeddedImageStyle(
-                    size: Size(40, 40),
-                  ),
-                ),
               ),
-              const SizedBox(height: 12),
-              
-              // Debug info
-              Text(
-                'Scannable: ${canScan ? "Yes" : "Expired"}',
-                style: TextStyle(
-                  color: canScan ? Colors.green : Colors.orange,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // QR code text
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  displayQrCode,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Countdown timer
-              if (_expiresAt != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isExpired
-                        ? Colors.red.withOpacity(0.2)
-                        : Theme.of(context).primaryColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isExpired
-                          ? Colors.red
-                          : Theme.of(context).primaryColor,
-                      width: 2,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isExpired ? Icons.error : Icons.timer,
-                        color: isExpired
-                            ? Colors.red
-                            : Theme.of(context).primaryColor,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        isExpired
-                            ? 'QR Code Expired'
-                            : 'Expires in: ${_formatCountdown()}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: isExpired
-                                  ? Colors.red
-                                  : Theme.of(context).primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-
-              // Refresh button
-              ElevatedButton.icon(
-                onPressed: _isRefreshing ? null : _refreshQrCode,
-                icon: _isRefreshing
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Icon(Icons.refresh),
-                label: const Text('Refresh QR Code'),
-              ),
-
-              const SizedBox(height: 32),
-
-              // Instructions
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'How to use',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
                     const SizedBox(height: 12),
+                    // White QR card with crimson glow.
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ClientTheme.primaryRed.withValues(alpha: 0.3),
+                            blurRadius: 40,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: QrImageView(
+                        data: displayQrCode,
+                        version: QrVersions.auto,
+                        size: 220,
+                        backgroundColor: Colors.white,
+                        // ignore: deprecated_member_use
+                        foregroundColor: Colors.black,
+                        errorCorrectionLevel: QrErrorCorrectLevel.H,
+                        gapless: true,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
                     Text(
-                      '• Show this QR code at gym entrance\n'
-                      '• QR code is valid for 1 hour\n'
-                      '• Refresh if expired\n'
-                      '• Keep phone screen bright for scanning',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      client?.fullName ?? S.guest,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 4),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Text(
+                        displayQrCode,
+                        style: const TextStyle(
+                            color: ClientTheme.textGrey,
+                            fontFamily: 'monospace',
+                            fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _statusPill(client?.subscriptionStatus ?? 'inactive',
+                        client?.branchName),
+                    const SizedBox(height: 12),
+                    _countdownChip(isExpired),
+                    const SizedBox(height: 20),
+                    Text(
+                      canScan ? S.pointCodeAtScanner : S.qrCodeExpired,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: ClientTheme.subtleGrey, fontSize: 13),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusIndicator(String status) {
-    Color color;
-    IconData icon;
-    String message;
-
+  Widget _statusPill(String status, String? branch) {
+    Color dot;
+    String label;
     switch (status.toLowerCase()) {
       case 'active':
-        color = Colors.green;
-        icon = Icons.check_circle;
-        message = 'Active Subscription';
+        dot = const Color(0xFF10B981);
+        label = S.activeSubscriptionStatus;
         break;
       case 'frozen':
-        color = Colors.blue;
-        icon = Icons.ac_unit;
-        message = 'Subscription Frozen';
+        dot = const Color(0xFF3B82F6);
+        label = S.subscriptionFrozenStatus;
         break;
       case 'stopped':
-        color = Colors.red;
-        icon = Icons.cancel;
-        message = 'Subscription Stopped';
+        dot = ClientTheme.primaryRed;
+        label = S.subscriptionStoppedStatus;
         break;
       default:
-        color = Colors.grey;
-        icon = Icons.info;
-        message = 'Inactive';
+        dot = const Color(0xFF6A6A6A);
+        label = S.inactiveStatus;
     }
-
+    final text = branch != null ? '$branch · $label' : label;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: ClientTheme.cardGrey,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color, width: 2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 8),
-          Text(
-            message,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
           ),
+          const SizedBox(width: 10),
+          Text(text,
+              style: const TextStyle(color: ClientTheme.textGrey, fontSize: 13)),
         ],
       ),
+    );
+  }
+
+  Widget _countdownChip(bool isExpired) {
+    if (_expiresAt == null) return const SizedBox.shrink();
+    final color = isExpired ? ClientTheme.primaryRed : Colors.white70;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(isExpired ? Icons.error_outline : Icons.timer_outlined,
+            size: 16, color: color),
+        const SizedBox(width: 6),
+        Text(
+          isExpired ? S.qrCodeExpired : S.expiresIn(_formatCountdown()),
+          style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
 }

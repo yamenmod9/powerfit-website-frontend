@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/widgets/loading_indicator.dart';
+import '../../../core/providers/gym_branding_provider.dart';
 import '../providers/reception_provider.dart';
+import '../../../core/localization/app_strings.dart';
 
 class RegisterCustomerDialog extends StatefulWidget {
   const RegisterCustomerDialog({super.key});
@@ -31,6 +33,20 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
     _weightController.dispose();
     _heightController.dispose();
     super.dispose();
+  }
+
+  /// Build the customer email using the gym's domain.
+  /// If the user typed just a name (no @), append @gymname.com.
+  /// If they typed a full email, use it as-is.
+  /// If empty, return null.
+  String? _buildEmail() {
+    final text = _emailController.text.trim();
+    if (text.isEmpty) return null;
+    if (text.contains('@')) return text;
+
+    // Auto-append gym domain
+    final branding = context.read<GymBrandingProvider>();
+    return '$text@${branding.emailDomain}';
   }
 
   Future<void> _handleSubmit() async {
@@ -63,7 +79,7 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
         age: int.parse(_ageController.text),
         gender: _gender,
         phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        email: _buildEmail(),
         qrCode: null, // QR code will be generated from customer ID after registration
       );
 
@@ -89,10 +105,10 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(result['message'] ?? 'Customer registered successfully'),
+                  Text(result['message'] ?? S.customerRegistered),
                   if (customerId != null)
                     Text(
-                      'Customer ID: $customerId',
+                      S.customerIdCreated(customerId),
                       style: const TextStyle(fontSize: 12),
                     ),
                 ],
@@ -107,16 +123,16 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Registration Failed'),
+              title: Text(S.registrationFailed),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(result['message'] ?? 'Failed to register customer'),
+                    Text(result['message'] ?? S.failedToRegister),
                     if (result['error'] != null) ...[
                       const SizedBox(height: 12),
-                      const Text('Details:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(S.details, style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       Text(
                         result['error'].toString(),
@@ -129,7 +145,7 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
+                  child: Text(S.ok),
                 ),
               ],
             ),
@@ -142,12 +158,12 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text('An unexpected error occurred:\n${e.toString()}'),
+            title: Text(S.error),
+            content: Text('${S.unexpectedError}:\n${e.toString()}'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
+                child: Text(S.ok),
               ),
             ],
           ),
@@ -198,7 +214,7 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Register New Customer',
+                      S.registerNewCustomer,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -229,18 +245,18 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
                       TextFormField(
                         controller: _nameController,
                         decoration: const InputDecoration(
-                          labelText: 'Full Name *',
+                          labelText: S.fullNameRequired,
                           prefixIcon: Icon(Icons.person, size: 20),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                        validator: (v) => v?.isEmpty ?? true ? S.required : null,
                       ),
                       const SizedBox(height: 12),
 
                       TextFormField(
                         controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone',
+                        decoration: InputDecoration(
+                          labelText: S.phone,
                           prefixIcon: Icon(Icons.phone, size: 20),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
@@ -248,27 +264,41 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
                       ),
                       const SizedBox(height: 12),
 
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email, size: 20),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
+                      Builder(
+                        builder: (context) {
+                          final branding = context.watch<GymBrandingProvider>();
+                          final domain = branding.emailDomain;
+                          return TextFormField(
+                            controller: _emailController,
+                            decoration: InputDecoration(
+                              labelText: S.email,
+                              hintText: 'name@$domain',
+                              prefixIcon: const Icon(Icons.email, size: 20),
+                              suffixText: '@$domain',
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            onChanged: (value) {
+                              // Auto-append gym domain if user types just a username
+                              if (value.isNotEmpty && !value.contains('@')) {
+                                // Don't modify while typing — hint shows the domain
+                              }
+                            },
+                          );
+                        },
                       ),
                       const SizedBox(height: 12),
 
                       DropdownButtonFormField<String>(
                         value: _gender,
                         decoration: const InputDecoration(
-                          labelText: 'Gender *',
+                          labelText: S.genderRequired,
                           prefixIcon: Icon(Icons.wc, size: 18),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'male', child: Text('Male')),
-                          DropdownMenuItem(value: 'female', child: Text('Female')),
+                          DropdownMenuItem(value: 'male', child: Text(S.male)),
+                          DropdownMenuItem(value: 'female', child: Text(S.female)),
                         ],
                         onChanged: (v) => setState(() => _gender = v!),
                       ),
@@ -277,31 +307,31 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
                       TextFormField(
                         controller: _ageController,
                         decoration: const InputDecoration(
-                          labelText: 'Age *',
+                          labelText: S.ageRequired,
                           prefixIcon: Icon(Icons.cake, size: 20),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
                         keyboardType: TextInputType.number,
-                        validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                        validator: (v) => v?.isEmpty ?? true ? S.required : null,
                       ),
                       const SizedBox(height: 12),
 
                       TextFormField(
                         controller: _weightController,
-                        decoration: const InputDecoration(
-                          labelText: 'Weight (kg) *',
+                        decoration: InputDecoration(
+                          labelText: S.weightRequired,
                           prefixIcon: Icon(Icons.monitor_weight, size: 20),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
                         keyboardType: TextInputType.number,
-                        validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                        validator: (v) => v?.isEmpty ?? true ? S.required : null,
                       ),
                       const SizedBox(height: 12),
 
                       TextFormField(
                         controller: _heightController,
-                        decoration: const InputDecoration(
-                          labelText: 'Height (cm) *',
+                        decoration: InputDecoration(
+                          labelText: S.heightRequired,
                           prefixIcon: Icon(Icons.height, size: 20),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
@@ -329,7 +359,7 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'QR code & health metrics will be auto-generated',
+                                S.qrAndHealthAutoGenerated,
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: Theme.of(context).colorScheme.primary,
                                       fontSize: 12,
@@ -358,14 +388,14 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
                 children: [
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                    child: Text(S.cancel),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleSubmit,
                     child: _isLoading
                         ? const SmallLoadingIndicator()
-                        : const Text('Register'),
+                        : Text(S.register),
                   ),
                 ],
               ),

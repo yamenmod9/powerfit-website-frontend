@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../core/auth/auth_provider.dart';
 import '../core/constants/app_constants.dart';
+import '../core/providers/gym_branding_provider.dart';
 import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/gym_setup_wizard.dart';
 import '../features/owner/screens/owner_dashboard.dart';
 import '../features/branch_manager/screens/branch_manager_dashboard.dart';
 import '../features/reception/screens/reception_main_screen.dart';
@@ -10,11 +13,12 @@ import '../features/accountant/screens/accountant_dashboard.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
+  final GymBrandingProvider brandingProvider;
 
-  AppRouter(this.authProvider);
+  AppRouter(this.authProvider, this.brandingProvider);
 
   late final GoRouter router = GoRouter(
-    refreshListenable: authProvider,
+    refreshListenable: Listenable.merge([authProvider, brandingProvider]),
     initialLocation: '/login',
     redirect: (context, state) {
       final isAuthenticated = authProvider.isAuthenticated;
@@ -22,6 +26,7 @@ class AppRouter {
       final userRole = authProvider.userRole;
 
       final isLoginRoute = state.matchedLocation == '/login';
+      final isSetupRoute = state.matchedLocation == '/gym-setup';
 
       // Still loading auth state
       if (isLoading) {
@@ -31,6 +36,14 @@ class AppRouter {
       // Not authenticated, redirect to login
       if (!isAuthenticated) {
         return isLoginRoute ? null : '/login';
+      }
+
+      // Owner with incomplete gym setup → force wizard
+      if (userRole == AppConstants.roleOwner && !brandingProvider.isSetupComplete) {
+        // Already on the setup page — stay there
+        if (isSetupRoute) return null;
+        // Redirect to wizard
+        return '/gym-setup';
       }
 
       // Authenticated, on login page, redirect to role dashboard
@@ -83,6 +96,10 @@ class AppRouter {
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/gym-setup',
+        builder: (context, state) => const GymSetupWizard(),
       ),
       GoRoute(
         path: '/owner',

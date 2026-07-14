@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../../shared/widgets/biometric_settings_section.dart';
+import '../../../shared/widgets/notification_settings_section.dart';
 
 class ManagerSettingsScreen extends StatelessWidget {
   const ManagerSettingsScreen({super.key});
@@ -11,7 +14,7 @@ class ManagerSettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(S.settings),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 120), // Extra padding for navbar
@@ -32,7 +35,7 @@ class ManagerSettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    authProvider.username ?? 'Manager',
+                    authProvider.username ?? S.manager,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -40,7 +43,7 @@ class ManagerSettingsScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Chip(
                     label: Text(
-                      'MANAGER',
+                      S.managerRole,
                       style: const TextStyle(fontSize: 12),
                     ),
                     backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -48,7 +51,7 @@ class ManagerSettingsScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   if (authProvider.branchId != null)
                     Text(
-                      'Branch ID: ${authProvider.branchId}',
+                      S.branchIdLabel(authProvider.branchId ?? ''),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.grey,
                       ),
@@ -61,7 +64,7 @@ class ManagerSettingsScreen extends StatelessWidget {
 
           // Appearance Section
           Text(
-            'Appearance',
+            S.appearance,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -72,13 +75,13 @@ class ManagerSettingsScreen extends StatelessWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.dark_mode),
-                  title: const Text('Theme'),
-                  subtitle: const Text('Dark Mode (Default)'),
+                  title: Text(S.theme),
+                  subtitle: Text(S.darkModeDefault),
                   trailing: const Icon(Icons.info_outline),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('App uses dark theme by default'),
+                      SnackBar(
+                        content: Text(S.appUsesDarkTheme),
                       ),
                     );
                   },
@@ -86,13 +89,13 @@ class ManagerSettingsScreen extends StatelessWidget {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.language),
-                  title: const Text('Language'),
-                  subtitle: const Text('English (Default)'),
+                  title: Text(S.language),
+                  subtitle: Text(S.arabicDefault),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Language selection coming soon'),
+                      SnackBar(
+                        content: Text(S.languageComingSoon),
                       ),
                     );
                   },
@@ -104,7 +107,7 @@ class ManagerSettingsScreen extends StatelessWidget {
 
           // Account Section
           Text(
-            'Account',
+            S.account,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -115,26 +118,26 @@ class ManagerSettingsScreen extends StatelessWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.lock),
-                  title: const Text('Change Password'),
+                  title: Text(S.changePassword),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showChangePasswordDialog(context),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.info),
-                  title: const Text('About App'),
+                  title: Text(S.aboutApp),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showAboutDialog(context),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.help),
-                  title: const Text('Help & Support'),
+                  title: Text(S.helpSupport),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Help & Support coming soon'),
+                      SnackBar(
+                        content: Text(S.helpSupportComingSoon),
                       ),
                     );
                   },
@@ -142,6 +145,13 @@ class ManagerSettingsScreen extends StatelessWidget {
               ],
             ),
           ),
+
+          // Security / Biometric Section
+          const BiometricSettingsSection(),
+
+          // Notification settings
+          const NotificationSettingsSection(),
+
           const SizedBox(height: 24),
 
           // Logout Button
@@ -151,7 +161,7 @@ class ManagerSettingsScreen extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () => _confirmLogout(context, authProvider),
               icon: const Icon(Icons.logout),
-              label: const Text('Logout'),
+              label: Text(S.logout),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
@@ -172,33 +182,33 @@ class ManagerSettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Change Password'),
+        title: Text(S.changePassword),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: currentPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'Current Password',
-                prefixIcon: Icon(Icons.lock),
+              decoration: InputDecoration(
+                labelText: S.currentPassword,
+                prefixIcon: const Icon(Icons.lock),
               ),
               obscureText: true,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: newPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'New Password',
-                prefixIcon: Icon(Icons.lock_outline),
+              decoration: InputDecoration(
+                labelText: S.newPassword,
+                prefixIcon: const Icon(Icons.lock_outline),
               ),
               obscureText: true,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: confirmPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'Confirm New Password',
-                prefixIcon: Icon(Icons.lock_outline),
+              decoration: InputDecoration(
+                labelText: S.confirmNewPassword,
+                prefixIcon: const Icon(Icons.lock_outline),
               ),
               obscureText: true,
             ),
@@ -207,18 +217,18 @@ class ManagerSettingsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(S.cancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Password change functionality coming soon'),
+                SnackBar(
+                  content: Text(S.passwordChangeComingSoon),
                 ),
               );
             },
-            child: const Text('Change'),
+            child: Text(S.change),
           ),
         ],
       ),
@@ -229,25 +239,25 @@ class ManagerSettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About Gym Management App'),
-        content: const Column(
+        title: Text(S.aboutGymManagement),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Version: 1.0.0'),
-            SizedBox(height: 8),
-            Text('Build: February 2026'),
-            SizedBox(height: 16),
+            Text(S.version100),
+            const SizedBox(height: 8),
+            Text(S.buildDate),
+            const SizedBox(height: 16),
             Text(
-              'A comprehensive gym management system for owners, managers, accountants, and staff.',
-              style: TextStyle(fontSize: 14),
+              S.aboutDescription,
+              style: const TextStyle(fontSize: 14),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(S.close),
           ),
         ],
       ),
@@ -258,12 +268,12 @@ class ManagerSettingsScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(S.logout),
+        content: Text(S.confirmLogout),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(S.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -271,7 +281,7 @@ class ManagerSettingsScreen extends StatelessWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Logout'),
+            child: Text(S.logout),
           ),
         ],
       ),

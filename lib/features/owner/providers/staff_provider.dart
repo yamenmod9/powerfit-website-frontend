@@ -109,5 +109,31 @@ class StaffProvider extends ChangeNotifier {
   Future<void> refresh() async {
     await loadStaff();
   }
+
+  /// Create a new staff member.
+  /// [data] should contain: username, email, password, full_name, role,
+  /// and optionally phone and branch_id.
+  Future<void> createStaff(Map<String, dynamic> data) async {
+    try {
+      final response = await _apiService.post('/api/users', data: data);
+      debugPrint('✅ Staff created: ${response.statusCode}');
+      await loadStaff(); // Refresh the list
+    } catch (e) {
+      debugPrint('❌ Error creating staff: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete a staff member by ID.
+  Future<void> deleteStaff(int userId) async {
+    try {
+      final response = await _apiService.delete('/api/users/$userId');
+      debugPrint('✅ Staff deleted: ${response.statusCode}');
+      await loadStaff();
+    } catch (e) {
+      debugPrint('❌ Error deleting staff: $e');
+      rethrow;
+    }
+  }
 }
 

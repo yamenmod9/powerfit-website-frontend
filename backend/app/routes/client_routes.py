@@ -128,14 +128,29 @@ def get_client_profile():
     response_data['password_changed'] = customer.password_changed
     response_data['qr_code_active'] = active_subscription is not None  # Add QR active status
     response_data['qr_image_url'] = f'/api/client/qr-image'
+
+    # Include gym branding so client app can refresh colors on startup
+    from app.models.gym import Gym
+    gym = None
+    if customer.branch and hasattr(customer.branch, 'gym_id') and customer.branch.gym_id:
+        gym = Gym.query.get(customer.branch.gym_id)
+    if not gym:
+        gym = Gym.query.first()
+    response_data['gym'] = gym.to_dict() if gym else None
     response_data['account_deletion'] = deletion_status
-    
+
     return success_response(response_data)
 
 
 @client_bp.route('/account/delete-request', methods=['POST'])
 @client_token_required
 def request_account_deletion():
+    """
+    Create or refresh an account deletion request.
+
+    The account remains active during the 90-day grace period,
+    then is soft-deleted automatically on next authenticated interaction.
+    """
     customer = get_current_client()
 
     if not customer:
@@ -161,6 +176,7 @@ def request_account_deletion():
 @client_bp.route('/account/delete-request', methods=['DELETE'])
 @client_token_required
 def cancel_account_deletion():
+    """Cancel a previously requested account deletion."""
     customer = get_current_client()
 
     if not customer:

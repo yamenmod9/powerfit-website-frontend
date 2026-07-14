@@ -1,11 +1,15 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../core/localization/app_strings.dart';
+import '../core/theme/client_theme.dart';
 import 'client_overview_tab.dart';
 import 'qr_screen.dart';
-import 'subscription_screen.dart';
 import 'entry_history_screen.dart';
 import 'settings_screen.dart';
 
+/// Bottom-tab shell for the member app. Four tabs matching the
+/// PowerFit Member App design: Home, Check-in (QR), History, Profile.
+/// The full SubscriptionScreen stays reachable from the Home subscription
+/// card and the Profile "manage subscription" row, so no feature is lost.
 class ClientMainScreen extends StatefulWidget {
   const ClientMainScreen({super.key});
 
@@ -16,95 +20,88 @@ class ClientMainScreen extends StatefulWidget {
 class _ClientMainScreenState extends State<ClientMainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = const [
-    ClientOverviewTab(),
-    QrScreen(),
-    SubscriptionScreen(),
-    EntryHistoryScreen(),
-    SettingsScreen(),
+  late final List<Widget> _screens = [
+    ClientOverviewTab(onGoToCheckIn: () => _select(1)),
+    const QrScreen(),
+    const EntryHistoryScreen(),
+    const SettingsScreen(),
   ];
+
+  void _select(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true,
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
+      backgroundColor: ClientTheme.darkGrey,
+      body: IndexedStack(index: _selectedIndex, children: _screens),
+      bottomNavigationBar: _MemberNavBar(
+        selectedIndex: _selectedIndex,
+        onSelect: _select,
+      ),
+    );
+  }
+}
+
+class _MemberNavBar extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+
+  const _MemberNavBar({required this.selectedIndex, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <_NavItem>[
+      const _NavItem(Icons.home_rounded, Icons.home_outlined, S.home),
+      const _NavItem(Icons.qr_code_rounded, Icons.qr_code_outlined, S.checkInNav),
+      const _NavItem(Icons.history_rounded, Icons.history_outlined, S.history),
+      const _NavItem(Icons.person_rounded, Icons.person_outline, S.profile),
+    ];
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: ClientTheme.mediumGrey,
+        border: Border(
+          top: BorderSide(color: Colors.white10, width: 1),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                  width: 1,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              for (var i = 0; i < items.length; i++)
+                _buildTab(items[i], i == selectedIndex, () => onSelect(i)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTab(_NavItem item, bool selected, VoidCallback onTap) {
+    final color = selected ? ClientTheme.primaryRed : const Color(0xFF6A6A6A);
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(selected ? item.activeIcon : item.icon, size: 24, color: color),
+              const SizedBox(height: 4),
+              Text(
+                item.label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: color,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  textTheme: Theme.of(context).textTheme.copyWith(
-                    labelSmall: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                child: NavigationBar(
-                  selectedIndex: _selectedIndex,
-                  onDestinationSelected: (index) {
-                    setState(() {
-                      _selectedIndex = index;
-                    });
-                  },
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  height: 70,
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.dashboard_outlined, size: 22),
-                      selectedIcon: Icon(Icons.dashboard, size: 22),
-                      label: 'Home',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.qr_code_outlined, size: 22),
-                      selectedIcon: Icon(Icons.qr_code, size: 22),
-                      label: 'QR',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.card_membership_outlined, size: 22),
-                      selectedIcon: Icon(Icons.card_membership, size: 22),
-                      label: 'Plan',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.history_outlined, size: 22),
-                      selectedIcon: Icon(Icons.history, size: 22),
-                      label: 'History',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.settings_outlined, size: 22),
-                      selectedIcon: Icon(Icons.settings, size: 22),
-                      label: 'Settings',
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            ],
           ),
         ),
       ),
@@ -112,3 +109,9 @@ class _ClientMainScreenState extends State<ClientMainScreen> {
   }
 }
 
+class _NavItem {
+  final IconData activeIcon;
+  final IconData icon;
+  final String label;
+  const _NavItem(this.activeIcon, this.icon, this.label);
+}

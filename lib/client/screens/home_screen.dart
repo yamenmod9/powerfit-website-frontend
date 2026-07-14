@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/localization/app_strings.dart';
 import '../core/auth/client_auth_provider.dart';
 import '../core/api/client_api_service.dart';
 import '../models/subscription_model.dart';
+import '../../shared/widgets/skeleton_loader.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -68,11 +70,11 @@ class _HomeScreenState extends State<HomeScreen> {
         } else {
           debugPrint('⚠️ No active_subscription or subscription field found');
           setState(() {
-            _error = 'No active subscription found';
+            _error = S.noActiveSubFound;
           });
         }
       } else {
-        final errorMsg = response['message'] ?? 'Failed to load profile';
+        final errorMsg = response['message'] ?? S.error;
         debugPrint('⚠️ Profile load failed: $errorMsg');
         setState(() {
           _error = errorMsg;
@@ -85,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Check if it's a 404 error
       String errorMsg = e.toString();
       if (errorMsg.contains('404')) {
-        errorMsg = 'Subscription endpoint not available. Please contact support.';
+        errorMsg = S.subEndpointNotAvailable;
       }
       
       setState(() {
@@ -104,20 +106,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: const Text(S.dashboard),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => context.goNamed('settings'),
-            tooltip: 'Settings',
+            tooltip: S.settings,
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadSubscription,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const DashboardSkeleton()
             : _error != null
                 ? Center(
                     child: Column(
@@ -129,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _loadSubscription,
-                          child: const Text('Retry'),
+                          child: const Text(S.retry),
                         ),
                       ],
                     ),
@@ -148,12 +150,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Welcome back,',
+                                  S.welcomeBack,
                                   style: Theme.of(context).textTheme.bodyLarge,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  client?.fullName ?? 'Guest',
+                                  client?.fullName ?? S.guest,
                                   style: Theme.of(context).textTheme.headlineMedium,
                                 ),
                                 if (client?.branchName != null) ...[
@@ -186,25 +188,25 @@ class _HomeScreenState extends State<HomeScreen> {
                               context,
                               icon: Icons.warning_amber,
                               color: Colors.orange,
-                              title: 'Subscription Expiring Soon',
+                              title: S.subExpiringSoon,
                               message:
-                                  'Your subscription expires in ${_subscription!.daysRemaining} days',
+                                  S.subExpiresInDays(_subscription!.daysRemaining),
                             ),
                           if (_subscription!.isExpired)
                             _buildAlertCard(
                               context,
                               icon: Icons.error,
                               color: Colors.red,
-                              title: 'Subscription Expired',
-                              message: 'Please renew your subscription',
+                              title: S.subExpired,
+                              message: S.pleaseRenew,
                             ),
                           if (_subscription!.isFrozen)
                             _buildAlertCard(
                               context,
                               icon: Icons.ac_unit,
                               color: Colors.blue,
-                              title: 'Subscription Frozen',
-                              message: 'Your subscription is currently frozen',
+                              title: S.subFrozen,
+                              message: S.subCurrentlyFrozen,
                             ),
                           if (_subscription!.isRunningLow)
                             _buildAlertCard(
@@ -212,11 +214,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               icon: Icons.warning_amber,
                               color: Colors.orange,
                               title: _subscription!.displayMetric == 'coins'
-                                  ? 'Low Coin Balance'
-                                  : 'Few Sessions Left',
+                                  ? S.lowCoinBalance
+                                  : S.fewSessionsLeft,
                               message: _subscription!.displayMetric == 'coins'
-                                  ? 'Only ${_subscription!.remainingCoins} coins remaining'
-                                  : 'Only ${_subscription!.displayValue} sessions remaining',
+                                  ? S.onlyCoinsRemaining(_subscription!.remainingCoins)
+                                  : S.onlySessionsRemaining(_subscription!.displayValue),
                             ),
                           const SizedBox(height: 16),
 
@@ -231,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
-                                        'Subscription',
+                                        S.subscription,
                                         style: Theme.of(context).textTheme.titleLarge,
                                       ),
                                       _buildStatusBadge(_subscription!.status),
@@ -241,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _buildInfoRow(
                                     context,
                                     icon: Icons.card_membership,
-                                    label: 'Type',
+                                    label: S.type,
                                     value: _getTypeLabel(_subscription!.subscriptionType, _subscription!.displayMetric),
                                   ),
                                   if (_subscription!.displayMetric == 'time' &&
@@ -250,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     _buildInfoRow(
                                       context,
                                       icon: Icons.calendar_today,
-                                      label: 'Expires',
+                                      label: S.expiresLabel,
                                       value:
                                           '${_subscription!.expiryDate!.day.toString().padLeft(2,'0')}/${_subscription!.expiryDate!.month.toString().padLeft(2,'0')}/${_subscription!.expiryDate!.year}',
                                     ),
@@ -272,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         // Quick actions
                         Text(
-                          'Quick Actions',
+                          S.quickActions,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 12),
@@ -282,8 +284,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: _buildActionCard(
                                 context,
                                 icon: Icons.qr_code_2,
-                                label: 'My QR Code',
-                                onTap: () => context.go('/qr'),
+                                label: S.myQRCode,
+                                onTap: () => context.go('/client/qr'),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -291,8 +293,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: _buildActionCard(
                                 context,
                                 icon: Icons.card_membership,
-                                label: 'Subscription',
-                                onTap: () => context.go('/subscription'),
+                                label: S.subscription,
+                                onTap: () => context.go('/client/subscription'),
                               ),
                             ),
                           ],
@@ -301,8 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         _buildActionCard(
                           context,
                           icon: Icons.history,
-                          label: 'Entry History',
-                          onTap: () => context.go('/history'),
+                          label: S.entryHistory,
+                          onTap: () => context.go('/client/history'),
                         ),
                       ],
                     ),
@@ -369,6 +371,21 @@ class _HomeScreenState extends State<HomeScreen> {
         color = Colors.grey;
     }
 
+    String statusText;
+    switch (status.toLowerCase()) {
+      case 'active':
+        statusText = S.active;
+        break;
+      case 'frozen':
+        statusText = S.subFrozen;
+        break;
+      case 'stopped':
+        statusText = S.stopSubscription;
+        break;
+      default:
+        statusText = status;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -377,7 +394,7 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: color),
       ),
       child: Text(
-        status.toUpperCase(),
+        statusText,
         style: TextStyle(
           color: color,
           fontSize: 12,
@@ -422,13 +439,13 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getTypeLabel(String rawType, String? metric) {
     switch (metric) {
       case 'coins':
-        return 'Coin-based';
+        return S.coinBased;
       case 'time':
-        return 'Time-based';
+        return S.timeBased;
       case 'sessions':
-        return 'Session-based';
+        return S.sessionBased;
       case 'training':
-        return 'Personal Training';
+        return S.personalTrainingType;
       default:
         return rawType
             .replaceAll('_', ' ')
@@ -455,15 +472,15 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getDisplayLabelText(String? metric) {
     switch (metric) {
       case 'coins':
-        return 'Remaining';
+        return S.remainingLabel;
       case 'time':
-        return 'Time Left';
+        return S.timeLeft;
       case 'sessions':
-        return 'Sessions';
+        return S.sessionsLabel;
       case 'training':
-        return 'Training';
+        return S.training;
       default:
-        return 'Remaining';
+        return S.remainingLabel;
     }
   }
 

@@ -39,6 +39,7 @@ A production-ready Flask REST API backend for managing gym/sports club operation
 - ✅ **Visit/Class Tracking** - Automatic coin deduction system
 - ✅ **Entry Validation** - Staff endpoints for gate scanners
 - ✅ **Client Statistics** - Visit history, streaks, and analytics
+- ✅ **Public Privacy Policy Page** - Play Console-ready endpoint at `/privacy-policy`
 - 📖 **[Complete Client API Docs →](CLIENT_FEATURES_API.md)**
 
 ### Services Supported
@@ -172,6 +173,7 @@ backend/
 3. **Access the API**
    - API Base: `http://localhost:5000`
    - Test Page: `http://localhost:5000/test`
+   - Privacy Policy: `http://localhost:5000/privacy-policy`
 
 ### Manual Setup
 

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
 import '../../../core/utils/helpers.dart';
 import '../providers/owner_dashboard_provider.dart';
+import '../../../core/localization/app_strings.dart';
 
 class SmartAlertsScreen extends StatelessWidget {
   const SmartAlertsScreen({super.key});
@@ -12,7 +13,7 @@ class SmartAlertsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Smart Alerts'),
+        title: const Text(S.smartAlerts),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -25,7 +26,7 @@ class SmartAlertsScreen extends StatelessWidget {
       body: Consumer<OwnerDashboardProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
-            return const LoadingIndicator(message: 'Loading alerts...');
+            return const DashboardSkeleton();
           }
 
           if (provider.error != null) {
@@ -49,12 +50,12 @@ class SmartAlertsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No Alerts',
+                    S.noAlerts,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'All systems operating normally',
+                    S.allSystemsNormal,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Colors.grey[600],
                         ),
@@ -65,9 +66,9 @@ class SmartAlertsScreen extends StatelessWidget {
           }
 
           // Group alerts by type
-          final criticalAlerts = alerts.where((a) => a['priority'] == 'critical' || a['severity'] == 'high').toList();
-          final warningAlerts = alerts.where((a) => a['priority'] == 'warning' || a['severity'] == 'medium').toList();
-          final infoAlerts = alerts.where((a) => a['priority'] == 'info' || a['severity'] == 'low').toList();
+          final criticalAlerts = alerts.where((a) => a['priority'] == 'critical' || a['severity'] == 'high' || a['risk_level'] == 'high').toList();
+          final warningAlerts = alerts.where((a) => a['priority'] == 'warning' || a['severity'] == 'medium' || a['risk_level'] == 'medium').toList();
+          final infoAlerts = alerts.where((a) => a['priority'] == 'info' || a['severity'] == 'low' || a['risk_level'] == 'low').toList();
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -84,21 +85,21 @@ class SmartAlertsScreen extends StatelessWidget {
                         context,
                         icon: Icons.error,
                         count: criticalAlerts.length,
-                        label: 'Critical',
+                        label: S.critical,
                         color: Colors.red,
                       ),
                       _buildSummaryItem(
                         context,
                         icon: Icons.warning,
                         count: warningAlerts.length,
-                        label: 'Warning',
+                        label: S.warning,
                         color: Colors.orange,
                       ),
                       _buildSummaryItem(
                         context,
                         icon: Icons.info,
                         count: infoAlerts.length,
-                        label: 'Info',
+                        label: S.info,
                         color: Colors.blue,
                       ),
                     ],
@@ -109,7 +110,7 @@ class SmartAlertsScreen extends StatelessWidget {
 
               // Critical Alerts
               if (criticalAlerts.isNotEmpty) ...[
-                _buildSectionHeader(context, 'Critical Alerts', Colors.red),
+                _buildSectionHeader(context, S.criticalAlerts, Colors.red),
                 const SizedBox(height: 12),
                 ...criticalAlerts.map((alert) => _buildAlertCard(context, alert, Colors.red)),
                 const SizedBox(height: 24),
@@ -117,7 +118,7 @@ class SmartAlertsScreen extends StatelessWidget {
 
               // Warning Alerts
               if (warningAlerts.isNotEmpty) ...[
-                _buildSectionHeader(context, 'Warnings', Colors.orange),
+                _buildSectionHeader(context, S.warnings, Colors.orange),
                 const SizedBox(height: 12),
                 ...warningAlerts.map((alert) => _buildAlertCard(context, alert, Colors.orange)),
                 const SizedBox(height: 24),
@@ -125,7 +126,7 @@ class SmartAlertsScreen extends StatelessWidget {
 
               // Info Alerts
               if (infoAlerts.isNotEmpty) ...[
-                _buildSectionHeader(context, 'Information', Colors.blue),
+                _buildSectionHeader(context, S.information, Colors.blue),
                 const SizedBox(height: 12),
                 ...infoAlerts.map((alert) => _buildAlertCard(context, alert, Colors.blue)),
               ],
@@ -193,8 +194,9 @@ class SmartAlertsScreen extends StatelessWidget {
 
   Widget _buildAlertCard(BuildContext context, Map<String, dynamic> alert, Color color) {
     final type = alert['type'] ?? alert['alert_type'] ?? 'general';
-    final message = alert['message'] ?? alert['description'] ?? 'No description';
-    final branchName = alert['branch_name'] ?? alert['branch'] ?? 'All Branches';
+    final title = alert['title'] ?? alert['message'] ?? S.alert;
+    final message = alert['description'] ?? alert['message'] ?? S.noDescription;
+    final branchName = alert['branch_name'] ?? alert['branch'] ?? S.allBranches;
     final timestamp = alert['created_at'] ?? alert['timestamp'];
 
     return Card(
@@ -209,12 +211,16 @@ class SmartAlertsScreen extends StatelessWidget {
           child: Icon(_getAlertIcon(type), color: color),
         ),
         title: Text(
-          message,
+          title,
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (message != title) ...[
+              const SizedBox(height: 4),
+              Text(message, style: TextStyle(color: Colors.grey[700])),
+            ],
             const SizedBox(height: 4),
             Row(
               children: [
@@ -244,7 +250,7 @@ class SmartAlertsScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.visibility),
                   SizedBox(width: 8),
-                  Text('View Details'),
+                  Text(S.viewDetails),
                 ],
               ),
             ),
@@ -254,7 +260,7 @@ class SmartAlertsScreen extends StatelessWidget {
                 children: [
                   Icon(Icons.check),
                   SizedBox(width: 8),
-                  Text('Dismiss'),
+                  Text(S.dismiss),
                 ],
               ),
             ),
@@ -295,22 +301,22 @@ class SmartAlertsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Alert Details'),
+        title: const Text(S.alertDetails),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Type: ${alert['type'] ?? 'N/A'}'),
+              Text(S.alertType(alert['type'] ?? S.na)),
               const SizedBox(height: 8),
-              Text('Message: ${alert['message'] ?? 'N/A'}'),
+              Text(S.alertMessage(alert['message'] ?? S.na)),
               const SizedBox(height: 8),
-              Text('Branch: ${alert['branch_name'] ?? 'N/A'}'),
+              Text(S.alertBranch(alert['branch_name'] ?? S.na)),
               const SizedBox(height: 8),
-              Text('Time: ${alert['created_at'] ?? 'N/A'}'),
+              Text(S.alertTime(alert['created_at'] ?? S.na)),
               if (alert['details'] != null) ...[
                 const SizedBox(height: 8),
-                Text('Details: ${alert['details']}'),
+                Text(S.alertDetailsFull(alert['details'])),
               ],
             ],
           ),
@@ -318,7 +324,7 @@ class SmartAlertsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text(S.close),
           ),
         ],
       ),
@@ -328,7 +334,7 @@ class SmartAlertsScreen extends StatelessWidget {
   void _dismissAlert(BuildContext context, Map<String, dynamic> alert) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Alert dismissed'),
+        content: Text(S.alertDismissed),
         duration: Duration(seconds: 2),
       ),
     );

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/widgets/loading_indicator.dart';
+import '../../../shared/widgets/skeleton_loader.dart';
 import '../providers/reception_provider.dart';
+import '../../../core/localization/app_strings.dart';
 
 class CustomersListScreen extends StatefulWidget {
   const CustomersListScreen({super.key});
@@ -58,7 +59,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading customers: $e'),
+            content: Text('${S.error}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -87,7 +88,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$label copied to clipboard'),
+        content: Text(S.copiedToClipboard(label)),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
       ),
@@ -98,7 +99,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('All Customers'),
+        title: Text(S.allCustomers),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -114,8 +115,8 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Search customers',
-                hintText: 'Name, phone, or email',
+                labelText: S.searchCustomers,
+                hintText: S.namePhoneEmail,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -135,7 +136,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
             child: Row(
               children: [
                 Text(
-                  '${_filteredCustomers.length} customers',
+                  S.customersCountLabel(_filteredCustomers.length),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -148,13 +149,13 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
           // Customer list
           Expanded(
             child: _isLoading
-                ? const LoadingIndicator()
+                ? const DashboardSkeleton()
                 : _filteredCustomers.isEmpty
                     ? Center(
                         child: Text(
                           _searchController.text.isEmpty
-                              ? 'No customers found'
-                              : 'No customers match your search',
+                              ? S.noCustomersFound
+                              : S.noCustomersMatch,
                         ),
                       )
                     : RefreshIndicator(
@@ -175,13 +176,24 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
   }
 
   Widget _buildCustomerCard(Map<String, dynamic> customer) {
-    final name = customer['full_name'] ?? 'Unknown';
-    final phone = customer['phone'] ?? 'N/A';
-    final email = customer['email'] ?? 'N/A';
-    final qrCode = customer['qr_code'] ?? 'N/A';
+    final name = customer['full_name'] ?? S.unknown;
+    final phone = customer['phone'] ?? S.na;
+    final email = customer['email'] ?? S.na;
+    final qrCode = customer['qr_code'] ?? S.na;
     // Extract temporary password - backend should return this for staff when password_changed is false
-    final tempPassword = customer['temporary_password'] ?? customer['temp_password'] ?? 'Not available';
-    final hasActiveSub = customer['has_active_subscription'] ?? false;
+    final tempPassword = customer['temporary_password'] ?? customer['temp_password'] ?? S.notAvailable;
+    final hasActiveSubRaw = customer['has_active_subscription'];
+    final activeSubsCountRaw = customer['active_subscriptions_count'] ??
+        customer['activeSubscriptionsCount'] ??
+        customer['subscriptions_count'];
+    final activeSubsCount = activeSubsCountRaw is num
+        ? activeSubsCountRaw.toInt()
+        : int.tryParse(activeSubsCountRaw?.toString() ?? '') ?? 0;
+    final hasActiveSub = hasActiveSubRaw == true ||
+      hasActiveSubRaw == 1 ||
+      hasActiveSubRaw?.toString().toLowerCase() == 'true' ||
+      hasActiveSubRaw?.toString() == '1' ||
+      activeSubsCount > 0;
     final customerId = customer['id'];
 
     return Card(
@@ -201,7 +213,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
           ),
         ),
         subtitle: Text(
-          'ID: $customerId • ${hasActiveSub ? "Active" : "No Subscription"}',
+          '${S.customerId(customerId)} • ${hasActiveSub ? S.active : S.noSubscription}',
           style: TextStyle(
             color: hasActiveSub ? Colors.green : Colors.orange,
           ),
@@ -215,24 +227,24 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
               children: [
                 // Contact Info
                 _buildInfoRow(
-                  'Phone',
+                  S.phone,
                   phone,
                   Icons.phone,
-                  onTap: () => _copyToClipboard(phone, 'Phone'),
+                  onTap: () => _copyToClipboard(phone, S.phone),
                 ),
                 const SizedBox(height: 12),
                 _buildInfoRow(
-                  'Email',
+                  S.email,
                   email,
                   Icons.email,
-                  onTap: () => _copyToClipboard(email, 'Email'),
+                  onTap: () => _copyToClipboard(email, S.email),
                 ),
                 const SizedBox(height: 12),
                 _buildInfoRow(
-                  'QR Code',
+                  S.qrCode,
                   qrCode,
                   Icons.qr_code,
-                  onTap: () => _copyToClipboard(qrCode, 'QR Code'),
+                  onTap: () => _copyToClipboard(qrCode, S.qrCode),
                 ),
                 const Divider(height: 24),
 
@@ -255,7 +267,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Client App Credentials',
+                            S.clientAppCredentials,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.blue.shade700,
@@ -266,39 +278,39 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                       ),
                       const SizedBox(height: 12),
                       _buildCredentialRow(
-                        'Login',
+                        S.login,
                         phone.isNotEmpty && phone != 'N/A' ? phone : email,
                         Icons.person,
                       ),
                       const SizedBox(height: 8),
                       _buildCredentialRow(
-                        'Password',
-                        tempPassword == 'Not available' ? '⚠️ Not available' : tempPassword,
+                        S.password,
+                        tempPassword == S.notAvailable ? S.notAvailable : tempPassword,
                         Icons.password,
                         isPassword: true,
-                        showCopy: tempPassword != 'Not available',
+                        showCopy: tempPassword != S.notAvailable,
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Icon(
-                            tempPassword == 'Not available'
+                            tempPassword == S.notAvailable
                                 ? Icons.warning_amber
                                 : Icons.info_outline,
                             size: 16,
-                            color: tempPassword == 'Not available'
+                            color: tempPassword == S.notAvailable
                                 ? Colors.red
                                 : Colors.blue,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              tempPassword == 'Not available'
-                                  ? '⚠️ Password not returned by backend — needs fix'
-                                  : 'This is the client\'s permanent login password',
+                              tempPassword == S.notAvailable
+                                  ? S.passwordNotReturned
+                                  : S.permanentLoginPassword,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: tempPassword == 'Not available'
+                                color: tempPassword == S.notAvailable
                                     ? Colors.red
                                     : Colors.blue,
                                 fontStyle: FontStyle.italic,
@@ -389,7 +401,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
           IconButton(
             icon: Icon(Icons.copy, size: 18, color: Colors.blue.shade700),
             onPressed: () => _copyToClipboard(value, label),
-            tooltip: 'Copy $label',
+            tooltip: S.copyLabel(label),
           ),
       ],
     );

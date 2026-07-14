@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../../core/localization/app_strings.dart';
 import '../core/auth/client_auth_provider.dart';
 
 class ActivationScreen extends StatefulWidget {
@@ -34,7 +35,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter all 6 digits'),
+          content: Text(S.pleaseEnterAllDigits),
           backgroundColor: Colors.orange,
         ),
       );
@@ -73,7 +74,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Activation code resent!'),
+            content: Text(S.activationCodeResent),
             backgroundColor: Colors.green,
           ),
         );
@@ -98,7 +99,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Activate Account'),
+        title: const Text(S.activateAccount),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -118,7 +119,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
               // Title
               Text(
-                'Enter Activation Code',
+                S.enterActivationCode,
                 style: Theme.of(context).textTheme.displaySmall,
                 textAlign: TextAlign.center,
               ),
@@ -126,7 +127,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
               // Subtitle
               Text(
-                'We sent a 6-digit code to\n${widget.identifier}',
+                S.codeSentTo(widget.identifier),
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Theme.of(context).textTheme.bodySmall?.color,
                     ),
@@ -189,7 +190,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
                           ),
                         ),
                       )
-                    : const Text('Verify'),
+                    : const Text(S.verify),
               ),
               const SizedBox(height: 16),
 
@@ -197,7 +198,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
               TextButton(
                 onPressed: _isLoading ? null : _resendCode,
                 child: Text(
-                  'Didn\'t receive code? Resend',
+                  S.didntReceiveCode,
                   style: TextStyle(
                     color: Theme.of(context).primaryColor,
                   ),
@@ -223,7 +224,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Code expires in 10 minutes',
+                        S.codeExpires10Min,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),

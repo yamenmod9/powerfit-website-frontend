@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-unified",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-d",
+        "web-server",
+        "-t",
+        "lib/web_main.dart",
+        "--web-port",
+        "8766",
+        "--dart-define=API_BASE_URL=https://yamenmod91.pythonanywhere.com"
+      ],
+      "port": 8766
+    }
+  ]
+}

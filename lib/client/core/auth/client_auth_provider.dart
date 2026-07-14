@@ -2,15 +2,26 @@ import 'package:flutter/material.dart';
 import '../api/client_api_service.dart';
 import 'client_auth_service.dart';
 import '../../models/client_model.dart';
+import '../../../core/providers/gym_branding_provider.dart';
+import '../../../shared/models/gym_model.dart';
+import '../../../core/services/fcm_notification_service.dart';
 
 class ClientAuthProvider extends ChangeNotifier {
   final ClientAuthService _authService;
+  final ClientApiService _apiService;
+  GymBrandingProvider? _brandingProvider;
   ClientModel? _currentClient;
   bool _isAuthenticated = false;
   bool _passwordChanged = true; // Always true — clients use their temporary password permanently
 
   ClientAuthProvider(ClientApiService apiService)
-      : _authService = ClientAuthService(apiService);
+      : _authService = ClientAuthService(apiService),
+        _apiService = apiService;
+
+  /// Set the branding provider so login can load gym colors before navigation.
+  void setBrandingProvider(GymBrandingProvider branding) {
+    _brandingProvider = branding;
+  }
 
   ClientModel? get currentClient => _currentClient;
   bool get isAuthenticated => _isAuthenticated;
@@ -22,15 +33,34 @@ class ClientAuthProvider extends ChangeNotifier {
     print('🔐 ClientAuthProvider: isAuthenticated = $_isAuthenticated');
 
     if (_isAuthenticated) {
-      _currentClient = await _authService.getCurrentClient();
-      print('🔐 ClientAuthProvider: Loaded client: ${_currentClient?.fullName}');
+      // Fetch full profile data (includes gym branding)
+      final profileData = await _authService.getProfileData();
+      if (profileData != null) {
+        _currentClient = ClientModel.fromJson(profileData);
+        print('🔐 ClientAuthProvider: Loaded client: ${_currentClient?.fullName}');
+
+        // Refresh gym branding from profile (so owner color changes take effect)
+        if (profileData.containsKey('gym') && profileData['gym'] is Map) {
+          try {
+            final gymData = profileData['gym'] as Map<String, dynamic>;
+            _brandingProvider?.loadFromGym(GymModel.fromJson(gymData));
+            print('🎨 ClientAuthProvider: Gym branding refreshed - ${gymData['name']}');
+          } catch (e) {
+            print('⚠️ ClientAuthProvider: Failed to refresh gym branding: $e');
+          }
+        }
+      } else {
+        // Fallback: load just the client model
+        _currentClient = await _authService.getCurrentClient();
+        print('🔐 ClientAuthProvider: Loaded client (fallback): ${_currentClient?.fullName}');
+      }
     }
 
     print('🔐 ClientAuthProvider: Initialization complete');
     notifyListeners();
   }
 
-  Future<void> login(String identifier, String password) async {
+  Future<Map<String, dynamic>> login(String identifier, String password) async {
     print('🔐 ClientAuthProvider: Starting login...');
     print('🔐 ClientAuthProvider: Current state - isAuth=$_isAuthenticated, passwordChanged=$_passwordChanged');
 
@@ -95,8 +125,30 @@ class ClientAuthProvider extends ChangeNotifier {
     _currentClient = ClientModel.fromJson(clientData);
     _isAuthenticated = true;
 
+    // Load gym branding BEFORE notifyListeners so colors are set before router redirects
+    if (data.containsKey('gym') && data['gym'] is Map) {
+      try {
+        final gymData = data['gym'] as Map<String, dynamic>;
+        _brandingProvider?.loadFromGym(GymModel.fromJson(gymData));
+        print('🎨 ClientAuthProvider: Gym branding loaded - ${gymData['name']}');
+      } catch (e) {
+        print('⚠️ ClientAuthProvider: Failed to load gym branding: $e');
+      }
+    }
+
     print('🔐 ClientAuthProvider: Login successful! Client: ${_currentClient?.fullName}');
     print('🔐 ClientAuthProvider: New state - isAuth=$_isAuthenticated, passwordChanged=$_passwordChanged');
+
+    // Register FCM token with backend
+    try {
+      await FcmNotificationService().registerTokenWithBackend(
+        apiService: _apiService,
+        appType: 'client',
+      );
+    } catch (e) {
+      print('⚠️ FCM token registration failed: $e');
+    }
+
     print('🔐 ClientAuthProvider: Calling notifyListeners()...');
     notifyListeners();
     print('🔐 ClientAuthProvider: notifyListeners() called');
@@ -104,6 +156,8 @@ class ClientAuthProvider extends ChangeNotifier {
     // Wait a bit to ensure listeners are notified
     await Future.delayed(const Duration(milliseconds: 100));
     print('🔐 ClientAuthProvider: Login process complete');
+
+    return data;
   }
 
   Future<void> changePassword(String currentPassword, String newPassword) async {
@@ -128,8 +182,15 @@ class ClientAuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>> requestAccountDeletion() async {
+    return await _authService.requestAccountDeletion();
+  }
+
   Future<void> logout() async {
+    // Unregister FCM token
+    await FcmNotificationService().unregisterToken(apiService: _apiService);
     await _authService.logout();
+    _brandingProvider?.reset();
     _currentClient = null;
     _isAuthenticated = false;
     _passwordChanged = true;

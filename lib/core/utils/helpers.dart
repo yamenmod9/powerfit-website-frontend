@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../localization/app_strings.dart';
 
 class DateHelper {
   static String formatDate(DateTime date, {String format = 'dd/MM/yyyy'}) {
@@ -31,17 +32,17 @@ class DateHelper {
     final difference = now.difference(dateTime);
 
     if (difference.inDays > 365) {
-      return '${(difference.inDays / 365).floor()} year${(difference.inDays / 365).floor() == 1 ? '' : 's'} ago';
+      return S.yearsAgo((difference.inDays / 365).floor());
     } else if (difference.inDays > 30) {
-      return '${(difference.inDays / 30).floor()} month${(difference.inDays / 30).floor() == 1 ? '' : 's'} ago';
+      return S.monthsAgo((difference.inDays / 30).floor());
     } else if (difference.inDays > 0) {
-      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+      return S.daysAgo(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+      return S.hoursAgo(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+      return S.minutesAgo(difference.inMinutes);
     } else {
-      return 'Just now';
+      return S.justNow;
     }
   }
 }
@@ -77,37 +78,37 @@ class ValidationHelper {
 
   static String? validateRequired(String? value, String fieldName) {
     if (value == null || value.trim().isEmpty) {
-      return '$fieldName is required';
+      return S.fieldRequired(fieldName);
     }
     return null;
   }
 
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email is required';
+      return S.emailIsRequired;
     }
     if (!isValidEmail(value)) {
-      return 'Invalid email format';
+      return S.invalidEmailFormat;
     }
     return null;
   }
 
   static String? validatePhone(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Phone is required';
+      return S.phoneIsRequired;
     }
     if (!isValidPhone(value)) {
-      return 'Invalid phone format';
+      return S.invalidPhoneFormat;
     }
     return null;
   }
 
   static String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return S.passwordRequired;
     }
     if (value.length < 6) {
-      return 'Password must be at least 6 characters';
+      return S.passwordTooShort;
     }
     return null;
   }
@@ -121,10 +122,10 @@ class HealthHelper {
   }
 
   static String getBMICategory(double bmi) {
-    if (bmi < 18.5) return 'Underweight';
-    if (bmi < 25) return 'Normal';
-    if (bmi < 30) return 'Overweight';
-    return 'Obese';
+    if (bmi < 18.5) return S.underweight;
+    if (bmi < 25) return S.normal;
+    if (bmi < 30) return S.overweight;
+    return S.obese;
   }
 
   static double calculateBMR(double weight, double height, int age, String gender) {

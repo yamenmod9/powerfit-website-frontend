@@ -116,9 +116,47 @@ class ClientAuthService {
     }
   }
 
+  /// Returns the full profile data map (includes client fields + gym).
+  /// Used by [ClientAuthProvider.initialize] to refresh gym branding on startup.
+  Future<Map<String, dynamic>?> getProfileData() async {
+    try {
+      final token = await _apiService.getToken();
+      if (token == null) return null;
+
+      final response = await _apiService.getProfile();
+
+      final isSuccess = (response['status'] == 'success') ||
+                       (response['success'] == true);
+
+      if (isSuccess && response['data'] is Map<String, dynamic>) {
+        return response['data'] as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<bool> isAuthenticated() async {
     final token = await _apiService.getToken();
     return token != null;
+  }
+
+  Future<Map<String, dynamic>> requestAccountDeletion() async {
+    final response = await _apiService.requestAccountDeletion();
+
+    final isSuccess = (response['status'] == 'success') ||
+                     (response['success'] == true);
+
+    if (!isSuccess) {
+      throw Exception(response['message'] ?? 'Failed to request account deletion');
+    }
+
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    return <String, dynamic>{};
   }
 
   Future<void> logout() async {

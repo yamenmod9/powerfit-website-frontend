@@ -1,6 +1,8 @@
+import '../config/app_config.dart';
+
 class ApiEndpoints {
   // Base URL
-  static const String baseUrl = 'https://yamenmod91.pythonanywhere.com';
+  static String get baseUrl => AppConfig.apiBaseUrl;
   
   // Auth Endpoints
   static const String login = '/api/auth/login';
@@ -68,4 +70,12 @@ class ApiEndpoints {
   static const String dashboardAccountant = '/api/dashboards/accountant';
   static const String dashboardBranchManager = '/api/dashboards/branch-manager';
   static String dashboardBranch(int branchId) => '/api/dashboards/branch/$branchId';
+
+  // User / Staff Endpoints
+  static const String users = '/api/users';
+  static String userById(int id) => '/api/users/$id';
+
+  // Notification Endpoints
+  static const String registerDevice = '/api/notifications/register-device';
+  static const String unregisterDevice = '/api/notifications/unregister-device';
 }

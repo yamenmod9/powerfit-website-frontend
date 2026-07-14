@@ -23,6 +23,7 @@ class OwnerDashboardProvider extends ChangeNotifier {
   OwnerDashboardProvider(this._apiService);
 
   // Getters
+  ApiService get apiService => _apiService;
   bool get isLoading => _isLoading;
   String? get error => _error;
   int? get selectedBranchId => _selectedBranchId;

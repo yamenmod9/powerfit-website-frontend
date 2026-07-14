@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'api_endpoints.dart';
 
@@ -7,6 +8,13 @@ class ApiService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   
   static const String _tokenKey = 'jwt_token';
+
+  /// Callback invoked when session has expired (401 or stale-JWT 404).
+  /// AuthProvider sets this to trigger a forced logout + GoRouter redirect.
+  VoidCallback? onSessionExpired;
+
+  /// Guard to prevent multiple simultaneous forced-logouts.
+  bool _isLoggingOut = false;
   
   ApiService() {
     _dio = Dio(
@@ -39,11 +47,42 @@ class ApiService {
           }
           return handler.next(options);
         },
+        onResponse: (response, handler) async {
+          // Detect auth failures that come through as normal responses
+          // (because validateStatus allows < 500)
+          final statusCode = response.statusCode;
+
+          bool sessionExpired = false;
+
+          if (statusCode == 401) {
+            // Backend explicitly says session expired / token invalid
+            sessionExpired = true;
+          } else if (statusCode == 404) {
+            // Legacy PythonAnywhere backend may still return 404 + "User not found"
+            // when the JWT references a deleted/re-seeded user.
+            final data = response.data;
+            if (data is Map) {
+              final error = (data['error'] ?? data['msg'] ?? '').toString().toLowerCase();
+              if (error.contains('user not found') ||
+                  error.contains('session expired')) {
+                sessionExpired = true;
+              }
+            }
+          }
+
+          if (sessionExpired) {
+            debugPrint('🔒 Session expired detected (${response.statusCode}) — forcing logout');
+            await _storage.delete(key: _tokenKey);
+            _triggerForcedLogout();
+          }
+
+          return handler.next(response);
+        },
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
-            // Unauthorized - clear token and redirect to login
+            // Unauthorized - clear token
             await _storage.delete(key: _tokenKey);
-            // The auth provider will handle navigation
+            _triggerForcedLogout();
           } else if (error.response?.statusCode == 403) {
             // Forbidden - permission error
             error = DioException(
@@ -65,6 +104,17 @@ class ApiService {
         },
       ),
     );
+  }
+
+  /// Fire the forced-logout callback exactly once until reset.
+  void _triggerForcedLogout() {
+    if (!_isLoggingOut && onSessionExpired != null) {
+      _isLoggingOut = true;
+      onSessionExpired!();
+      // Reset the guard after a short delay so future 401s can trigger again
+      // (e.g. if the user logs back in and gets another stale token).
+      Future.delayed(const Duration(seconds: 2), () => _isLoggingOut = false);
+    }
   }
   
   // Generic GET request

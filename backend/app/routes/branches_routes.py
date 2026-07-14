@@ -1,5 +1,5 @@
 """
-Branch management routes
+Branch management routes (gym-scoped)
 """
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
@@ -8,7 +8,8 @@ from app.schemas import BranchSchema
 from app.models.branch import Branch
 from app.utils import (
     success_response, error_response, role_required,
-    paginate, format_pagination_response, get_current_user
+    paginate, format_pagination_response, get_current_user,
+    get_current_gym_id
 )
 from app.models.user import UserRole
 from app.models.complaint import ComplaintStatus
@@ -20,12 +21,19 @@ branches_bp = Blueprint('branches', __name__, url_prefix='/api/branches')
 @branches_bp.route('', methods=['GET'])
 @jwt_required()
 def get_branches():
-    """Get all branches"""
+    """Get branches for the current user's gym."""
+    user = get_current_user()
+    gym_id = get_current_gym_id(user)
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     is_active = request.args.get('is_active', type=bool)
     
     query = Branch.query
+
+    # Scope to the user's gym (super admin sees all)
+    if gym_id is not None:
+        query = query.filter_by(gym_id=gym_id)
     
     if is_active is not None:
         query = query.filter_by(is_active=is_active)
@@ -91,24 +99,28 @@ def get_branch(branch_id):
 
 @branches_bp.route('', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER)
 def create_branch():
-    """Create new branch"""
+    """Create new branch (scoped to the owner's gym)"""
+    user = get_current_user()
+    gym_id = get_current_gym_id(user)
+
     try:
         schema = BranchSchema()
         data = schema.load(request.json)
     except ValidationError as e:
         return error_response("Validation error", 400, e.messages)
     
-    # Check if code already exists
-    if Branch.query.filter_by(code=data['code']).first():
-        return error_response("Branch code already exists", 400)
+    # Check uniqueness within the gym
+    existing_code = Branch.query.filter_by(gym_id=gym_id, code=data['code']).first()
+    if existing_code:
+        return error_response("Branch code already exists in this gym", 400)
     
-    # Check if name already exists
-    if Branch.query.filter_by(name=data['name']).first():
-        return error_response("Branch name already exists", 400)
+    existing_name = Branch.query.filter_by(gym_id=gym_id, name=data['name']).first()
+    if existing_name:
+        return error_response("Branch name already exists in this gym", 400)
     
-    branch = Branch(**data)
+    branch = Branch(gym_id=gym_id, **data)
     db.session.add(branch)
     db.session.commit()
     
@@ -117,7 +129,7 @@ def create_branch():
 
 @branches_bp.route('/<int:branch_id>', methods=['PUT'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER)
 def update_branch(branch_id):
     """Update branch"""
     branch = db.session.get(Branch, branch_id)
@@ -143,7 +155,7 @@ def update_branch(branch_id):
 
 @branches_bp.route('/<int:branch_id>', methods=['DELETE'])
 @jwt_required()
-@role_required(UserRole.OWNER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER)
 def delete_branch(branch_id):
     """Deactivate branch (soft delete)"""
     branch = db.session.get(Branch, branch_id)

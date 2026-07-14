@@ -1,6 +1,7 @@
 """
 Entry logs routes - Customer check-in/scanning
 """
+import logging
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from datetime import datetime
@@ -11,12 +12,14 @@ from app.utils import success_response, error_response, role_required, get_curre
 from app.models.user import UserRole
 from app.extensions import db
 
+logger = logging.getLogger(__name__)
+
 entry_logs_bp = Blueprint('entry_logs', __name__, url_prefix='/api/entry-logs')
 
 
 @entry_logs_bp.route('/scan', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.FRONT_DESK, UserRole.BRANCH_MANAGER, UserRole.OWNER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.FRONT_DESK, UserRole.BRANCH_MANAGER, UserRole.OWNER)
 def scan_qr_code():
     """
     Record customer check-in via QR scan or customer ID
@@ -190,6 +193,45 @@ def scan_qr_code():
     db.session.add(entry_log)
     db.session.commit()
     
+    # Notify the customer about their check-in
+    try:
+        from app.services.fcm_service import notify_customer
+        remaining_msg = ''
+        if subscription.subscription_type == 'coins' and subscription.remaining_coins is not None:
+            remaining_msg = f' | المتبقي: {subscription.remaining_coins} عملة'
+        elif subscription.subscription_type in ['sessions', 'training'] and subscription.remaining_sessions is not None:
+            remaining_msg = f' | المتبقي: {subscription.remaining_sessions} حصة'
+        
+        notify_customer(
+            customer.id,
+            '🏋️ تم تسجيل الدخول',
+            f'مرحباً {customer.full_name}! تم تسجيل دخولك بنجاح.{remaining_msg}',
+            {'type': 'check_in', 'entry_id': str(entry_log.id)},
+        )
+    except Exception as e:
+        logger.exception('Push notification failed: %s', e)
+
+    # Notify staff if coins/sessions are running low
+    try:
+        from app.services.fcm_service import notify_role
+        low_threshold = 3
+        if subscription.subscription_type == 'coins' and subscription.remaining_coins is not None and subscription.remaining_coins <= low_threshold:
+            notify_role(
+                'front_desk',
+                '⚠️ رصيد منخفض',
+                f'{customer.full_name} لديه {subscription.remaining_coins} عملة متبقية فقط.',
+                {'type': 'low_balance', 'customer_id': str(customer.id)},
+            )
+        elif subscription.subscription_type in ['sessions', 'training'] and subscription.remaining_sessions is not None and subscription.remaining_sessions <= low_threshold:
+            notify_role(
+                'front_desk',
+                '⚠️ حصص منخفضة',
+                f'{customer.full_name} لديه {subscription.remaining_sessions} حصة متبقية فقط.',
+                {'type': 'low_sessions', 'customer_id': str(customer.id)},
+            )
+    except Exception as e:
+        logger.exception('Push notification failed: %s', e)
+
     return success_response({
         "attendance_id": entry_log.id,
         "entry_id": entry_log.id,  # Alias for compatibility

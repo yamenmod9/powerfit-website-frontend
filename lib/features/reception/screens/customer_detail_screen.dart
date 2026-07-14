@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../shared/models/customer_model.dart';
 import '../widgets/customer_qr_code_widget.dart';
 import '../providers/reception_provider.dart';
+import '../../../core/localization/app_strings.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final CustomerModel customer;
@@ -39,14 +40,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('QR code regenerated successfully'),
+              content: Text(S.qrRegenerated),
               backgroundColor: Colors.green,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Failed to regenerate QR code'),
+              content: Text(result['message'] ?? S.failedToRegenerateQR),
               backgroundColor: Colors.red,
             ),
           );
@@ -72,7 +73,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Customer Profile'),
+        title: Text(S.customerProfile),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -102,7 +103,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'ID: ${widget.customer.id}',
+                      S.customerId(widget.customer.id!),
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: Colors.grey[400],
                           ),
@@ -133,7 +134,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Scan this QR code to check in',
+                      S.scanQRToCheckIn,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.grey[500],
                             fontStyle: FontStyle.italic,
@@ -156,7 +157,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                               );
                             },
                             icon: const Icon(Icons.qr_code_2),
-                            label: const Text('View Full QR'),
+                            label: Text(S.viewFullQR),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -173,7 +174,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                                     child: CircularProgressIndicator(strokeWidth: 2),
                                   )
                                 : const Icon(Icons.refresh),
-                            label: Text(_isRegenerating ? 'Regenerating...' : 'Regenerate'),
+                            label: Text(_isRegenerating ? S.regenerating : S.regenerate),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               backgroundColor: Colors.orange,
@@ -205,7 +206,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Temporary Password',
+                            S.temporaryPassword,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.orange.shade700,
@@ -236,8 +237,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                             const SizedBox(height: 8),
                             Text(
                               widget.customer.passwordChanged ?? false
-                                  ? 'Password has been changed'
-                                  : 'First-time login password',
+                                  ? S.passwordChanged
+                                  : S.firstTimeLoginPassword,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Colors.grey[600],
                                     fontStyle: FontStyle.italic,
@@ -253,7 +254,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Share this password with the customer for their first login',
+                              S.sharePasswordWithCustomer,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Colors.orange.shade600,
                                   ),
@@ -283,7 +284,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Contact Information',
+                          S.contactInformation,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -292,21 +293,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     ),
                     const Divider(height: 24),
                     if (widget.customer.phone != null) ...[
-                      _buildInfoRow(context, Icons.phone, 'Phone', widget.customer.phone!),
+                      _buildInfoRow(context, Icons.phone, S.phone, widget.customer.phone!),
                       const SizedBox(height: 12),
                     ],
                     if (widget.customer.email != null) ...[
-                      _buildInfoRow(context, Icons.email, 'Email', widget.customer.email!),
+                      _buildInfoRow(context, Icons.email, S.email, widget.customer.email!),
                       const SizedBox(height: 12),
                     ],
                     _buildInfoRow(
                       context,
                       widget.customer.gender == 'male' ? Icons.male : Icons.female,
-                      'Gender',
-                      widget.customer.gender?.toUpperCase() ?? 'N/A',
+                      S.gender,
+                      widget.customer.gender?.toUpperCase() ?? S.na,
                     ),
                     const SizedBox(height: 12),
-                    _buildInfoRow(context, Icons.cake, 'Age', '${widget.customer.age ?? 'N/A'} years'),
+                    _buildInfoRow(context, Icons.cake, S.age, S.ageYears(widget.customer.age?.toString() ?? S.na)),
                   ],
                 ),
               ),
@@ -328,7 +329,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Health Metrics',
+                          S.healthMetrics,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -341,8 +342,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         Expanded(
                           child: _buildMetricCard(
                             context,
-                            'Weight',
-                            '${widget.customer.weight?.toStringAsFixed(1) ?? 'N/A'} kg',
+                            S.weight,
+                            S.weightKg(widget.customer.weight?.toStringAsFixed(1) ?? S.na),
                             Icons.monitor_weight,
                           ),
                         ),
@@ -350,8 +351,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         Expanded(
                           child: _buildMetricCard(
                             context,
-                            'Height',
-                            '${widget.customer.height != null ? (widget.customer.height! * 100).toStringAsFixed(0) : 'N/A'} cm',
+                            S.height,
+                            S.heightCm(widget.customer.height != null ? (widget.customer.height! * 100).toStringAsFixed(0) : S.na),
                             Icons.height,
                           ),
                         ),
@@ -363,8 +364,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         Expanded(
                           child: _buildMetricCard(
                             context,
-                            'BMI',
-                            widget.customer.bmi?.toStringAsFixed(1) ?? 'N/A',
+                            S.bmi,
+                            widget.customer.bmi?.toStringAsFixed(1) ?? S.na,
                             Icons.analytics,
                             subtitle: widget.customer.bmiCategory,
                           ),
@@ -373,8 +374,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                         Expanded(
                           child: _buildMetricCard(
                             context,
-                            'BMR',
-                            '${widget.customer.bmr?.toStringAsFixed(0) ?? 'N/A'} cal',
+                            S.bmr,
+                            S.calValue(widget.customer.bmr?.toStringAsFixed(0) ?? S.na),
                             Icons.local_fire_department,
                           ),
                         ),
@@ -383,10 +384,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     const SizedBox(height: 12),
                     _buildMetricCard(
                       context,
-                      'Daily Calories',
-                      '${widget.customer.dailyCalories?.toStringAsFixed(0) ?? 'N/A'} cal',
+                      S.dailyCalories,
+                      S.calValue(widget.customer.dailyCalories?.toStringAsFixed(0) ?? S.na),
                       Icons.restaurant,
-                      subtitle: 'Recommended intake',
+                      subtitle: S.recommendedIntake,
                     ),
                   ],
                 ),

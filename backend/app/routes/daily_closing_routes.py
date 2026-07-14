@@ -19,7 +19,7 @@ daily_closing_bp = Blueprint('daily_closing', __name__, url_prefix='/api/daily-c
 
 @daily_closing_bp.route('', methods=['GET'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.BRANCH_MANAGER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.BRANCH_MANAGER)
 def get_daily_closings():
     """Get all daily closings (paginated)"""
     page = request.args.get('page', 1, type=int)
@@ -80,7 +80,7 @@ def get_daily_closing(closing_id):
 
 @daily_closing_bp.route('/calculate', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def calculate_expected_cash():
     """Calculate expected cash for a given date and branch"""
     data = request.json
@@ -139,7 +139,7 @@ def calculate_expected_cash():
 
 @daily_closing_bp.route('', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def create_daily_closing():
     """Create daily closing (end of shift)"""
     data = request.json

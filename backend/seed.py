@@ -22,9 +22,20 @@ from app.models import (
     Expense, ExpenseStatus, Complaint, ComplaintType, ComplaintStatus,
     Fingerprint, FreezeHistory, DailyClosing, EntryLog
 )
+from app.models.gym import Gym
 
 # Set seed for reproducible results (can be commented out for true randomness)
 random.seed(42)
+
+# Dedicated, stable account for Google Play review/testing.
+GOOGLE_PLAY_TEST_CLIENT = {
+    'full_name': 'Google Play Test Client',
+    'phone': '01099990000',
+    'password': 'GP12TEST',
+    'email': 'google.play.tester@example.com',
+    'national_id': '2909999000001',
+    'branch_index': 0,
+}
 
 
 def generate_temp_password():
@@ -56,13 +67,31 @@ def seed_database():
         db.drop_all()
         db.create_all()
         
-        # Create branches
-        print("  ↳ Creating branches...")
-        branches = create_branches()
-        
-        # Create users
+        # Create users (super admin + default owner)
         print("  ↳ Creating users...")
-        users = create_users(branches)
+        users = create_users([])  # branches not created yet
+
+        # Create gym for the DEFAULT owner only
+        print("  ↳ Creating gym for the default owner...")
+        default_owner = next(u for u in users if u.role == UserRole.OWNER)
+        default_gym = Gym(
+            name="Abu Faisal's Gym",
+            owner_id=default_owner.id,
+            primary_color='#DC2626',
+            secondary_color='#EF4444',
+            is_setup_complete=True,  # seed data fills it
+        )
+        db.session.add(default_gym)
+        db.session.flush()
+        gym_id = default_gym.id
+
+        # Create branches (scoped to default owner's gym)
+        print("  ↳ Creating branches...")
+        branches = create_branches(gym_id)
+
+        # Back-fill gym_id + branch_id on staff users
+        print("  ↳ Assigning staff to gym & branches...")
+        assign_staff_to_branches(users, branches, gym_id)
         
         # Create services
         print("  ↳ Creating services...")
@@ -174,6 +203,11 @@ def seed_database():
         print("  ")
         print("  Username: baccountant2 | Password: accountant123")
         print("  Branch: Phoenix Club | Name: Rania Nabil")
+
+        print("\n[CLIENT] DEDICATED GOOGLE PLAY TEST ACCOUNT:")
+        print(f"  Phone: {GOOGLE_PLAY_TEST_CLIENT['phone']} | Password: {GOOGLE_PLAY_TEST_CLIENT['password']}")
+        print(f"  Name: {GOOGLE_PLAY_TEST_CLIENT['full_name']} | Branch: {branches[GOOGLE_PLAY_TEST_CLIENT['branch_index']].name}")
+        print("  Note: Use this stable account in Google Play Console for reviewer testing")
         
         # Print sample customer credentials
         print("\n[CLIENT] CLIENT APP TEST ACCOUNTS (Sample from 150 customers):")
@@ -201,8 +235,8 @@ def seed_database():
         print("="*70 + "\n")
 
 
-def create_branches():
-    """Create test branches with different performance levels"""
+def create_branches(gym_id):
+    """Create test branches scoped to the default owner's gym"""
     branches = [
         Branch(
             name='Dragon Club',  # High performance
@@ -210,6 +244,7 @@ def create_branches():
             address='123 Premium Street, Zamalek, Cairo',
             phone='0227350001',
             city='Cairo',
+            gym_id=gym_id,
             is_active=True
         ),
         Branch(
@@ -218,6 +253,7 @@ def create_branches():
             address='456 Central Avenue, Mohandessin, Giza',
             phone='0233450002',
             city='Giza',
+            gym_id=gym_id,
             is_active=True
         ),
         Branch(
@@ -226,6 +262,7 @@ def create_branches():
             address='789 Beach Road, Alexandria',
             phone='0345670003',
             city='Alexandria',
+            gym_id=gym_id,
             is_active=True
         )
     ]
@@ -239,22 +276,22 @@ def create_branches():
 
 
 def create_users(branches):
-    """Create test users - MINIMUM 2 per role (except owner)"""
+    """Create test users — branches are assigned later via assign_staff_to_branches."""
     users = []
     
     # ========== SUPER ADMIN (platform-level) ==========
     super_admin = User(
-        username='Zyad',
-        email='zyad@platform.com',
-        full_name='Zyad',
+        username='powerfit',
+        email='admin@powerfit.com',
+        full_name='PowerFit Admin',
         phone='0200000000',
         role=UserRole.SUPER_ADMIN,
         is_active=True
     )
-    super_admin.set_password('ZWL@2009')
+    super_admin.set_password('PowerFit2026!')
     users.append(super_admin)
-    
-    # ========== OWNER (exactly 1) ==========
+
+    # ========== OWNER (exactly 1 — the default/test owner) ==========
     owner = User(
         username='owner',
         email='owner@gymchain.com',
@@ -266,27 +303,26 @@ def create_users(branches):
     owner.set_password('owner123')
     users.append(owner)
     
-    # ========== BRANCH MANAGERS (1 per branch minimum) ==========
+    # ========== Staff users (branch_id + gym_id set later) ==========
+    # BRANCH MANAGERS (1 per branch minimum)
     manager_names = [
         ('Ahmed Khalil', '0201111001'),
         ('Mohamed Rashad', '0201111002'),
         ('Khaled Mansour', '0201111003')
     ]
-    
-    for i, branch in enumerate(branches):
+    for i, (name, phone) in enumerate(manager_names):
         manager = User(
             username=f'manager{i+1}',
             email=f'manager{i+1}@gymchain.com',
-            full_name=manager_names[i][0],
-            phone=manager_names[i][1],
+            full_name=name,
+            phone=phone,
             role=UserRole.BRANCH_MANAGER,
-            branch_id=branch.id,
             is_active=True
         )
         manager.set_password('manager123')
         users.append(manager)
     
-    # ========== FRONT DESK / RECEPTION (2 per branch) ==========
+    # FRONT DESK / RECEPTION (6 total — 2 per branch)
     reception_names = [
         ('Sara Mohamed', '0202220001'),
         ('Fatma Hassan', '0202220002'),
@@ -295,30 +331,23 @@ def create_users(branches):
         ('Mariam Ali', '0202220005'),
         ('Yasmin Samir', '0202220006')
     ]
+    for i, (name, phone) in enumerate(reception_names):
+        reception = User(
+            username=f'reception{i+1}',
+            email=f'reception{i+1}@gymchain.com',
+            full_name=name,
+            phone=phone,
+            role=UserRole.FRONT_DESK,
+            is_active=True
+        )
+        reception.set_password('reception123')
+        users.append(reception)
     
-    reception_idx = 0
-    for i, branch in enumerate(branches):
-        # Create 2 receptionists per branch
-        for j in range(2):
-            reception = User(
-                username=f'reception{reception_idx + 1}',
-                email=f'reception{reception_idx + 1}@gymchain.com',
-                full_name=reception_names[reception_idx][0],
-                phone=reception_names[reception_idx][1],
-                role=UserRole.FRONT_DESK,
-                branch_id=branch.id,
-                is_active=True
-            )
-            reception.set_password('reception123')
-            users.append(reception)
-            reception_idx += 1
-    
-    # ========== CENTRAL ACCOUNTANTS (2+) ==========
+    # CENTRAL ACCOUNTANTS (2)
     central_accountants = [
         ('Omar Farid', '0203330001', 'accountant1'),
         ('Hassan Nasser', '0203330002', 'accountant2')
     ]
-    
     for name, phone, username in central_accountants:
         accountant = User(
             username=username,
@@ -331,20 +360,18 @@ def create_users(branches):
         accountant.set_password('accountant123')
         users.append(accountant)
     
-    # ========== BRANCH ACCOUNTANTS (2+) ==========
-    branch_accountants = [
-        ('Amr Saleh', '0204440001', 'baccountant1', branches[0].id),  # Dragon Club
-        ('Tarek Hamdy', '0204440002', 'baccountant2', branches[1].id)  # Phoenix Club
+    # BRANCH ACCOUNTANTS (2 — branch assigned later)
+    branch_accountant_names = [
+        ('Amr Saleh', '0204440001', 'baccountant1'),
+        ('Tarek Hamdy', '0204440002', 'baccountant2')
     ]
-    
-    for name, phone, username, branch_id in branch_accountants:
+    for name, phone, username in branch_accountant_names:
         accountant = User(
             username=username,
             email=f'{username}@gymchain.com',
             full_name=name,
             phone=phone,
             role=UserRole.BRANCH_ACCOUNTANT,
-            branch_id=branch_id,
             is_active=True
         )
         accountant.set_password('accountant123')
@@ -355,12 +382,44 @@ def create_users(branches):
     
     db.session.flush()
     print(f"  ✓ Created {len(users)} users")
-    print(f"    - Owners: 1")
+    print(f"    - Super Admin: 1")
+    print(f"    - Owners: 1 (default)")
     print(f"    - Branch Managers: 3")
-    print(f"    - Front Desk: 6 (2 per branch)")
+    print(f"    - Front Desk: 6")
     print(f"    - Central Accountants: 2")
     print(f"    - Branch Accountants: 2")
     return users
+
+
+def assign_staff_to_branches(users, branches, gym_id):
+    """Assign gym_id and branch_id to staff users after branches are created."""
+    # Map roles to branches
+    managers = [u for u in users if u.role == UserRole.BRANCH_MANAGER]
+    receptionists = [u for u in users if u.role == UserRole.FRONT_DESK]
+    central_accountants = [u for u in users if u.role == UserRole.CENTRAL_ACCOUNTANT]
+    branch_accountants = [u for u in users if u.role == UserRole.BRANCH_ACCOUNTANT]
+
+    # Assign managers: 1 per branch
+    for i, mgr in enumerate(managers):
+        mgr.branch_id = branches[i % len(branches)].id
+        mgr.gym_id = gym_id
+
+    # Assign receptionists: 2 per branch
+    for i, rec in enumerate(receptionists):
+        rec.branch_id = branches[i // 2 % len(branches)].id
+        rec.gym_id = gym_id
+
+    # Central accountants: no branch but belong to the gym
+    for acc in central_accountants:
+        acc.gym_id = gym_id
+
+    # Branch accountants: assign to first 2 branches
+    for i, acc in enumerate(branch_accountants):
+        acc.branch_id = branches[i % len(branches)].id
+        acc.gym_id = gym_id
+
+    db.session.flush()
+    print(f"  ✓ Staff assigned to branches & gym")
 
 
 def create_services():
@@ -461,6 +520,8 @@ def create_services():
 
 def create_customers(branches):
     """Create test customers - WEIGHTED distribution for realistic branch performance"""
+    from passlib.hash import pbkdf2_sha256
+
     customers = []
     
     # Egyptian first names
@@ -490,6 +551,35 @@ def create_customers(branches):
     # Phoenix Club (medium): 55 customers (36.7%)
     # Tiger Club (lower): 35 customers (23.3%)
     branch_distribution = [60, 55, 35]
+
+    # Add one fixed account specifically for Google Play reviewer testing.
+    test_branch_idx = GOOGLE_PLAY_TEST_CLIENT['branch_index']
+    if 0 <= test_branch_idx < len(branches):
+        test_branch = branches[test_branch_idx]
+        test_password = GOOGLE_PLAY_TEST_CLIENT['password']
+        test_customer = Customer(
+            full_name=GOOGLE_PLAY_TEST_CLIENT['full_name'],
+            phone=GOOGLE_PLAY_TEST_CLIENT['phone'],
+            email=GOOGLE_PLAY_TEST_CLIENT['email'],
+            national_id=GOOGLE_PLAY_TEST_CLIENT['national_id'],
+            date_of_birth=date(1998, 6, 15),
+            gender=Gender.MALE,
+            address=f'100 Review Street, {test_branch.city}',
+            height=178,
+            weight=78,
+            health_notes='Google Play reviewer test account',
+            branch_id=test_branch.id,
+            is_active=True,
+            temp_password=test_password,
+            password_changed=False
+        )
+        test_customer.password_hash = pbkdf2_sha256.hash(test_password)
+        test_customer.calculate_health_metrics()
+        customers.append(test_customer)
+        db.session.add(test_customer)
+
+        # Keep total customers at 150 by reducing generated count in that branch.
+        branch_distribution[test_branch_idx] = max(0, branch_distribution[test_branch_idx] - 1)
     
     customer_id = 1
     for branch_idx, branch in enumerate(branches):
@@ -545,7 +635,6 @@ def create_customers(branches):
             )
             
             # Hash the temp password (don't use set_password() as it clears temp_password)
-            from passlib.hash import pbkdf2_sha256
             customer.password_hash = pbkdf2_sha256.hash(temp_password)
             
             # Calculate health metrics
@@ -560,11 +649,12 @@ def create_customers(branches):
     print(f"    - Dragon Club: {branch_distribution[0]}")
     print(f"    - Phoenix Club: {branch_distribution[1]}")
     print(f"    - Tiger Club: {branch_distribution[2]}")
+    print(f"    - Dedicated Google Play test account: {GOOGLE_PLAY_TEST_CLIENT['phone']}")
     return customers
 
 
 def create_subscriptions(customers, services, branches, users):
-    """Create subscriptions - REALISTIC statuses, renewals, rejections, freeze history"""
+    """Create subscriptions and ensure every seeded client has active access."""
     subscriptions = []
     reception_users = [u for u in users if u.role == UserRole.FRONT_DESK]
     
@@ -600,6 +690,14 @@ def create_subscriptions(customers, services, branches, users):
         
         # Select customers for subscriptions
         subscribed_customers = random.sample(branch_cust, subscription_count)
+
+        # Ensure the Google Play test customer always has an active subscription.
+        test_customer = next((c for c in branch_cust if c.phone == GOOGLE_PLAY_TEST_CLIENT['phone']), None)
+        if test_customer and test_customer not in subscribed_customers:
+            if subscribed_customers:
+                subscribed_customers[-1] = test_customer
+            else:
+                subscribed_customers.append(test_customer)
         
         for customer in subscribed_customers:
             # Get reception user from same branch
@@ -656,6 +754,15 @@ def create_subscriptions(customers, services, branches, users):
                 status = SubscriptionStatus.ACTIVE
                 freeze_count = random.randint(0, 2)
                 total_frozen = random.randint(0, 7) if freeze_count > 0 else 0
+
+            if customer.phone == GOOGLE_PLAY_TEST_CLIENT['phone']:
+                service = services[0]  # Monthly gym membership for predictable review flow
+                days_old = 5
+                start_date = date.today() - timedelta(days=days_old)
+                end_date = start_date + timedelta(days=service.duration_days)
+                status = SubscriptionStatus.ACTIVE
+                freeze_count = 0
+                total_frozen = 0
             
             subscription = Subscription(
                 customer_id=customer.id,
@@ -713,6 +820,46 @@ def create_subscriptions(customers, services, branches, users):
             
             subscriptions.append(subscription)
             db.session.add(subscription)
+
+    # Ensure every seeded customer has at least one active subscription for client app testing.
+    ensured_active_count = 0
+    customers_with_active = {
+        s.customer_id
+        for s in subscriptions
+        if s.status == SubscriptionStatus.ACTIVE and (
+            s.subscription_type == 'coins' or s.end_date >= date.today()
+        )
+    }
+
+    default_client_service = services[0]  # Monthly Gym Membership (coin-based)
+    for customer in customers:
+        if customer.id in customers_with_active:
+            continue
+
+        reception = next((u for u in reception_users if u.branch_id == customer.branch_id), None)
+        start_date = date.today() - timedelta(days=random.randint(0, 5))
+        end_date = start_date + timedelta(days=default_client_service.duration_days)
+
+        fallback_subscription = Subscription(
+            customer_id=customer.id,
+            service_id=default_client_service.id,
+            branch_id=customer.branch_id,
+            start_date=start_date,
+            end_date=end_date,
+            status=SubscriptionStatus.ACTIVE,
+            freeze_count=0,
+            total_frozen_days=0,
+            classes_attended=0,
+            created_by=reception.id if reception else None,
+        )
+        fallback_subscription.subscription_type = 'coins'
+        fallback_subscription.total_coins = 30
+        fallback_subscription.remaining_coins = random.randint(18, 30)
+
+        subscriptions.append(fallback_subscription)
+        db.session.add(fallback_subscription)
+        customers_with_active.add(customer.id)
+        ensured_active_count += 1
     
     db.session.flush()
     
@@ -752,6 +899,7 @@ def create_subscriptions(customers, services, branches, users):
     print(f"    - Frozen: {frozen_count}")
     print(f"    - Stopped: {stopped_count}")
     print(f"    - Expired: {expired_count}")
+    print(f"    - Added fallback active subscriptions: {ensured_active_count}")
     print(f"    - Freeze history records: {freeze_history_count}")
     
     return subscriptions

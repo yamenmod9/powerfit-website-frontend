@@ -85,6 +85,9 @@ class AuthService {
             await _storage.write(key: _branchIdKey, value: branchId.toString());
           }
           
+          // Extract gym data (returned for owner users)
+          final gymData = data['gym'] as Map<String, dynamic>?;
+
           return {
             'success': true,
             'token': token,
@@ -92,6 +95,7 @@ class AuthService {
             'user_id': userId,
             'username': userUsername,
             'branch_id': branchId,
+            if (gymData != null) 'gym': gymData,
           };
         }
       }
@@ -177,7 +181,13 @@ class AuthService {
     }
     
     await _apiService.deleteToken();
-    await _storage.deleteAll();
+    // Only delete auth-session keys; preserve biometric credentials
+    // so the user can still use biometric login after logout.
+    await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _userRoleKey);
+    await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _usernameKey);
+    await _storage.delete(key: _branchIdKey);
   }
   
   // Check if user is authenticated

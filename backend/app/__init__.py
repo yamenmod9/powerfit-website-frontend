@@ -65,7 +65,41 @@ def _ensure_db_schema(app):
 
         try:
             inspector = sa_inspect(db.engine)
-            if 'transactions' in inspector.get_table_names():
+            existing_tables = inspector.get_table_names()
+
+            # Create gyms table if it doesn't exist (needed for gym scoping)
+            if 'gyms' not in existing_tables:
+                from app.models.gym import Gym
+                Gym.__table__.create(db.engine)
+                app.logger.info('Auto-migration: created gyms table')
+
+            # Create device_tokens table if it doesn't exist
+            if 'device_tokens' not in existing_tables:
+                from app.models.device_token import DeviceToken
+                DeviceToken.__table__.create(db.engine)
+                app.logger.info('Auto-migration: created device_tokens table')
+
+            # Add gym_id column to users table if missing
+            if 'users' in existing_tables:
+                columns = [col['name'] for col in inspector.get_columns('users')]
+                if 'gym_id' not in columns:
+                    db.session.execute(text(
+                        'ALTER TABLE users ADD COLUMN gym_id INTEGER REFERENCES gyms(id)'
+                    ))
+                    db.session.commit()
+                    app.logger.info('Auto-migration: added gym_id column to users table')
+
+            # Add gym_id column to branches table if missing
+            if 'branches' in existing_tables:
+                columns = [col['name'] for col in inspector.get_columns('branches')]
+                if 'gym_id' not in columns:
+                    db.session.execute(text(
+                        'ALTER TABLE branches ADD COLUMN gym_id INTEGER REFERENCES gyms(id)'
+                    ))
+                    db.session.commit()
+                    app.logger.info('Auto-migration: added gym_id column to branches table')
+
+            if 'transactions' in existing_tables:
                 columns = [col['name'] for col in inspector.get_columns('transactions')]
                 if 'discount' not in columns:
                     db.session.execute(text(

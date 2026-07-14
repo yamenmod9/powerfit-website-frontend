@@ -1,0 +1,1 @@
+{"input":"FLASK_ENV=production python seed.py\n"}

@@ -110,7 +110,7 @@ def get_payment(payment_id):
 
 @payments_bp.route('/record', methods=['POST'])
 @jwt_required()
-@role_required([UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK])
+@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK])
 def record_payment():
     """
     Record a new payment/transaction
@@ -171,7 +171,7 @@ def record_payment():
 
 @payments_bp.route('/daily-closing', methods=['POST'])
 @jwt_required()
-@role_required([UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK])
+@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK])
 def daily_closing():
     """
     Create daily closing record

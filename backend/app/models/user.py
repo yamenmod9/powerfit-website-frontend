@@ -30,6 +30,9 @@ class User(db.Model):
     phone = db.Column(db.String(20), nullable=True)
     role = db.Column(db.Enum(UserRole), nullable=False, index=True)
     
+    # Gym ownership — every staff member belongs to a gym (set on creation)
+    gym_id = db.Column(db.Integer, db.ForeignKey('gyms.id'), nullable=True, index=True)
+
     # Branch relationship (nullable for Owner and Central roles)
     branch_id = db.Column(db.Integer, db.ForeignKey('branches.id'), nullable=True, index=True)
     branch = db.relationship('Branch', back_populates='staff')
@@ -67,6 +70,7 @@ class User(db.Model):
             'full_name': self.full_name,
             'phone': self.phone,
             'role': self.role.value,
+            'gym_id': self.gym_id,
             'branch_id': self.branch_id,
             'branch_name': self.branch.name if self.branch else None,
             'is_active': self.is_active,

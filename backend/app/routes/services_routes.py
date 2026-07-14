@@ -57,7 +57,7 @@ def get_service(service_id):
 
 @services_bp.route('', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER)
 def create_service():
     """Create new service"""
     try:
@@ -75,7 +75,7 @@ def create_service():
 
 @services_bp.route('/<int:service_id>', methods=['PUT'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER)
 def update_service(service_id):
     """Update service"""
     service = db.session.get(Service, service_id)
@@ -103,7 +103,7 @@ def update_service(service_id):
 
 @services_bp.route('/<int:service_id>', methods=['DELETE'])
 @jwt_required()
-@role_required(UserRole.OWNER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER)
 def delete_service(service_id):
     """Deactivate service (soft delete)"""
     service = db.session.get(Service, service_id)

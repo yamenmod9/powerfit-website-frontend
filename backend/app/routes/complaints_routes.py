@@ -1,6 +1,7 @@
 """
 Complaint management routes
 """
+import logging
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
@@ -12,6 +13,8 @@ from app.utils import (
 )
 from app.models.user import UserRole
 from app.extensions import db
+
+logger = logging.getLogger(__name__)
 
 complaints_bp = Blueprint('complaints', __name__, url_prefix='/api/complaints')
 
@@ -102,12 +105,30 @@ def create_complaint():
     db.session.add(complaint)
     db.session.commit()
     
+    # Notify owner/branch manager about the new complaint
+    try:
+        from app.services.fcm_service import notify_role
+        notify_role(
+            'owner',
+            '📋 شكوى جديدة',
+            f'{complaint.title}',
+            {'type': 'new_complaint', 'complaint_id': str(complaint.id)},
+        )
+        notify_role(
+            'branch_manager',
+            '📋 شكوى جديدة',
+            f'{complaint.title}',
+            {'type': 'new_complaint', 'complaint_id': str(complaint.id)},
+        )
+    except Exception as e:
+        logger.exception('Push notification failed: %s', e)
+
     return success_response(complaint.to_dict(), "Complaint created successfully", 201)
 
 
 @complaints_bp.route('/<int:complaint_id>', methods=['PUT'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
 def update_complaint(complaint_id):
     """Update complaint status"""
     complaint = db.session.get(Complaint, complaint_id)
@@ -144,7 +165,7 @@ def update_complaint(complaint_id):
 
 @complaints_bp.route('/<int:complaint_id>', methods=['DELETE'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER)
 def delete_complaint(complaint_id):
     """Delete complaint"""
     complaint = db.session.get(Complaint, complaint_id)

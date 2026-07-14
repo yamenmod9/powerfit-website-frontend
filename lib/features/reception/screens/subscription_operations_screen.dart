@@ -3,6 +3,7 @@ import '../widgets/activate_subscription_dialog.dart';
 import '../widgets/renew_subscription_dialog.dart';
 import '../widgets/freeze_subscription_dialog.dart';
 import '../widgets/stop_subscription_dialog.dart';
+import '../../../core/localization/app_strings.dart';
 
 class SubscriptionOperationsScreen extends StatelessWidget {
   const SubscriptionOperationsScreen({super.key});
@@ -11,7 +12,7 @@ class SubscriptionOperationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Subscription Operations'),
+        title: Text(S.subscriptionOperations),
       ),
       body: GridView.count(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), // Extra bottom padding for navbar
@@ -22,28 +23,28 @@ class SubscriptionOperationsScreen extends StatelessWidget {
         children: [
           _buildOperationCard(
             context,
-            title: 'Activate Subscription',
+            title: S.activateSubscription,
             icon: Icons.card_membership,
             color: Colors.green,
             onTap: () => _showActivateSubscriptionDialog(context),
           ),
           _buildOperationCard(
             context,
-            title: 'Renew Subscription',
+            title: S.renewSubscription,
             icon: Icons.refresh,
             color: Colors.teal,
             onTap: () => _showRenewSubscriptionDialog(context),
           ),
           _buildOperationCard(
             context,
-            title: 'Freeze Subscription',
+            title: S.freezeSubscription,
             icon: Icons.pause_circle,
             color: Colors.indigo,
             onTap: () => _showFreezeSubscriptionDialog(context),
           ),
           _buildOperationCard(
             context,
-            title: 'Stop Subscription',
+            title: S.stopSubscription,
             icon: Icons.stop_circle,
             color: Colors.red,
             onTap: () => _showStopSubscriptionDialog(context),

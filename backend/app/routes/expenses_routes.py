@@ -73,7 +73,7 @@ def get_expense(expense_id):
 
 @expenses_bp.route('', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT)
 def create_expense():
     """Create new expense"""
     try:
@@ -108,7 +108,7 @@ def create_expense():
 
 @expenses_bp.route('/<int:expense_id>/review', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT)
 def review_expense(expense_id):
     """Approve or reject expense"""
     expense = db.session.get(Expense, expense_id)
@@ -141,7 +141,7 @@ def review_expense(expense_id):
 
 @expenses_bp.route('/<int:expense_id>', methods=['DELETE'])
 @jwt_required()
-@role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.ACCOUNTANT)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.ACCOUNTANT)
 def delete_expense(expense_id):
     """Delete expense (only if pending)"""
     expense = db.session.get(Expense, expense_id)

@@ -36,7 +36,7 @@ def get_current_user_info():
     user = get_current_user()
     
     if not user:
-        return error_response("User not found", 404)
+        return error_response("Session expired. Please log in again.", 401)
     
     return success_response(user.to_dict())
 
