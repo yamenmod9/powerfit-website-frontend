@@ -36,3 +36,8 @@ Thumbs.db
 
 # Migrations (keep folder, ignore version files if needed)
 migrations/versions/*.pyc
+
+# GeoIP database — MaxMind's license prohibits freely redistributing the
+# raw file, and these repos are public. Upload it directly to the server
+# instead (see app/static/geoip/README.md).
+*.mmdb

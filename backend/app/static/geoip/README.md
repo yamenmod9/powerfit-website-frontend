@@ -4,12 +4,20 @@ This directory should contain `GeoLite2-Country.mmdb`, used by
 `app/services/geoip_service.py` to resolve a visitor's country from their
 IP for region-aware pricing (`GET /api/pricing`).
 
-**This file is intentionally not committed** — MaxMind gates it behind a
-free account and license key, so it can't be fetched automatically. Until
-it's placed here, `/api/pricing` still works correctly: every lookup
-returns `None` and the endpoint falls back to the generic USD default
-region (see `geoip_service._get_reader()` — it degrades gracefully, never
+**This file is intentionally not committed** (`*.mmdb` is gitignored) —
+MaxMind's license doesn't allow freely redistributing the raw database,
+and this repo is public. It has to be placed on each environment
+(local dev, PythonAnywhere) directly, not via `git pull`. Until it's
+placed here, `/api/pricing` still works correctly: every lookup returns
+`None` and the endpoint falls back to the generic USD default region
+(see `geoip_service._get_reader()` — it degrades gracefully, never
 raises, for exactly this reason).
+
+**Deploying to PythonAnywhere**: git pull will NOT bring this file over
+(it's gitignored on purpose). Upload it directly via PythonAnywhere's
+Files tab (navigate to this directory and use the upload button), or
+`wget`/`curl` it from a Bash console there if you'd rather fetch it fresh
+with your own MaxMind license key.
 
 ## One-time setup
 
