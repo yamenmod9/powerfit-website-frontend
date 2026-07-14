@@ -9,14 +9,16 @@ import 'package:provider/provider.dart';
 import '../../../core/api/api_service.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/providers/gym_branding_provider.dart';
+import '../../../core/providers/locale_provider.dart';
 import '../../../shared/models/gym_model.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 
-/// Three-step wizard shown when a gym owner logs in for the first time.
+/// Four-step wizard shown when a gym owner logs in for the first time.
 ///
 /// Step 1 — Gym Name
 /// Step 2 — Logo Upload
 /// Step 3 — Brand Colors (primary + secondary)
+/// Step 4 — Preferred Language
 ///
 /// On completion the branding provider is updated and the owner is sent
 /// to their normal dashboard.
@@ -45,6 +47,9 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
   // Step 3 — Colors
   Color _selectedPrimary = const Color(0xFFDC2626);
   Color _selectedSecondary = const Color(0xFFEF4444);
+
+  // Step 4 — Language
+  String _selectedLanguage = 'ar';
 
   // Pre-defined palette the owner can pick from
   static const List<Color> _colorPalette = [
@@ -77,7 +82,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
     if (_currentStep == 0) {
       if (!_gymNameFormKey.currentState!.validate()) return;
     }
-    if (_currentStep < 2) {
+    if (_currentStep < 3) {
       setState(() => _currentStep++);
       _pageController.animateToPage(
         _currentStep,
@@ -141,6 +146,20 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
         );
       }
 
+      // Save the owner's language preference (step 4) — failure here
+      // shouldn't block finishing setup, since it's not critical data.
+      try {
+        await apiService.patch(
+          '/api/auth/language',
+          data: {'preferred_language': _selectedLanguage},
+        );
+      } catch (e) {
+        debugPrint('Failed to save language preference: $e');
+      }
+      if (mounted) {
+        context.read<LocaleProvider>().setArabic(_selectedLanguage == 'ar');
+      }
+
       if (mounted) {
         // Navigate to owner dashboard — GoRouter redirect handles it
         context.go('/owner');
@@ -157,7 +176,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
 
   @override
   Widget build(BuildContext context) {
-    final labels = [S.gymName, S.logo, S.brandColors];
+    final labels = [S.gymName, S.logo, S.brandColors, S.preferredLanguage];
 
     return Scaffold(
       body: SafeArea(
@@ -186,12 +205,12 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
 
                   // Progress bar
                   Row(
-                    children: List.generate(3, (i) {
+                    children: List.generate(4, (i) {
                       final isActive = i <= _currentStep;
                       return Expanded(
                         child: Container(
                           height: 4,
-                          margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                          margin: EdgeInsets.only(right: i < 3 ? 8 : 0),
                           decoration: BoxDecoration(
                             color: isActive
                                 ? Theme.of(context).colorScheme.primary
@@ -215,6 +234,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                   _buildStep1GymName(context),
                   _buildStep2Logo(context),
                   _buildStep3Colors(context),
+                  _buildStep4Language(context),
                 ],
               ),
             ),
@@ -231,7 +251,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: const Text(S.back),
+                        child: Text(S.back),
                       ),
                     ),
                   if (_currentStep > 0) const SizedBox(width: 16),
@@ -245,7 +265,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                       child: _isSubmitting
                           ? const SmallLoadingIndicator()
                           : Text(
-                              _currentStep < 2 ? S.continueText : S.finishSetup,
+                              _currentStep < 3 ? S.continueText : S.finishSetup,
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                             ),
                     ),
@@ -305,7 +325,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
 
             TextFormField(
               controller: _gymNameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: S.gymName,
                 hintText: S.gymNameHint,
                 prefixIcon: Icon(Icons.store),
@@ -378,7 +398,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
       if (bytes.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text(S.fileNotFound), backgroundColor: Colors.red),
+            SnackBar(content: Text(S.fileNotFound), backgroundColor: Colors.red),
           );
         }
         return;
@@ -407,7 +427,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text(S.chooseFromGallery),
+              title: Text(S.chooseFromGallery),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickLogo(ImageSource.gallery);
@@ -415,7 +435,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt),
-              title: const Text(S.takePhoto),
+              title: Text(S.takePhoto),
               enabled: !kIsWeb,
               onTap: () {
                 Navigator.pop(ctx);
@@ -425,7 +445,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
             if (_selectedLogoFile != null)
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text(S.removeLogo, style: TextStyle(color: Colors.red)),
+                title: Text(S.removeLogo, style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(ctx);
                   setState(() {
@@ -711,7 +731,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                         backgroundColor: _selectedPrimary,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Text(S.primary),
+                      child: Text(S.primary),
                     ),
                     const SizedBox(width: 12),
                     OutlinedButton(
@@ -720,7 +740,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                         foregroundColor: _selectedSecondary,
                         side: BorderSide(color: _selectedSecondary),
                       ),
-                      child: const Text(S.secondary),
+                      child: Text(S.secondary),
                     ),
                   ],
                 ),
@@ -728,6 +748,109 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // STEP 4 — Preferred Language
+  // ─────────────────────────────────────────────────────────────
+  Widget _buildStep4Language(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(height: 40),
+
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.language,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          Text(
+            S.chooseYourLanguage,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            S.languageUsedThroughout,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[500],
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+
+          _buildLanguageOption(
+            code: 'ar',
+            label: S.arabicLanguageName,
+            icon: Icons.translate,
+          ),
+          const SizedBox(height: 16),
+          _buildLanguageOption(
+            code: 'en',
+            label: S.englishLanguageName,
+            icon: Icons.translate,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageOption({
+    required String code,
+    required String label,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedLanguage == code;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedLanguage = code),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : Colors.grey[900],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[700]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[500],
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+          ],
+        ),
       ),
     );
   }

@@ -84,7 +84,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
 
     if (_subscriptionType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(S.pleaseSelectSubType)),
+        SnackBar(content: Text(S.pleaseSelectSubType)),
       );
       return;
     }
@@ -92,21 +92,21 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
     // Validate type-specific fields
     if (_subscriptionType == 'coins' && _coinsAmount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(S.pleaseSelectCoins)),
+        SnackBar(content: Text(S.pleaseSelectCoins)),
       );
       return;
     }
 
     if (_subscriptionType == 'time_based' && _packageDuration == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(S.pleaseSelectDuration)),
+        SnackBar(content: Text(S.pleaseSelectDuration)),
       );
       return;
     }
 
     if (_subscriptionType == 'personal_training' && _sessionsAmount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(S.pleaseSelectSessions)),
+        SnackBar(content: Text(S.pleaseSelectSessions)),
       );
       return;
     }
@@ -178,7 +178,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
             SizedBox(width: 8),
@@ -225,7 +225,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue.shade200),
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -255,7 +255,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text('${S.runOnAndroid} - DEBUG_SUBSCRIPTION_ACTIVATION.bat'),
                   duration: Duration(seconds: 5),
                   backgroundColor: Colors.orange,
@@ -274,7 +274,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.error_outline, color: Colors.red, size: 28),
             SizedBox(width: 8),
@@ -402,7 +402,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
                     children: [
                       TextFormField(
                         controller: _customerIdController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: S.customerIdRequired,
                           prefixIcon: Icon(Icons.person),
                         ),

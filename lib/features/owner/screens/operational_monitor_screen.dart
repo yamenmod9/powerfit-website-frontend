@@ -80,7 +80,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(S.operationalMonitor),
+        title: Text(S.operationalMonitor),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -109,7 +109,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _loadOperationalData,
-                          child: const Text(S.retry),
+                          child: Text(S.retry),
                         ),
                       ],
                     ),
@@ -198,7 +198,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
             TextButton.icon(
               onPressed: _loadOperationalData,
               icon: const Icon(Icons.refresh),
-              label: const Text(S.refresh),
+              label: Text(S.refresh),
             ),
           ],
         ),
@@ -375,7 +375,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                       color: Colors.green,
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text(
+                    child: Text(
                       S.live,
                       style: TextStyle(
                         color: Colors.white,

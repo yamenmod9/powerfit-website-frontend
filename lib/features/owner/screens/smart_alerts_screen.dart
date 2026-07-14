@@ -13,7 +13,7 @@ class SmartAlertsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(S.smartAlerts),
+        title: Text(S.smartAlerts),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -244,7 +244,7 @@ class SmartAlertsScreen extends StatelessWidget {
         trailing: PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert),
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'view',
               child: Row(
                 children: [
@@ -254,7 +254,7 @@ class SmartAlertsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'dismiss',
               child: Row(
                 children: [
@@ -301,7 +301,7 @@ class SmartAlertsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(S.alertDetails),
+        title: Text(S.alertDetails),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +324,7 @@ class SmartAlertsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(S.close),
+            child: Text(S.close),
           ),
         ],
       ),
@@ -333,7 +333,7 @@ class SmartAlertsScreen extends StatelessWidget {
 
   void _dismissAlert(BuildContext context, Map<String, dynamic> alert) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(S.alertDismissed),
         duration: Duration(seconds: 2),
       ),

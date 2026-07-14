@@ -5,6 +5,7 @@ import '../../core/localization/app_strings.dart';
 import '../core/auth/client_auth_provider.dart';
 import '../core/theme/client_theme.dart';
 import '../../core/providers/gym_branding_provider.dart';
+import '../../core/providers/locale_provider.dart';
 import '../../shared/models/gym_model.dart';
 import '../../shared/widgets/loading_indicator.dart';
 
@@ -37,13 +38,23 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     branding.loadFromGym(GymModel.fromJson(gymJson));
   }
 
+  /// Applies the member's saved language preference, if any — a brand new
+  /// account has none yet, which the router sends to the language setup
+  /// step instead of the home screen.
+  void _applyLanguagePreference(Map<String, dynamic> loginData) {
+    final customer = loginData['customer'] as Map<String, dynamic>?;
+    context
+        .read<LocaleProvider>()
+        .applyAccountPreference(customer?['preferred_language'] as String?);
+  }
+
   Future<void> _login() async {
     final identifier = _identifierController.text.trim();
     final password = _passwordController.text.trim();
 
     if (identifier.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(S.pleaseEnterCredentials),
           backgroundColor: Colors.orange,
         ),
@@ -59,9 +70,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       if (!mounted) return;
 
       _loadGymBranding(data);
+      _applyLanguagePreference(data);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(S.loginSuccessful),
           backgroundColor: Color(0xFF10B981),
           duration: Duration(seconds: 1),
@@ -121,7 +133,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       Center(child: _logoMark(88)),
                       const SizedBox(height: 26),
 
-                      const Text(
+                      Text(
                         S.gymMemberPortal,
                         style: TextStyle(
                           color: Colors.white,
@@ -131,7 +143,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
-                      const Text(
+                      Text(
                         S.yourGymInPocket,
                         style: TextStyle(
                           color: ClientTheme.textGrey,
@@ -143,7 +155,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                       TextField(
                         controller: _identifierController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: S.phoneOrEmail,
                           prefixIcon: Icon(Icons.person_outline),
                           hintText: S.enterPhoneOrEmail,
@@ -184,7 +196,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         ),
                         child: _isLoading
                             ? const SmallLoadingIndicator()
-                            : const Text(S.login),
+                            : Text(S.login),
                       ),
                       const SizedBox(height: 28),
 
@@ -208,7 +220,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               size: 30,
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               S.newMember,
                               style: TextStyle(
                                 color: Colors.white,
@@ -217,7 +229,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               S.visitReception,
                               style: TextStyle(
                                 color: ClientTheme.textGrey,
@@ -276,7 +288,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   size: 16,
                   color: ClientTheme.textGrey,
                 ),
-                label: const Text(
+                label: Text(
                   S.backToHome,
                   style: TextStyle(color: ClientTheme.textGrey),
                 ),

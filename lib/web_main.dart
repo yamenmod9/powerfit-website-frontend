@@ -13,6 +13,7 @@ import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'firebase_options.dart';
 import 'core/providers/gym_branding_provider.dart';
+import 'core/providers/locale_provider.dart';
 import 'core/services/fcm_notification_service.dart';
 import 'features/owner/providers/owner_dashboard_provider.dart';
 import 'features/branch_manager/providers/branch_manager_provider.dart';
@@ -23,6 +24,7 @@ import 'features/super_admin/providers/super_admin_provider.dart';
 import 'features/auth/screens/landing_screen.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/gym_setup_wizard.dart';
+import 'features/auth/screens/staff_language_setup_screen.dart';
 import 'features/owner/screens/owner_dashboard.dart';
 import 'features/branch_manager/screens/branch_manager_dashboard.dart';
 import 'features/reception/screens/reception_main_screen.dart';
@@ -60,6 +62,9 @@ class WebApp extends StatefulWidget {
 }
 
 class _WebAppState extends State<WebApp> {
+  // Shared across staff and client sides — one app-wide language.
+  late final LocaleProvider _localeProvider;
+
   // Staff / Admin stack
   late final ApiService _apiService;
   late final AuthService _authService;
@@ -79,6 +84,8 @@ class _WebAppState extends State<WebApp> {
   @override
   void initState() {
     super.initState();
+
+    _localeProvider = LocaleProvider();
 
     _apiService = ApiService();
     _authService = AuthService(_apiService);
@@ -156,6 +163,7 @@ class _WebAppState extends State<WebApp> {
         final userRole = _authProvider.userRole;
         final isLoginRoute = loc == '/login';
         final isSetupRoute = loc == '/gym-setup';
+        final isStaffLanguageSetupRoute = loc == '/staff-language-setup';
 
         if (isLoading) return null;
 
@@ -168,6 +176,12 @@ class _WebAppState extends State<WebApp> {
         if (userRole == AppConstants.roleOwner && !_brandingProvider.isSetupComplete) {
           if (isSetupRoute) return null;
           return '/gym-setup';
+        }
+
+        // Staff (any non-owner role) with no saved language preference → onboard
+        if (_authProvider.needsLanguageSetup) {
+          if (isStaffLanguageSetupRoute) return null;
+          return '/staff-language-setup';
         }
 
         if (isRootRoute || isLoginRoute) {
@@ -209,6 +223,10 @@ class _WebAppState extends State<WebApp> {
         GoRoute(
           path: '/gym-setup',
           builder: (context, state) => const GymSetupWizard(),
+        ),
+        GoRoute(
+          path: '/staff-language-setup',
+          builder: (context, state) => const StaffLanguageSetupScreen(),
         ),
         GoRoute(
           path: '/owner',
@@ -354,9 +372,10 @@ class _WebAppState extends State<WebApp> {
         ChangeNotifierProvider(create: (_) => AccountantProvider(_apiService)),
         ChangeNotifierProvider(create: (_) => SuperAdminProvider(_apiService)),
         ChangeNotifierProvider<GymBrandingProvider>.value(value: _brandingProvider),
+        ChangeNotifierProvider<LocaleProvider>.value(value: _localeProvider),
       ],
-      child: Consumer2<AuthProvider, GymBrandingProvider>(
-        builder: (context, authProvider, branding, _) {
+      child: Consumer3<AuthProvider, GymBrandingProvider, LocaleProvider>(
+        builder: (context, authProvider, branding, localeProvider, _) {
           final shouldUseGymBranding = authProvider.isAuthenticated &&
               branding.isSetupComplete &&
               branding.gymId != null;
@@ -371,12 +390,13 @@ class _WebAppState extends State<WebApp> {
           final title = shouldUseGymBranding ? branding.gymName : AppConstants.appName;
 
           return MaterialApp.router(
+            key: ValueKey(localeProvider.isArabic),
             title: title,
             debugShowCheckedModeBanner: false,
             theme: theme,
             scaffoldMessengerKey: FcmNotificationService.scaffoldMessengerKey,
-            locale: const Locale('ar'),
-            supportedLocales: const [Locale('ar')],
+            locale: localeProvider.locale,
+            supportedLocales: const [Locale('ar'), Locale('en')],
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,

@@ -88,7 +88,7 @@ class _EntryHistoryScreenState extends State<EntryHistoryScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(S.entryHistoryTitle,
+              Text(S.entryHistoryTitle,
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 19,
@@ -122,7 +122,7 @@ class _EntryHistoryScreenState extends State<EntryHistoryScreen> {
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               ElevatedButton(
-                  onPressed: _loadEntries, child: const Text(S.retry)),
+                  onPressed: _loadEntries, child: Text(S.retry)),
             ],
           ),
         ),
@@ -139,7 +139,7 @@ class _EntryHistoryScreenState extends State<EntryHistoryScreen> {
                 const SizedBox(height: 120),
                 Icon(Icons.history, size: 64, color: Colors.grey[700]),
                 const SizedBox(height: 16),
-                const Center(
+                Center(
                   child: Text(S.noEntryHistory,
                       style: TextStyle(
                           color: Colors.white,
@@ -147,7 +147,7 @@ class _EntryHistoryScreenState extends State<EntryHistoryScreen> {
                           fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(height: 8),
-                const Center(
+                Center(
                   child: Text(S.visitsAppearHere,
                       style: TextStyle(color: ClientTheme.subtleGrey)),
                 ),

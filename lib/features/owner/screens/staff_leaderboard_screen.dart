@@ -13,7 +13,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(S.staffLeaderboard),
+        title: Text(S.staffLeaderboard),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -43,7 +43,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
           final employees = provider.employeePerformance;
 
           if (employees.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(S.noPerformanceData),
             );
           }
@@ -306,13 +306,13 @@ class StaffLeaderboardScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(S.filterOptions),
+        title: Text(S.filterOptions),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.sort),
-              title: const Text(S.sortByRevenue),
+              title: Text(S.sortByRevenue),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Implement sorting
@@ -320,7 +320,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.people),
-              title: const Text(S.sortByCustomers),
+              title: Text(S.sortByCustomers),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Implement sorting
@@ -328,7 +328,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.trending_up),
-              title: const Text(S.sortByRetention),
+              title: Text(S.sortByRetention),
               onTap: () {
                 Navigator.pop(context);
                 // TODO: Implement sorting
@@ -339,7 +339,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(S.close),
+            child: Text(S.close),
           ),
         ],
       ),

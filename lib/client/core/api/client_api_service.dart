@@ -244,6 +244,19 @@ class ClientApiService {
     }
   }
 
+  // Generic PATCH request
+  Future<Response> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      return await _dio.patch(path, data: data, queryParameters: queryParameters);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Error handling
   String _handleError(DioException error) {
     if (error.response != null) {

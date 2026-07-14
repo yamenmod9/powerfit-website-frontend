@@ -39,7 +39,11 @@ class User(db.Model):
     
     # Status
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    
+
+    # Preferred UI language ('ar' or 'en'). NULL means the user hasn't set
+    # one yet — used as the signal to show the first-login language step.
+    preferred_language = db.Column(db.String(5), nullable=True)
+
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -74,6 +78,7 @@ class User(db.Model):
             'branch_id': self.branch_id,
             'branch_name': self.branch.name if self.branch else None,
             'is_active': self.is_active,
+            'preferred_language': self.preferred_language,
             'created_at': self.created_at.isoformat(),
             'last_login': self.last_login.isoformat() if self.last_login else None
         }

@@ -63,7 +63,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
       onSelect: (i) => setState(() => _selectedIndex = i),
       pageTitle: _selectedIndex == 0 ? gymName : _titles[_selectedIndex],
       pageSub: _selectedIndex == 0 ? S.todaysSummary : null,
-      navItems: const [
+      navItems: [
         DashNavItem(Icons.dashboard_outlined, S.overview),
         DashNavItem(Icons.point_of_sale_outlined, S.sales),
         DashNavItem(Icons.money_off_outlined, S.expenses),
@@ -97,7 +97,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
     );
   }
 
-  static const _titles = [
+  static List<String> get _titles => [
     S.overview,
     S.sales,
     S.expenses,
@@ -805,7 +805,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                               color: score >= 70 ? Colors.green : score >= 40 ? Colors.orange : Colors.red)),
                         ),
                       if (!isActive)
-                        const Chip(label: Text(S.inactive), backgroundColor: Colors.grey),
+                        Chip(label: Text(S.inactive), backgroundColor: Colors.grey),
                     ],
                   ),
                   const SizedBox(height: 12),

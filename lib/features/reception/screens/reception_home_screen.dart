@@ -184,7 +184,7 @@ class _ReceptionHomeScreenState extends State<ReceptionHomeScreen> {
                       ),
                       const SizedBox(height: 12),
                       if (provider.recentCustomers.isEmpty)
-                        const Card(
+                        Card(
                           child: Padding(
                             padding: EdgeInsets.all(16),
                             child: Center(child: Text(S.noRecentCustomers)),

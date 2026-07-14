@@ -87,7 +87,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             }
           },
         ),
-        title: const Text(S.subscriptionDetails),
+        title: Text(S.subscriptionDetails),
       ),
       body: _isLoading
           ? const DashboardSkeleton()
@@ -103,7 +103,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadSubscription,
-                        child: const Text(S.retry),
+                        child: Text(S.retry),
                       ),
                     ],
                   ),
@@ -380,7 +380,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                               ],
                             ],
                           )
-                        : const Center(
+                        : Center(
                             child: Text(S.noSubscriptionData),
                           ),
                   ),

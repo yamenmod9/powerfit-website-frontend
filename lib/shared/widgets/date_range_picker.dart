@@ -123,7 +123,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
             children: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text(S.cancel),
+                child: Text(S.cancel),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
@@ -131,7 +131,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
                   widget.onDateRangeSelected(_startDate, _endDate);
                   Navigator.pop(context);
                 },
-                child: const Text(S.apply),
+                child: Text(S.apply),
               ),
             ],
           ),

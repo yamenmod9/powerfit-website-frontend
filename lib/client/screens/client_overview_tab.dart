@@ -126,7 +126,7 @@ class _ClientOverviewTabState extends State<ClientOverviewTab> {
         Center(
           child: ElevatedButton(
             onPressed: _loadSubscription,
-            child: const Text(S.retry),
+            child: Text(S.retry),
           ),
         ),
       ],
@@ -404,14 +404,14 @@ class _ClientOverviewTabState extends State<ClientOverviewTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(S.subscriptionDetails,
+              Text(S.subscriptionDetails,
                   style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
                       fontSize: 15)),
               GestureDetector(
                 onTap: () => context.pushNamed('subscription'),
-                child: const Text(S.manageSubscription,
+                child: Text(S.manageSubscription,
                     style: TextStyle(
                         color: ClientTheme.primaryRed,
                         fontSize: 13,

@@ -145,7 +145,7 @@ class HealthReportScreen extends StatelessWidget {
                               onPressed: () {
                                 Clipboard.setData(ClipboardData(text: 'CUSTOMER-${customer.id}'));
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(S.qrCopied),
                                     duration: Duration(seconds: 2),
                                   ),
@@ -524,7 +524,7 @@ class HealthReportScreen extends StatelessWidget {
 
   void _shareReport(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(S.shareWhatsAppSoon),
       ),
     );
@@ -532,7 +532,7 @@ class HealthReportScreen extends StatelessWidget {
 
   void _printReport(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(S.printSoon),
       ),
     );

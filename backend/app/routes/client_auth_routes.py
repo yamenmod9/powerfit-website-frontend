@@ -120,7 +120,8 @@ def client_login():
             'qr_code': customer.qr_code,
             'branch_id': customer.branch_id,
             'branch_name': customer.branch.name if customer.branch else None,
-            'has_active_subscription': active_subscription is not None
+            'has_active_subscription': active_subscription is not None,
+            'preferred_language': customer.preferred_language,
         },
         'account_deletion': deletion_status,
         'gym': gym_data,
@@ -309,7 +310,8 @@ def verify_activation_code():
             'email': customer.email,
             'qr_code': customer.qr_code,
             'branch_id': customer.branch_id,
-            'branch_name': customer.branch.name if customer.branch else None
+            'branch_name': customer.branch.name if customer.branch else None,
+            'preferred_language': customer.preferred_language,
         },
         'gym': gym_data,
     }, 'Login successful')

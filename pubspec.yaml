@@ -48,6 +48,9 @@ dependencies:
   # Secure Storage for JWT
   flutter_secure_storage: ^9.0.0
 
+  # Lightweight key-value storage (persisted language preference)
+  shared_preferences: ^2.2.2
+
   # Routing
   go_router: ^13.0.0
 

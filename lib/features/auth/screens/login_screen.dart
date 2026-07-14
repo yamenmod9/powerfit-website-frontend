@@ -5,6 +5,7 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/providers/gym_branding_provider.dart';
+import '../../../core/providers/locale_provider.dart';
 import '../../../shared/models/gym_model.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 
@@ -71,6 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else {
         _loadGymBranding(result);
+        _applyLanguagePreference(result);
       }
     }
   }
@@ -79,6 +81,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final gymJson = loginResult['gym'] as Map<String, dynamic>?;
     if (gymJson == null) return;
     context.read<GymBrandingProvider>().loadFromGym(GymModel.fromJson(gymJson));
+  }
+
+  /// Applies the account's saved language preference, if any — a brand new
+  /// staff account has none yet, which the router sends to the onboarding
+  /// language step instead of a dashboard.
+  void _applyLanguagePreference(Map<String, dynamic> loginResult) {
+    context
+        .read<LocaleProvider>()
+        .applyAccountPreference(loginResult['preferred_language'] as String?);
   }
 
   Future<void> _handleLogin() async {
@@ -96,6 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
       if (result['success'] == true) {
         _loadGymBranding(result);
+        _applyLanguagePreference(result);
       } else {
         setState(() => _errorMessage = result['message'] ?? S.loginFailed);
       }
@@ -168,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextButton.icon(
                 onPressed: () => context.go('/'),
                 icon: const Icon(Icons.arrow_back, size: 16, color: _muted),
-                label: const Text(
+                label: Text(
                   S.backToHome,
                   style: TextStyle(color: _muted),
                 ),
@@ -202,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 22),
           _title(context),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             S.staffConsoleSubtitle,
             textAlign: TextAlign.center,
             style: TextStyle(color: _muted, fontSize: 15),
@@ -277,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: _isLoading
                         ? const SmallLoadingIndicator()
-                        : const Text(
+                        : Text(
                             S.login,
                             style: TextStyle(
                               fontSize: 16,
@@ -303,13 +315,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
+            child: Text(
               S.memberEntry,
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             S.roleAutoResolved,
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF808080), fontSize: 13),
@@ -376,7 +388,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: OutlinedButton.icon(
               onPressed: _isLoading ? null : _handleBiometricLogin,
               icon: const Icon(Icons.fingerprint, size: 26),
-              label: const Text(
+              label: Text(
                 S.loginWithBiometrics,
                 style: TextStyle(fontSize: 15),
               ),

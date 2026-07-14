@@ -8,6 +8,9 @@ from app.schemas import UserSchema, LoginSchema
 from app.services import AuthService
 from app.utils import success_response, error_response, get_current_user, role_required
 from app.models.user import UserRole
+from app.extensions import db
+
+_SUPPORTED_LANGUAGES = {'ar', 'en'}
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -61,6 +64,28 @@ def change_password():
         return error_response(message, 400)
     
     return success_response(message=message)
+
+
+@auth_bp.route('/language', methods=['PATCH'])
+@jwt_required()
+def update_preferred_language():
+    """Set the current user's preferred UI language ('ar' or 'en').
+
+    Called from the first-login onboarding step (owner setup wizard,
+    staff onboarding screen) and from in-app settings.
+    """
+    user = get_current_user()
+    if not user:
+        return error_response("Session expired. Please log in again.", 401)
+
+    language = (request.json or {}).get('preferred_language', '').strip().lower()
+    if language not in _SUPPORTED_LANGUAGES:
+        return error_response(f"preferred_language must be one of {sorted(_SUPPORTED_LANGUAGES)}", 400)
+
+    user.preferred_language = language
+    db.session.commit()
+
+    return success_response(user.to_dict(), "Language preference saved")
 
 
 @auth_bp.route('/logout', methods=['POST'])

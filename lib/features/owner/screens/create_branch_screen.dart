@@ -59,7 +59,7 @@ class _CreateBranchScreenState extends State<CreateBranchScreen> {
         final data = response.data;
         if (data['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(S.branchCreated),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 3),
@@ -93,7 +93,7 @@ class _CreateBranchScreenState extends State<CreateBranchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(S.createBranch),
+        title: Text(S.createBranch),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -136,7 +136,7 @@ class _CreateBranchScreenState extends State<CreateBranchScreen> {
               // Branch name
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.branchNameLabel,
                   hintText: S.branchNameHint,
                   prefixIcon: Icon(Icons.badge),
@@ -159,7 +159,7 @@ class _CreateBranchScreenState extends State<CreateBranchScreen> {
               // Branch code
               TextFormField(
                 controller: _codeController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.branchCodeLabel,
                   hintText: S.branchCodeHint,
                   prefixIcon: Icon(Icons.qr_code),
@@ -181,7 +181,7 @@ class _CreateBranchScreenState extends State<CreateBranchScreen> {
               // Address
               TextFormField(
                 controller: _addressController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.branchAddressLabel,
                   hintText: S.branchAddressHint,
                   prefixIcon: Icon(Icons.location_on),
@@ -194,7 +194,7 @@ class _CreateBranchScreenState extends State<CreateBranchScreen> {
               // City
               TextFormField(
                 controller: _cityController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.branchCityLabel,
                   hintText: S.branchCityHint,
                   prefixIcon: Icon(Icons.location_city),
@@ -207,7 +207,7 @@ class _CreateBranchScreenState extends State<CreateBranchScreen> {
               // Phone
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.branchPhoneLabel,
                   hintText: S.branchPhoneHint,
                   prefixIcon: Icon(Icons.phone),

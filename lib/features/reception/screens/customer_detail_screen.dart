@@ -39,7 +39,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(S.qrRegenerated),
               backgroundColor: Colors.green,
             ),
