@@ -95,147 +95,215 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ClientTheme.darkGrey,
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.7),
-            radius: 1.0,
-            colors: [Color(0xFF2A0A12), ClientTheme.darkGrey],
-            stops: [0.0, 0.6],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 48),
-
-                // Logo mark.
-                Center(
-                  child: Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      color: ClientTheme.primaryRed,
-                      borderRadius: BorderRadius.circular(26),
-                      boxShadow: [
-                        BoxShadow(
-                          color: ClientTheme.primaryRed.withValues(alpha: 0.5),
-                          blurRadius: 34,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'P',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 46,
-                          fontWeight: FontWeight.w900),
-                    ),
-                  ),
+      body: Column(
+        children: [
+          _header(context),
+          Expanded(
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment(0, -0.7),
+                  radius: 1.0,
+                  colors: [Color(0xFF2A0A12), ClientTheme.darkGrey],
+                  stops: [0.0, 0.6],
                 ),
-                const SizedBox(height: 26),
-
-                const Text(
-                  S.gymMemberPortal,
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  S.yourGymInPocket,
-                  style: TextStyle(color: ClientTheme.textGrey, fontSize: 15),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-
-                TextField(
-                  controller: _identifierController,
-                  decoration: const InputDecoration(
-                    labelText: S.phoneOrEmail,
-                    prefixIcon: Icon(Icons.person_outline),
-                    hintText: S.enterPhoneOrEmail,
-                    helperText: S.credentialsFromReception,
-                  ),
-                  keyboardType: TextInputType.text,
-                  enabled: !_isLoading,
-                ),
-                const SizedBox(height: 16),
-
-                TextField(
-                  controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: S.password,
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    helperText: S.firstTimeHint,
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword
-                          ? Icons.visibility
-                          : Icons.visibility_off),
-                      onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword),
-                    ),
-                  ),
-                  obscureText: _obscurePassword,
-                  enabled: !_isLoading,
-                  onSubmitted: (_) => _login(),
-                ),
-                const SizedBox(height: 28),
-
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _isLoading
-                      ? const SmallLoadingIndicator()
-                      : const Text(S.login),
-                ),
-                const SizedBox(height: 28),
-
-                // New-member hint.
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: ClientTheme.cardGrey,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: ClientTheme.primaryRed.withValues(alpha: 0.25)),
-                  ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.info_outline,
-                          color: ClientTheme.primaryRed, size: 30),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 24),
+
+                      // Logo mark.
+                      Center(child: _logoMark(88)),
+                      const SizedBox(height: 26),
+
                       const Text(
-                        S.newMember,
+                        S.gymMemberPortal,
                         style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        S.visitReception,
-                        style: TextStyle(
-                            color: ClientTheme.textGrey, fontSize: 13),
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                        ),
                         textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        S.yourGymInPocket,
+                        style: TextStyle(
+                          color: ClientTheme.textGrey,
+                          fontSize: 15,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 40),
+
+                      TextField(
+                        controller: _identifierController,
+                        decoration: const InputDecoration(
+                          labelText: S.phoneOrEmail,
+                          prefixIcon: Icon(Icons.person_outline),
+                          hintText: S.enterPhoneOrEmail,
+                          helperText: S.credentialsFromReception,
+                        ),
+                        keyboardType: TextInputType.text,
+                        enabled: !_isLoading,
+                      ),
+                      const SizedBox(height: 16),
+
+                      TextField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: S.password,
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          helperText: S.firstTimeHint,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                          ),
+                        ),
+                        obscureText: _obscurePassword,
+                        enabled: !_isLoading,
+                        onSubmitted: (_) => _login(),
+                      ),
+                      const SizedBox(height: 28),
+
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: _isLoading
+                            ? const SmallLoadingIndicator()
+                            : const Text(S.login),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // New-member hint.
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: ClientTheme.cardGrey,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: ClientTheme.primaryRed.withValues(
+                              alpha: 0.25,
+                            ),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              color: ClientTheme.primaryRed,
+                              size: 30,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              S.newMember,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              S.visitReception,
+                              style: TextStyle(
+                                color: ClientTheme.textGrey,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _header(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0x12FFFFFF))),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          child: Row(
+            children: [
+              InkWell(
+                onTap: () => context.go('/'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _logoMark(32),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'PowerFit',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => context.go('/'),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  size: 16,
+                  color: ClientTheme.textGrey,
+                ),
+                label: const Text(
+                  S.backToHome,
+                  style: TextStyle(color: ClientTheme.textGrey),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+
+  Widget _logoMark(double size) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(size * 0.28),
+      boxShadow: [
+        BoxShadow(
+          color: ClientTheme.primaryRed.withValues(alpha: 0.5),
+          blurRadius: size * 0.4,
+          offset: Offset(0, size * 0.14),
+        ),
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.28),
+      child: Image.asset('assets/icon/powerfit.jpeg', fit: BoxFit.cover),
+    ),
+  );
 }

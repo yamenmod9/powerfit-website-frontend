@@ -196,16 +196,22 @@ class _Sidebar extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(appTitle,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800)),
-                        Text(roleTag,
-                            style: TextStyle(
-                                color: accent,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700)),
+                        Text(
+                          appTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          roleTag,
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -215,10 +221,17 @@ class _Sidebar extends StatelessWidget {
             const Divider(height: 1, color: DashColors.line),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 12,
+                ),
                 children: [
                   for (var i = 0; i < navItems.length; i++)
-                    _navTile(navItems[i], i == selectedIndex, () => onSelect(i)),
+                    _navTile(
+                      navItems[i],
+                      i == selectedIndex,
+                      () => onSelect(i),
+                    ),
                 ],
               ),
             ),
@@ -230,27 +243,41 @@ class _Sidebar extends StatelessWidget {
                   Container(
                     width: 38,
                     height: 38,
-                    decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: accent,
+                      shape: BoxShape.circle,
+                    ),
                     alignment: Alignment.center,
-                    child: Text(initial,
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w800)),
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(userName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700)),
-                        Text(userRole,
-                            style: const TextStyle(
-                                color: DashColors.subtle, fontSize: 12)),
+                        Text(
+                          userName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          userRole,
+                          style: const TextStyle(
+                            color: DashColors.subtle,
+                            fontSize: 12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -278,22 +305,28 @@ class _Sidebar extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: BorderDirectional(
                 start: BorderSide(
-                    color: selected ? accent : Colors.transparent, width: 3),
+                  color: selected ? accent : Colors.transparent,
+                  width: 3,
+                ),
               ),
             ),
             child: Row(
               children: [
-                Icon(item.icon,
-                    size: 20,
-                    color: selected ? Colors.white : DashColors.muted),
+                Icon(
+                  item.icon,
+                  size: 20,
+                  color: selected ? Colors.white : DashColors.muted,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(item.label,
-                      style: TextStyle(
-                          color: selected ? Colors.white : DashColors.muted,
-                          fontSize: 15,
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w600)),
+                  child: Text(
+                    item.label,
+                    style: TextStyle(
+                      color: selected ? Colors.white : DashColors.muted,
+                      fontSize: 15,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -342,19 +375,26 @@ class _Topbar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(pageTitle,
+                    Text(
+                      pageTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (pageSub != null)
+                      Text(
+                        pageSub!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800)),
-                    if (pageSub != null)
-                      Text(pageSub!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: DashColors.subtle, fontSize: 13)),
+                          color: DashColors.subtle,
+                          fontSize: 13,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -400,9 +440,10 @@ class DashKpiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 24,
-              offset: const Offset(0, 8)),
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
@@ -412,13 +453,16 @@ class DashKpiCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Flexible(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: DashColors.muted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600)),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: DashColors.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               Container(
@@ -436,36 +480,47 @@ class DashKpiCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
-            child: Text(value,
-                style: TextStyle(
-                    color: valueColor ?? Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900)),
+            child: Text(
+              value,
+              style: TextStyle(
+                color: valueColor ?? Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           if (trend != null || sub != null) ...[
             const SizedBox(height: 4),
             Row(
               children: [
                 if (trend != null) ...[
-                  Icon(trendUp ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                  Icon(
+                    trendUp ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                    color: trendUp ? DashColors.emerald : Colors.redAccent,
+                    size: 18,
+                  ),
+                  Text(
+                    trend!,
+                    style: TextStyle(
                       color: trendUp ? DashColors.emerald : Colors.redAccent,
-                      size: 18),
-                  Text(trend!,
-                      style: TextStyle(
-                          color: trendUp ? DashColors.emerald : Colors.redAccent,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700)),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(width: 6),
                 ],
                 if (sub != null)
                   Flexible(
-                    child: Text(sub!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: DashColors.subtle,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
+                    child: Text(
+                      sub!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: DashColors.subtle,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -503,9 +558,10 @@ class DashSectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 24,
-              offset: const Offset(0, 8)),
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
@@ -514,19 +570,25 @@ class DashSectionCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800)),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               if (actionLabel != null)
                 InkWell(
                   onTap: onAction,
-                  child: Text(actionLabel!,
-                      style: const TextStyle(
-                          color: Color(0xFFF87171),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700)),
+                  child: Text(
+                    actionLabel!,
+                    style: const TextStyle(
+                      color: Color(0xFFF87171),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -581,26 +643,33 @@ class DashBarChart extends StatelessWidget {
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                                 colors: i == bars.length - 1
-                                    ? [const Color(0xFFEF4444), const Color(0xFF991B1B)]
+                                    ? [
+                                        const Color(0xFFEF4444),
+                                        const Color(0xFF991B1B),
+                                      ]
                                     : [accent, accent.withValues(alpha: 0.45)],
                               ),
                               borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(8)),
+                                top: Radius.circular(8),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(i < labels.length ? labels[i] : '',
-                        style: TextStyle(
-                            color: i == bars.length - 1
-                                ? Colors.white
-                                : DashColors.subtle,
-                            fontSize: 12,
-                            fontWeight: i == bars.length - 1
-                                ? FontWeight.w700
-                                : FontWeight.w400)),
+                    Text(
+                      i < labels.length ? labels[i] : '',
+                      style: TextStyle(
+                        color: i == bars.length - 1
+                            ? Colors.white
+                            : DashColors.subtle,
+                        fontSize: 12,
+                        fontWeight: i == bars.length - 1
+                            ? FontWeight.w700
+                            : FontWeight.w400,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -644,24 +713,32 @@ class DashAlertTile extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 3),
               child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   if (subtitle.isNotEmpty)
-                    Text(subtitle,
-                        style: const TextStyle(
-                            color: DashColors.muted, fontSize: 12)),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: DashColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -697,13 +774,18 @@ class DashProgressRow extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(name,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700)),
-            Text(trailing,
-                style: TextStyle(color: trailingColor, fontSize: 13)),
+            Text(
+              name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              trailing,
+              style: TextStyle(color: trailingColor, fontSize: 13),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -764,11 +846,19 @@ class DashKpiGrid extends StatelessWidget {
       final row = <Widget>[];
       for (var j = 0; j < cols; j++) {
         final idx = i + j;
-        row.add(Expanded(child: idx < cards.length ? cards[idx] : const SizedBox()));
+        row.add(
+          Expanded(child: idx < cards.length ? cards[idx] : const SizedBox()),
+        );
         if (j < cols - 1) row.add(const SizedBox(width: gap));
       }
-      rows.add(IntrinsicHeight(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: row)));
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: row,
+          ),
+        ),
+      );
       if (i + cols < cards.length) rows.add(const SizedBox(height: gap));
     }
     return Column(children: rows);
@@ -776,25 +866,23 @@ class DashKpiGrid extends StatelessWidget {
 }
 
 Widget _logoMark(Color accent, double size) => Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: accent,
-        borderRadius: BorderRadius.circular(size * 0.28),
-        boxShadow: [
-          BoxShadow(
-              color: accent.withValues(alpha: 0.5),
-              blurRadius: 14,
-              offset: const Offset(0, 4)),
-        ],
+  width: size,
+  height: size,
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(size * 0.28),
+    boxShadow: [
+      BoxShadow(
+        color: accent.withValues(alpha: 0.5),
+        blurRadius: 14,
+        offset: const Offset(0, 4),
       ),
-      alignment: Alignment.center,
-      child: Text('P',
-          style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: size * 0.56)),
-    );
+    ],
+  ),
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(size * 0.28),
+    child: Image.asset('assets/icon/powerfit.jpeg', fit: BoxFit.cover),
+  ),
+);
 
 /// A compact icon action button for the topbar.
 class DashIconAction extends StatelessWidget {
@@ -803,12 +891,13 @@ class DashIconAction extends StatelessWidget {
   final String? tooltip;
   final bool badge;
 
-  const DashIconAction(
-      {super.key,
-      required this.icon,
-      required this.onTap,
-      this.tooltip,
-      this.badge = false});
+  const DashIconAction({
+    super.key,
+    required this.icon,
+    required this.onTap,
+    this.tooltip,
+    this.badge = false,
+  });
 
   @override
   Widget build(BuildContext context) {

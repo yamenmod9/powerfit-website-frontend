@@ -34,18 +34,29 @@ class _LandingScreenState extends State<LandingScreen> {
   final _faqKey = GlobalKey();
   final _gatewayKey = GlobalKey();
 
-  bool _ar = true;
+  // Persisted at the class level (not the widget instance) so the choice
+  // survives navigating away from and back to the landing route — GoRouter
+  // rebuilds a fresh LandingScreen/State each time this route is visited.
+  static bool _lastSelectedAr = true;
+
+  late bool _ar = _lastSelectedAr;
   int _faqOpen = -1;
 
-  void _toggleLang() => setState(() => _ar = !_ar);
+  void _toggleLang() => setState(() {
+    _ar = !_ar;
+    _lastSelectedAr = _ar;
+  });
 
   Map<String, String> get _t => _ar ? _arText : _enText;
 
   void _scrollTo(GlobalKey key) {
     final ctx = key.currentContext;
     if (ctx != null) {
-      Scrollable.ensureVisible(ctx,
-          duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -159,7 +170,11 @@ class _LandingScreenState extends State<LandingScreen> {
                 Text(
                   _t['heroSub']!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: _muted, fontSize: 18, height: 1.6),
+                  style: const TextStyle(
+                    color: _muted,
+                    fontSize: 18,
+                    height: 1.6,
+                  ),
                 ),
                 const SizedBox(height: 36),
                 Wrap(
@@ -187,9 +202,14 @@ class _LandingScreenState extends State<LandingScreen> {
         border: Border.all(color: _red.withValues(alpha: 0.35)),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(text,
-          style: const TextStyle(
-              color: _red3, fontSize: 13, fontWeight: FontWeight.w700)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: _red3,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
@@ -224,6 +244,14 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   // ── Trust bar ────────────────────────────────────────────────────────────
+  static const _trustIcons = [
+    Icons.fitness_center,
+    Icons.sports_gymnastics,
+    Icons.sports_martial_arts,
+    Icons.pool,
+    Icons.sports_score,
+  ];
+
   Widget _trustBar(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -236,23 +264,26 @@ class _LandingScreenState extends State<LandingScreen> {
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text(_t['trust']!,
-                style: const TextStyle(
-                    color: _subtle, fontSize: 14, fontWeight: FontWeight.w600)),
-            for (var i = 0; i < 5; i++)
+            Text(
+              _t['trust']!,
+              style: const TextStyle(
+                color: _subtle,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            for (final icon in _trustIcons)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      style: BorderStyle.solid),
-                  borderRadius: BorderRadius.circular(8),
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text('logo',
-                    style: TextStyle(
-                        color: Color(0xFF5A5A5A),
-                        fontFamily: 'monospace',
-                        fontSize: 12)),
+                child: Icon(icon, color: const Color(0xFF8A8A8A), size: 22),
               ),
           ],
         ),
@@ -276,10 +307,9 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           _sectionHead(_t['featHead']!, _t['featSub']),
           const SizedBox(height: 56),
-          _responsiveGrid(
-            context,
-            [for (final f in features) _featureCard(f.$1, f.$2, f.$3)],
-          ),
+          _responsiveGrid(context, [
+            for (final f in features) _featureCard(f.$1, f.$2, f.$3),
+          ]),
         ],
       ),
     );
@@ -294,9 +324,10 @@ class _LandingScreenState extends State<LandingScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 26,
-              offset: const Offset(0, 8)),
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 26,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
@@ -312,13 +343,19 @@ class _LandingScreenState extends State<LandingScreen> {
             child: Icon(icon, color: _red2, size: 26),
           ),
           const SizedBox(height: 20),
-          Text(title,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(desc, style: const TextStyle(color: _muted, fontSize: 15, height: 1.6)),
+          Text(
+            desc,
+            style: const TextStyle(color: _muted, fontSize: 15, height: 1.6),
+          ),
         ],
       ),
     );
@@ -336,18 +373,20 @@ class _LandingScreenState extends State<LandingScreen> {
       color: _bg2,
       child: Column(
         children: [
-          Text(_t['howHead']!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.4)),
-          const SizedBox(height: 56),
-          _responsiveGrid(
-            context,
-            [for (final s in steps) _stepCard(s.$1, s.$2, s.$3)],
+          Text(
+            _t['howHead']!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 40,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.4,
+            ),
           ),
+          const SizedBox(height: 56),
+          _responsiveGrid(context, [
+            for (final s in steps) _stepCard(s.$1, s.$2, s.$3),
+          ]),
         ],
       ),
     );
@@ -364,27 +403,38 @@ class _LandingScreenState extends State<LandingScreen> {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                  color: _red.withValues(alpha: 0.4),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8)),
+                color: _red.withValues(alpha: 0.4),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
           alignment: Alignment.center,
-          child: Text(n,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900)),
+          child: Text(
+            n,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
         const SizedBox(height: 22),
-        Text(title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         const SizedBox(height: 8),
-        Text(desc,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: _muted, fontSize: 15, height: 1.6)),
+        Text(
+          desc,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: _muted, fontSize: 15, height: 1.6),
+        ),
       ],
     );
   }
@@ -401,10 +451,7 @@ class _LandingScreenState extends State<LandingScreen> {
             runSpacing: 32,
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.end,
-            children: [
-              _dashboardMock(),
-              _phoneMock(),
-            ],
+            children: [_dashboardMock(), _phoneMock()],
           ),
         ],
       ),
@@ -413,39 +460,44 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _dashboardMock() {
     Widget kpi(String label, String value, {Color? valueColor}) => Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-                color: _card, borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(color: _subtle, fontSize: 12)),
-                const SizedBox(height: 6),
-                Text(value,
-                    style: TextStyle(
-                        color: valueColor ?? Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800)),
-              ],
-            ),
-          ),
-        );
-    Widget bar(double h, {bool accent = false}) => Expanded(
-          child: Container(
-            height: 150 * h,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: accent
-                    ? const [_red2, Color(0xFF991B1B)]
-                    : const [_red, Color(0xFF7F1D1D)],
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: _subtle, fontSize: 12)),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: valueColor ?? Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
               ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
             ),
+          ],
+        ),
+      ),
+    );
+    Widget bar(double h, {bool accent = false}) => Expanded(
+      child: Container(
+        height: 150 * h,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: accent
+                ? const [_red2, Color(0xFF991B1B)]
+                : const [_red, Color(0xFF7F1D1D)],
           ),
-        );
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+        ),
+      ),
+    );
     return Container(
       constraints: const BoxConstraints(maxWidth: 620, minWidth: 300),
       decoration: BoxDecoration(
@@ -454,9 +506,10 @@ class _LandingScreenState extends State<LandingScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
-              blurRadius: 60,
-              offset: const Offset(0, 24)),
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 60,
+            offset: const Offset(0, 24),
+          ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -466,8 +519,8 @@ class _LandingScreenState extends State<LandingScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: BoxDecoration(
               border: Border(
-                  bottom:
-                      BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+                bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+              ),
             ),
             child: Row(
               children: [
@@ -477,9 +530,14 @@ class _LandingScreenState extends State<LandingScreen> {
                 const SizedBox(width: 7),
                 _dot(_emerald),
                 const Spacer(),
-                Text(_t['shotDash']!,
-                    style: const TextStyle(
-                        color: _subtle, fontSize: 12, fontWeight: FontWeight.w600)),
+                Text(
+                  _t['shotDash']!,
+                  style: const TextStyle(
+                    color: _subtle,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -500,7 +558,9 @@ class _LandingScreenState extends State<LandingScreen> {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                      color: _card, borderRadius: BorderRadius.circular(12)),
+                    color: _card,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: SizedBox(
                     height: 150,
                     child: Row(
@@ -531,8 +591,11 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _dot(Color c) =>
-      Container(width: 11, height: 11, decoration: BoxDecoration(color: c, shape: BoxShape.circle));
+  Widget _dot(Color c) => Container(
+    width: 11,
+    height: 11,
+    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+  );
 
   Widget _phoneMock() {
     return Container(
@@ -543,9 +606,10 @@ class _LandingScreenState extends State<LandingScreen> {
         borderRadius: BorderRadius.circular(38),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.6),
-              blurRadius: 60,
-              offset: const Offset(0, 24)),
+            color: Colors.black.withValues(alpha: 0.6),
+            blurRadius: 60,
+            offset: const Offset(0, 24),
+          ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -558,13 +622,18 @@ class _LandingScreenState extends State<LandingScreen> {
               padding: const EdgeInsets.fromLTRB(18, 22, 18, 14),
               child: Column(
                 children: [
-                  Text(_t['phGreet']!,
-                      style: const TextStyle(color: _subtle, fontSize: 12)),
-                  Text(_t['phName']!,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800)),
+                  Text(
+                    _t['phGreet']!,
+                    style: const TextStyle(color: _subtle, fontSize: 12),
+                  ),
+                  Text(
+                    _t['phName']!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -573,9 +642,10 @@ class _LandingScreenState extends State<LandingScreen> {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [_crimson, Color(0xFF7F1D1D)]),
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_crimson, Color(0xFF7F1D1D)],
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -584,35 +654,50 @@ class _LandingScreenState extends State<LandingScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(_t['phPlan']!,
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 13)),
+                      Text(
+                        _t['phPlan']!,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 13,
+                        ),
+                      ),
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                            color: _emerald,
-                            borderRadius: BorderRadius.circular(999)),
-                        child: Text(_t['phActive']!,
-                            style: const TextStyle(
-                                color: Color(0xFF04231A),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800)),
+                          color: _emerald,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          _t['phActive']!,
+                          style: const TextStyle(
+                            color: Color(0xFF04231A),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Text('24 ${_t['phDays']!}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900)),
+                  Text(
+                    '24 ${_t['phDays']!}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(_t['phLeft']!,
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 12)),
+                  Text(
+                    _t['phLeft']!,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -620,7 +705,9 @@ class _LandingScreenState extends State<LandingScreen> {
               margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                  color: _card, borderRadius: BorderRadius.circular(16)),
+                color: _card,
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Column(
                 children: [
                   Container(
@@ -628,13 +715,20 @@ class _LandingScreenState extends State<LandingScreen> {
                     height: 96,
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.qr_code_2, size: 78, color: Colors.black),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.qr_code_2,
+                      size: 78,
+                      color: Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  Text(_t['phScan']!,
-                      style: const TextStyle(color: _muted, fontSize: 12)),
+                  Text(
+                    _t['phScan']!,
+                    style: const TextStyle(color: _muted, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -655,25 +749,30 @@ class _LandingScreenState extends State<LandingScreen> {
       color: _bg2,
       child: Column(
         children: [
-          Text(_t['testHead']!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.4)),
-          const SizedBox(height: 56),
-          _responsiveGrid(
-            context,
-            [for (final q in quotes) _quoteCard(q.$1, q.$2, q.$3, q.$4)],
+          Text(
+            _t['testHead']!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 40,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.4,
+            ),
           ),
+          const SizedBox(height: 56),
+          _responsiveGrid(context, [
+            for (final q in quotes) _quoteCard(q.$1, q.$2, q.$3, q.$4),
+          ]),
           const SizedBox(height: 22),
-          Text(_t['placeholderNote']!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Color(0xFF5A5A5A),
-                  fontFamily: 'monospace',
-                  fontSize: 12)),
+          Text(
+            _t['placeholderNote']!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF5A5A5A),
+              fontFamily: 'monospace',
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
@@ -690,30 +789,49 @@ class _LandingScreenState extends State<LandingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('“$quote”',
-              style: const TextStyle(color: Colors.white, fontSize: 16, height: 1.7)),
+          Text(
+            '“$quote”',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              height: 1.7,
+            ),
+          ),
           const SizedBox(height: 22),
           Row(
             children: [
               Container(
                 width: 44,
                 height: 44,
-                decoration: const BoxDecoration(color: _red, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                  color: _red,
+                  shape: BoxShape.circle,
+                ),
                 alignment: Alignment.center,
-                child: Text(initial,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w800)),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700)),
-                  Text(gym, style: const TextStyle(color: _subtle, fontSize: 13)),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    gym,
+                    style: const TextStyle(color: _subtle, fontSize: 13),
+                  ),
                 ],
               ),
             ],
@@ -728,32 +846,48 @@ class _LandingScreenState extends State<LandingScreen> {
     final wide = _isWide(context);
     final cards = [
       _priceCard(
-        _t['p1name']!, _t['p1desc']!, _t['p1price']!, _t['perMo']!,
+        _t['p1name']!,
+        _t['p1desc']!,
+        _t['p1price']!,
+        _t['perMo']!,
         [_t['p1f1']!, _t['p1f2']!, _t['p1f3']!, _t['p1f4']!],
-        ctaLabel: _t['cta1']!, highlighted: false,
+        ctaLabel: _t['cta1']!,
+        highlighted: false,
       ),
       _priceCard(
-        _t['p2name']!, _t['p2desc']!, _t['p2price']!, _t['perMo']!,
+        _t['p2name']!,
+        _t['p2desc']!,
+        _t['p2price']!,
+        _t['perMo']!,
         [_t['p2f1']!, _t['p2f2']!, _t['p2f3']!, _t['p2f4']!, _t['p2f5']!],
-        ctaLabel: _t['cta1']!, highlighted: true, badge: _t['mostPopular']!,
+        ctaLabel: _t['cta1']!,
+        highlighted: true,
+        badge: _t['mostPopular']!,
       ),
       _priceCard(
-        _t['p3name']!, _t['p3desc']!, _t['p3price']!, null,
+        _t['p3name']!,
+        _t['p3desc']!,
+        _t['p3price']!,
+        null,
         [_t['p3f1']!, _t['p3f2']!, _t['p3f3']!, _t['p3f4']!],
-        ctaLabel: _t['contactSales']!, highlighted: false,
+        ctaLabel: _t['contactSales']!,
+        highlighted: false,
       ),
     ];
     return _section(
       key: _pricingKey,
       child: Column(
         children: [
-          Text(_t['pricingHead']!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 40,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.4)),
+          Text(
+            _t['pricingHead']!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 40,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.4,
+            ),
+          ),
           const SizedBox(height: 56),
           wide
               ? IntrinsicHeight(
@@ -794,28 +928,36 @@ class _LandingScreenState extends State<LandingScreen> {
             ? const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFF241416), _card])
+                colors: [Color(0xFF241416), _card],
+              )
             : null,
         color: highlighted ? null : _card,
         border: Border.all(
-            color: highlighted ? _red : Colors.white.withValues(alpha: 0.08),
-            width: highlighted ? 1.5 : 1),
+          color: highlighted ? _red : Colors.white.withValues(alpha: 0.08),
+          width: highlighted ? 1.5 : 1,
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: highlighted
             ? [
                 BoxShadow(
-                    color: _red.withValues(alpha: 0.22),
-                    blurRadius: 50,
-                    offset: const Offset(0, 20))
+                  color: _red.withValues(alpha: 0.22),
+                  blurRadius: 50,
+                  offset: const Offset(0, 20),
+                ),
               ]
             : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(name,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 6),
           Text(desc, style: const TextStyle(color: _muted, fontSize: 14)),
           const SizedBox(height: 18),
@@ -823,13 +965,19 @@ class _LandingScreenState extends State<LandingScreen> {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(price,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 38,
-                      fontWeight: FontWeight.w900)),
+              Text(
+                price,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 38,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               if (per != null)
-                Text(' $per', style: const TextStyle(color: _subtle, fontSize: 15)),
+                Text(
+                  ' $per',
+                  style: const TextStyle(color: _subtle, fontSize: 15),
+                ),
             ],
           ),
           const SizedBox(height: 22),
@@ -846,14 +994,21 @@ class _LandingScreenState extends State<LandingScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('✓',
-                      style: TextStyle(color: _red2, fontWeight: FontWeight.w900)),
+                  const Text(
+                    '✓',
+                    style: TextStyle(color: _red2, fontWeight: FontWeight.w900),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(f,
-                        style: TextStyle(
-                            color: highlighted ? Colors.white : const Color(0xFFD4D4D4),
-                            fontSize: 14)),
+                    child: Text(
+                      f,
+                      style: TextStyle(
+                        color: highlighted
+                            ? Colors.white
+                            : const Color(0xFFD4D4D4),
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -875,12 +1030,17 @@ class _LandingScreenState extends State<LandingScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                  color: _red, borderRadius: BorderRadius.circular(999)),
-              child: Text(badge,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800)),
+                color: _red,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                badge,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
         ),
@@ -905,13 +1065,16 @@ class _LandingScreenState extends State<LandingScreen> {
           constraints: const BoxConstraints(maxWidth: 820),
           child: Column(
             children: [
-              Text(_t['faqHead']!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 40,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.4)),
+              Text(
+                _t['faqHead']!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 40,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.4,
+                ),
+              ),
               const SizedBox(height: 48),
               for (var i = 0; i < items.length; i++) ...[
                 _faqItem(i, items[i].$1, items[i].$2),
@@ -942,15 +1105,20 @@ class _LandingScreenState extends State<LandingScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(q,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700)),
+                    child: Text(
+                      q,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 16),
-                  Text(open ? '−' : '+',
-                      style: const TextStyle(color: _red2, fontSize: 24)),
+                  Text(
+                    open ? '−' : '+',
+                    style: const TextStyle(color: _red2, fontSize: 24),
+                  ),
                 ],
               ),
             ),
@@ -961,12 +1129,19 @@ class _LandingScreenState extends State<LandingScreen> {
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 22),
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: Text(a,
-                    style: const TextStyle(color: _muted, fontSize: 15, height: 1.6)),
+                child: Text(
+                  a,
+                  style: const TextStyle(
+                    color: _muted,
+                    fontSize: 15,
+                    height: 1.6,
+                  ),
+                ),
               ),
             ),
-            crossFadeState:
-                open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: open
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 220),
           ),
         ],
@@ -992,25 +1167,45 @@ class _LandingScreenState extends State<LandingScreen> {
           constraints: const BoxConstraints(maxWidth: 1000),
           child: Column(
             children: [
-              Text(_t['finalHead']!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 44,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.5)),
+              Text(
+                _t['finalHead']!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 44,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+              ),
               const SizedBox(height: 14),
-              Text(_t['finalSub']!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: _muted, fontSize: 19)),
+              Text(
+                _t['finalSub']!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: _muted, fontSize: 19),
+              ),
               const SizedBox(height: 48),
               _responsiveGrid(context, [
-                _roleCard(Icons.person, _crimson, _t['roleMember']!,
-                    _t['roleMemberD']!, () => context.go('/client/welcome')),
-                _roleCard(Icons.badge, _red, _t['roleStaff']!, _t['roleStaffD']!,
-                    () => context.go('/login')),
-                _roleCard(Icons.admin_panel_settings, _gold, _t['roleAdmin']!,
-                    _t['roleAdminD']!, () => context.go('/login')),
+                _roleCard(
+                  Icons.person,
+                  _crimson,
+                  _t['roleMember']!,
+                  _t['roleMemberD']!,
+                  () => context.go('/client/welcome'),
+                ),
+                _roleCard(
+                  Icons.badge,
+                  _red,
+                  _t['roleStaff']!,
+                  _t['roleStaffD']!,
+                  () => context.go('/login'),
+                ),
+                _roleCard(
+                  Icons.admin_panel_settings,
+                  _gold,
+                  _t['roleAdmin']!,
+                  _t['roleAdminD']!,
+                  () => context.go('/login'),
+                ),
               ]),
             ],
           ),
@@ -1020,7 +1215,12 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Widget _roleCard(
-      IconData icon, Color color, String title, String desc, VoidCallback onTap) {
+    IconData icon,
+    Color color,
+    String title,
+    String desc,
+    VoidCallback onTap,
+  ) {
     return _HoverLift(
       builder: (hovering) => Material(
         color: _card,
@@ -1046,15 +1246,20 @@ class _LandingScreenState extends State<LandingScreen> {
                   child: Icon(icon, color: color, size: 26),
                 ),
                 const SizedBox(height: 18),
-                Text(title,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(desc,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: _muted, fontSize: 14)),
+                Text(
+                  desc,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _muted, fontSize: 14),
+                ),
               ],
             ),
           ),
@@ -1086,18 +1291,24 @@ class _LandingScreenState extends State<LandingScreen> {
                 children: [
                   _logoMark(30),
                   const SizedBox(width: 10),
-                  const Text('PowerFit',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800)),
+                  const Text(
+                    'PowerFit',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ],
               ),
               Wrap(
                 spacing: 24,
                 runSpacing: 8,
                 children: [
-                  _footerLink(_t['navFeatures']!, () => _scrollTo(_featuresKey)),
+                  _footerLink(
+                    _t['navFeatures']!,
+                    () => _scrollTo(_featuresKey),
+                  ),
                   _footerLink(_t['navPricing']!, () => _scrollTo(_pricingKey)),
                   _footerLink(_t['navFaq']!, () => _scrollTo(_faqKey)),
                   _footerLink(_t['login']!, () => _scrollTo(_gatewayKey)),
@@ -1108,8 +1319,10 @@ class _LandingScreenState extends State<LandingScreen> {
                 children: [
                   _langButton(),
                   const SizedBox(width: 16),
-                  const Text('© 2026 PowerFit',
-                      style: TextStyle(color: Color(0xFF5A5A5A), fontSize: 13)),
+                  const Text(
+                    '© 2026 PowerFit',
+                    style: TextStyle(color: Color(0xFF5A5A5A), fontSize: 13),
+                  ),
                 ],
               ),
             ],
@@ -1120,39 +1333,46 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Widget _footerLink(String text, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        child: Text(text, style: const TextStyle(color: _muted, fontSize: 14)),
-      );
+    onTap: onTap,
+    child: Text(text, style: const TextStyle(color: _muted, fontSize: 14)),
+  );
 
   Widget _langButton() => OutlinedButton(
-        onPressed: _toggleLang,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.white,
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-          minimumSize: Size.zero,
-        ),
-        child: Text(_ar ? 'EN' : 'ع',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-      );
+    onPressed: _toggleLang,
+    style: OutlinedButton.styleFrom(
+      foregroundColor: Colors.white,
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      minimumSize: Size.zero,
+    ),
+    child: Text(
+      _ar ? 'EN' : 'ع',
+      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+    ),
+  );
 
   // ── Shared bits ──────────────────────────────────────────────────────────
   Widget _sectionHead(String head, String? sub) {
     return Column(
       children: [
-        Text(head,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 40,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.4)),
+        Text(
+          head,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 40,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.4,
+          ),
+        ),
         if (sub != null) ...[
           const SizedBox(height: 12),
-          Text(sub,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: _muted, fontSize: 18)),
+          Text(
+            sub,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: _muted, fontSize: 18),
+          ),
         ],
       ],
     );
@@ -1168,14 +1388,21 @@ class _LandingScreenState extends State<LandingScreen> {
       final rowChildren = <Widget>[];
       for (var j = 0; j < cols; j++) {
         final idx = i + j;
-        rowChildren.add(Expanded(
-          child: idx < children.length ? children[idx] : const SizedBox(),
-        ));
+        rowChildren.add(
+          Expanded(
+            child: idx < children.length ? children[idx] : const SizedBox(),
+          ),
+        );
         if (j < cols - 1) rowChildren.add(const SizedBox(width: gap));
       }
-      rows.add(IntrinsicHeight(
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: rowChildren),
-      ));
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: rowChildren,
+          ),
+        ),
+      );
       if (i + cols < children.length) rows.add(const SizedBox(height: gap));
     }
     return Column(children: rows);
@@ -1183,22 +1410,23 @@ class _LandingScreenState extends State<LandingScreen> {
 }
 
 Widget _logoMark(double size) => Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: _red,
-        borderRadius: BorderRadius.circular(size * 0.28),
-        boxShadow: [
-          BoxShadow(color: _red.withValues(alpha: 0.5), blurRadius: 14, offset: const Offset(0, 4)),
-        ],
+  width: size,
+  height: size,
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(size * 0.28),
+    boxShadow: [
+      BoxShadow(
+        color: _red.withValues(alpha: 0.5),
+        blurRadius: 14,
+        offset: const Offset(0, 4),
       ),
-      alignment: Alignment.center,
-      child: Text('P',
-          style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              fontSize: size * 0.56)),
-    );
+    ],
+  ),
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(size * 0.28),
+    child: Image.asset('assets/icon/powerfit.jpeg', fit: BoxFit.cover),
+  ),
+);
 
 // ── Header ───────────────────────────────────────────────────────────────
 class _Header extends StatelessWidget {
@@ -1225,7 +1453,9 @@ class _Header extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: _bg.withValues(alpha: 0.9),
-        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.07))),
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
+        ),
       ),
       child: SafeArea(
         bottom: false,
@@ -1238,11 +1468,14 @@ class _Header extends StatelessWidget {
                 children: [
                   _logoMark(32),
                   const SizedBox(width: 10),
-                  const Text('PowerFit',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800)),
+                  const Text(
+                    'PowerFit',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const Spacer(),
                   if (wide) ...[
                     _navLink(t['navFeatures']!, onNavFeatures),
@@ -1258,26 +1491,41 @@ class _Header extends StatelessWidget {
                     onPressed: onToggleLang,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999)),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                       minimumSize: Size.zero,
                     ),
-                    child: Text(langLabel,
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w700)),
+                    child: Text(
+                      langLabel,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   OutlinedButton(
                     onPressed: onLogin,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.24)),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.24),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(t['login']!),
                   ),
@@ -1291,11 +1539,16 @@ class _Header extends StatelessWidget {
   }
 
   Widget _navLink(String text, VoidCallback onTap) => InkWell(
-        onTap: onTap,
-        child: Text(text,
-            style: const TextStyle(
-                color: _muted, fontSize: 15, fontWeight: FontWeight.w600)),
-      );
+    onTap: onTap,
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: _muted,
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
 }
 
 /// Fades + slides its child up on first build.
@@ -1309,8 +1562,9 @@ class _HeroFadeIn extends StatefulWidget {
 class _HeroFadeInState extends State<_HeroFadeIn>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 800))
-    ..forward();
+    vsync: this,
+    duration: const Duration(milliseconds: 800),
+  )..forward();
   @override
   void dispose() {
     _c.dispose();
@@ -1325,7 +1579,10 @@ class _HeroFadeInState extends State<_HeroFadeIn>
         final t = Curves.easeOutCubic.transform(_c.value);
         return Opacity(
           opacity: t,
-          child: Transform.translate(offset: Offset(0, (1 - t) * 24), child: child),
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 24),
+            child: child,
+          ),
         );
       },
       child: widget.child,
@@ -1344,7 +1601,9 @@ class _RevealOnScroll extends StatefulWidget {
 class _RevealOnScrollState extends State<_RevealOnScroll>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 550));
+    vsync: this,
+    duration: const Duration(milliseconds: 550),
+  );
   ScrollPosition? _position;
   bool _revealed = false;
 
@@ -1387,7 +1646,10 @@ class _RevealOnScrollState extends State<_RevealOnScroll>
         final t = Curves.easeOut.transform(_c.value);
         return Opacity(
           opacity: t,
-          child: Transform.translate(offset: Offset(0, (1 - t) * 24), child: child),
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 24),
+            child: child,
+          ),
         );
       },
       child: widget.child,
@@ -1421,54 +1683,93 @@ class _HoverLiftState extends State<_HoverLift> {
 
 // ── Content ────────────────────────────────────────────────────────────────
 const Map<String, String> _arText = {
-  'navFeatures': 'الميزات', 'navHow': 'كيف يعمل', 'navPricing': 'الأسعار',
-  'navFaq': 'الأسئلة', 'login': 'تسجيل الدخول',
+  'navFeatures': 'الميزات',
+  'navHow': 'كيف يعمل',
+  'navPricing': 'الأسعار',
+  'navFaq': 'الأسئلة',
+  'login': 'تسجيل الدخول',
   'heroBadge': 'نظام إدارة النوادي الرياضية',
   'heroHead': 'أدر ناديك بالكامل من مكان واحد',
   'heroSub':
       'إدارة كاملة للاشتراكات والفروع والدخول عبر رمز QR — لأعضاء النادي والموظفين والإدارة، في مكان واحد.',
-  'cta1': 'ابدأ الآن', 'cta2': 'شاهد كيف يعمل',
+  'cta1': 'ابدأ الآن',
+  'cta2': 'شاهد كيف يعمل',
   'trust': 'يثق به نوادٍ في المنطقة',
   'featHead': 'كل ما يحتاجه ناديك في مكان واحد',
   'featSub': 'أدوات متكاملة للإدارة والفروع والأعضاء.',
-  'f1t': 'دخول سريع عبر QR', 'f1d': 'سجّل حضور الأعضاء في ثوانٍ عبر مسح رمز QR.',
-  'f2t': 'متابعة الاشتراكات', 'f2d': 'تجديد وتجميد وإيقاف مع تنبيهات قبل الانتهاء.',
-  'f3t': 'إدارة متعددة الفروع', 'f3d': 'لوحة منفصلة لكل فرع ومقارنات فورية.',
-  'f4t': 'تقارير مالية دقيقة', 'f4d': 'إيرادات ومصروفات وإقفال يومي بضغطة واحدة.',
-  'f5t': 'تنبيهات ذكية', 'f5d': 'تنبيهات فورية للاشتراكات المنتهية والخلل التشغيلي.',
-  'f6t': 'إدارة الموظفين', 'f6d': 'صلاحيات لكل دور وتتبّع أداء الفريق.',
+  'f1t': 'دخول سريع عبر QR',
+  'f1d': 'سجّل حضور الأعضاء في ثوانٍ عبر مسح رمز QR.',
+  'f2t': 'متابعة الاشتراكات',
+  'f2d': 'تجديد وتجميد وإيقاف مع تنبيهات قبل الانتهاء.',
+  'f3t': 'إدارة متعددة الفروع',
+  'f3d': 'لوحة منفصلة لكل فرع ومقارنات فورية.',
+  'f4t': 'تقارير مالية دقيقة',
+  'f4d': 'إيرادات ومصروفات وإقفال يومي بضغطة واحدة.',
+  'f5t': 'تنبيهات ذكية',
+  'f5d': 'تنبيهات فورية للاشتراكات المنتهية والخلل التشغيلي.',
+  'f6t': 'إدارة الموظفين',
+  'f6d': 'صلاحيات لكل دور وتتبّع أداء الفريق.',
   'howHead': 'كيف يعمل',
-  's1t': 'سجّل ناديك وفروعك', 's1d': 'أنشئ حسابك وأضف فروعك في دقائق.',
-  's2t': 'أضف الأعضاء والموظفين', 's2d': 'استورد أعضاءك ومنح كل موظف دوره.',
-  's3t': 'تابع كل شيء لحظياً', 's3d': 'راقب الحضور والإيرادات من لوحة واحدة.',
+  's1t': 'سجّل ناديك وفروعك',
+  's1d': 'أنشئ حسابك وأضف فروعك في دقائق.',
+  's2t': 'أضف الأعضاء والموظفين',
+  's2d': 'استورد أعضاءك ومنح كل موظف دوره.',
+  's3t': 'تابع كل شيء لحظياً',
+  's3d': 'راقب الحضور والإيرادات من لوحة واحدة.',
   'shotHead': 'مصمّم لكل شاشة',
   'shotSub': 'كونسول الموظفين وتطبيق الأعضاء بلغة تصميم واحدة.',
-  'shotDash': 'لوحة المالك', 'kRevenue': 'الإيرادات', 'kMembers': 'الأعضاء',
+  'shotDash': 'لوحة المالك',
+  'kRevenue': 'الإيرادات',
+  'kMembers': 'الأعضاء',
   'kToday': 'دخول اليوم',
-  'phGreet': 'مرحباً بعودتك', 'phName': 'أحمد', 'phPlan': 'اشتراكك',
-  'phActive': 'نشط', 'phDays': 'يوم', 'phLeft': 'متبقٍ على انتهاء الاشتراك',
+  'phGreet': 'مرحباً بعودتك',
+  'phName': 'أحمد',
+  'phPlan': 'اشتراكك',
+  'phActive': 'نشط',
+  'phDays': 'يوم',
+  'phLeft': 'متبقٍ على انتهاء الاشتراك',
   'phScan': 'امسح للدخول',
   'testHead': 'يحبّه أصحاب النوادي',
   'q1': 'باور فِت استبدل ثلاث أدوات كنا نتنقل بينها. الدخول صار فورياً.',
   'q2': 'إدارة خمسة فروع من شاشة واحدة غيّرت طريقة عملنا.',
   'q3': 'التقارير المالية توفّر عليّ ساعات كل أسبوع.',
-  'n1': 'اسم تجريبي', 'g1': 'نادي آيرون هاوس', 'n2': 'اسم تجريبي',
-  'g2': 'بيك فِتنس', 'n3': 'اسم تجريبي', 'g3': 'نادي تيتان',
+  'n1': 'اسم تجريبي',
+  'g1': 'نادي آيرون هاوس',
+  'n2': 'اسم تجريبي',
+  'g2': 'بيك فِتنس',
+  'n3': 'اسم تجريبي',
+  'g3': 'نادي تيتان',
   'placeholderNote': 'أسماء وشهادات تجريبية — استبدلها بعملائك.',
-  'pricingHead': 'أسعار بسيطة تنمو معك', 'mostPopular': 'الأكثر شيوعاً',
-  'perMo': '/شهرياً', 'contactSales': 'تواصل معنا',
-  'p1name': 'المبتدئ', 'p1desc': 'فرع واحد', 'p1price': '\$29',
-  'p1f1': 'فرع واحد', 'p1f2': 'حتى 200 عضو', 'p1f3': 'دخول عبر QR',
+  'pricingHead': 'أسعار بسيطة تنمو معك',
+  'mostPopular': 'الأكثر شيوعاً',
+  'perMo': '/شهرياً',
+  'contactSales': 'تواصل معنا',
+  'p1name': 'المبتدئ',
+  'p1desc': 'فرع واحد',
+  'p1price': '\$29',
+  'p1f1': 'فرع واحد',
+  'p1f2': 'حتى 200 عضو',
+  'p1f3': 'دخول عبر QR',
   'p1f4': 'دعم بالبريد',
-  'p2name': 'الاحترافي', 'p2desc': 'متعدد الفروع', 'p2price': '\$79',
-  'p2f1': 'فروع غير محدودة', 'p2f2': 'أعضاء بلا حدود', 'p2f3': 'تقارير مالية',
-  'p2f4': 'صلاحيات الموظفين', 'p2f5': 'دعم ذو أولوية',
-  'p3name': 'المؤسسات', 'p3desc': 'حلول مخصصة', 'p3price': 'مخصّص',
-  'p3f1': 'كل مزايا الاحترافي', 'p3f2': 'تكاملات مخصصة', 'p3f3': 'مدير حساب مخصص',
+  'p2name': 'الاحترافي',
+  'p2desc': 'متعدد الفروع',
+  'p2price': '\$79',
+  'p2f1': 'فروع غير محدودة',
+  'p2f2': 'أعضاء بلا حدود',
+  'p2f3': 'تقارير مالية',
+  'p2f4': 'صلاحيات الموظفين',
+  'p2f5': 'دعم ذو أولوية',
+  'p3name': 'المؤسسات',
+  'p3desc': 'حلول مخصصة',
+  'p3price': 'مخصّص',
+  'p3f1': 'كل مزايا الاحترافي',
+  'p3f2': 'تكاملات مخصصة',
+  'p3f3': 'مدير حساب مخصص',
   'p3f4': 'اتفاقية خدمة وتدريب',
   'faqHead': 'الأسئلة الشائعة',
   'faq0q': 'كيف يعمل الدخول عبر QR؟',
-  'faq0a': 'يمسح العضو رمز QR عند الباب فيسجّل النظام الحضور فوراً دون أي انتظار.',
+  'faq0a':
+      'يمسح العضو رمز QR عند الباب فيسجّل النظام الحضور فوراً دون أي انتظار.',
   'faq1q': 'كم فرعاً يمكنني إدارته؟',
   'faq1a': 'أي عدد تحتاجه — لكل فرع لوحته الخاصة مع مقارنات فورية بين الفروع.',
   'faq2q': 'هل بياناتي آمنة؟',
@@ -1477,20 +1778,28 @@ const Map<String, String> _arText = {
   'faq3a': 'نعم، للأعضاء تطبيق خاص للاشتراكات والدخول عبر QR وسجل الزيارات.',
   'faq4q': 'هل يمكنني التجربة أولاً؟',
   'faq4a': 'ابدأ مجاناً وارتقِ بالخطة متى شئت دون التزام.',
-  'finalHead': 'جاهز لإدارة ناديك بذكاء؟', 'finalSub': 'اختر كيف تريد الدخول.',
-  'roleMember': 'عميل', 'roleMemberD': 'ادخل إلى تطبيق الأعضاء',
-  'roleStaff': 'موظف', 'roleStaffD': 'سجّل الدخول إلى الكونسول',
-  'roleAdmin': 'مسؤول النظام', 'roleAdminD': 'إدارة النظام',
+  'finalHead': 'جاهز لإدارة ناديك بذكاء؟',
+  'finalSub': 'اختر كيف تريد الدخول.',
+  'roleMember': 'عميل',
+  'roleMemberD': 'ادخل إلى تطبيق الأعضاء',
+  'roleStaff': 'موظف',
+  'roleStaffD': 'سجّل الدخول إلى الكونسول',
+  'roleAdmin': 'مسؤول النظام',
+  'roleAdminD': 'إدارة النظام',
 };
 
 const Map<String, String> _enText = {
-  'navFeatures': 'Features', 'navHow': 'How it works', 'navPricing': 'Pricing',
-  'navFaq': 'FAQ', 'login': 'Log in',
+  'navFeatures': 'Features',
+  'navHow': 'How it works',
+  'navPricing': 'Pricing',
+  'navFaq': 'FAQ',
+  'login': 'Log in',
   'heroBadge': 'Gym management system',
   'heroHead': 'Run your entire gym from one place',
   'heroSub':
       'Complete control of subscriptions, branches, and QR entry — for members, staff, and owners, all in one place.',
-  'cta1': 'Get started', 'cta2': 'See how it works',
+  'cta1': 'Get started',
+  'cta2': 'See how it works',
   'trust': 'Trusted by gyms across the region',
   'featHead': 'Everything your gym needs, in one place.',
   'featSub': 'Integrated tools for management, branches, and members.',
@@ -1498,10 +1807,14 @@ const Map<String, String> _enText = {
   'f1d': 'Check members in within seconds by scanning a QR code.',
   'f2t': 'Subscription control',
   'f2d': 'Renew, freeze, stop — with alerts before expiry.',
-  'f3t': 'Multi-branch', 'f3d': 'A dashboard per branch, instant comparisons.',
-  'f4t': 'Financial reports', 'f4d': 'Revenue, expenses, daily close-out in one click.',
-  'f5t': 'Smart alerts', 'f5d': 'Real-time alerts for expiries and operational issues.',
-  'f6t': 'Staff management', 'f6d': 'Role-based permissions and team performance.',
+  'f3t': 'Multi-branch',
+  'f3d': 'A dashboard per branch, instant comparisons.',
+  'f4t': 'Financial reports',
+  'f4d': 'Revenue, expenses, daily close-out in one click.',
+  'f5t': 'Smart alerts',
+  'f5d': 'Real-time alerts for expiries and operational issues.',
+  'f6t': 'Staff management',
+  'f6d': 'Role-based permissions and team performance.',
   'howHead': 'How it works',
   's1t': 'Set up your gym & branches',
   's1d': 'Create your account and add branches in minutes.',
@@ -1511,29 +1824,56 @@ const Map<String, String> _enText = {
   's3d': 'Monitor attendance and revenue from one dashboard.',
   'shotHead': 'Built for every screen',
   'shotSub': 'Staff console and member app, one design language.',
-  'shotDash': 'Owner dashboard', 'kRevenue': 'Revenue', 'kMembers': 'Members',
+  'shotDash': 'Owner dashboard',
+  'kRevenue': 'Revenue',
+  'kMembers': 'Members',
   'kToday': 'Today’s entries',
-  'phGreet': 'Welcome back', 'phName': 'Ahmed', 'phPlan': 'Your plan',
-  'phActive': 'Active', 'phDays': 'days', 'phLeft': 'left until renewal',
+  'phGreet': 'Welcome back',
+  'phName': 'Ahmed',
+  'phPlan': 'Your plan',
+  'phActive': 'Active',
+  'phDays': 'days',
+  'phLeft': 'left until renewal',
   'phScan': 'Scan to enter',
   'testHead': 'Loved by gym owners',
-  'q1': 'PowerFit replaced three tools we used to juggle. Check-in is instant now.',
+  'q1':
+      'PowerFit replaced three tools we used to juggle. Check-in is instant now.',
   'q2': 'Managing five branches from one screen changed how we operate.',
   'q3': 'The financial reports save me hours every week.',
-  'n1': 'Placeholder name', 'g1': 'Iron House Gym', 'n2': 'Placeholder name',
-  'g2': 'Peak Fitness', 'n3': 'Placeholder name', 'g3': 'Titan Club',
-  'placeholderNote': 'Placeholder names & quotes — replace with your customers.',
-  'pricingHead': 'Simple pricing that scales', 'mostPopular': 'Most popular',
-  'perMo': '/mo', 'contactSales': 'Contact sales',
-  'p1name': 'Starter', 'p1desc': 'Single branch', 'p1price': '\$29',
-  'p1f1': '1 branch', 'p1f2': 'Up to 200 members', 'p1f3': 'QR check-in',
+  'n1': 'Placeholder name',
+  'g1': 'Iron House Gym',
+  'n2': 'Placeholder name',
+  'g2': 'Peak Fitness',
+  'n3': 'Placeholder name',
+  'g3': 'Titan Club',
+  'placeholderNote':
+      'Placeholder names & quotes — replace with your customers.',
+  'pricingHead': 'Simple pricing that scales',
+  'mostPopular': 'Most popular',
+  'perMo': '/mo',
+  'contactSales': 'Contact sales',
+  'p1name': 'Starter',
+  'p1desc': 'Single branch',
+  'p1price': '\$29',
+  'p1f1': '1 branch',
+  'p1f2': 'Up to 200 members',
+  'p1f3': 'QR check-in',
   'p1f4': 'Email support',
-  'p2name': 'Pro', 'p2desc': 'Multi-branch', 'p2price': '\$79',
-  'p2f1': 'Unlimited branches', 'p2f2': 'Unlimited members', 'p2f3': 'Financial reports',
-  'p2f4': 'Staff roles', 'p2f5': 'Priority support',
-  'p3name': 'Enterprise', 'p3desc': 'Custom solutions', 'p3price': 'Custom',
-  'p3f1': 'Everything in Pro', 'p3f2': 'Custom integrations',
-  'p3f3': 'Dedicated manager', 'p3f4': 'SLA & training',
+  'p2name': 'Pro',
+  'p2desc': 'Multi-branch',
+  'p2price': '\$79',
+  'p2f1': 'Unlimited branches',
+  'p2f2': 'Unlimited members',
+  'p2f3': 'Financial reports',
+  'p2f4': 'Staff roles',
+  'p2f5': 'Priority support',
+  'p3name': 'Enterprise',
+  'p3desc': 'Custom solutions',
+  'p3price': 'Custom',
+  'p3f1': 'Everything in Pro',
+  'p3f2': 'Custom integrations',
+  'p3f3': 'Dedicated manager',
+  'p3f4': 'SLA & training',
   'faqHead': 'Frequently asked questions',
   'faq0q': 'How does QR check-in work?',
   'faq0a':
@@ -1551,7 +1891,10 @@ const Map<String, String> _enText = {
   'faq4a': 'Start free and upgrade whenever you are ready, no commitment.',
   'finalHead': 'Ready to run your gym the smart way?',
   'finalSub': 'Choose how you want to enter.',
-  'roleMember': 'Member', 'roleMemberD': 'Open the member app',
-  'roleStaff': 'Staff', 'roleStaffD': 'Log in to the console',
-  'roleAdmin': 'System admin', 'roleAdminD': 'System administration',
+  'roleMember': 'Member',
+  'roleMemberD': 'Open the member app',
+  'roleStaff': 'Staff',
+  'roleStaffD': 'Log in to the console',
+  'roleAdmin': 'System admin',
+  'roleAdminD': 'System administration',
 };

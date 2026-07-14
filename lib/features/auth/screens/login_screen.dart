@@ -66,7 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted) {
       setState(() => _isLoading = false);
       if (result['success'] != true) {
-        setState(() => _errorMessage = result['message'] ?? S.biometricLoginFailed);
+        setState(
+          () => _errorMessage = result['message'] ?? S.biometricLoginFailed,
+        );
       } else {
         _loadGymBranding(result);
       }
@@ -151,11 +153,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     _logoMark(32),
                     const SizedBox(width: 10),
-                    const Text('PowerFit',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800)),
+                    const Text(
+                      'PowerFit',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -163,7 +168,10 @@ class _LoginScreenState extends State<LoginScreen> {
               TextButton.icon(
                 onPressed: () => context.go('/'),
                 icon: const Icon(Icons.arrow_back, size: 16, color: _muted),
-                label: const Text(S.backToHome, style: TextStyle(color: _muted)),
+                label: const Text(
+                  S.backToHome,
+                  style: TextStyle(color: _muted),
+                ),
               ),
             ],
           ),
@@ -181,9 +189,10 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
-              blurRadius: 60,
-              offset: const Offset(0, 24)),
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 60,
+            offset: const Offset(0, 24),
+          ),
         ],
       ),
       child: Column(
@@ -193,9 +202,11 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 22),
           _title(context),
           const SizedBox(height: 8),
-          const Text(S.staffConsoleSubtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: _muted, fontSize: 15)),
+          const Text(
+            S.staffConsoleSubtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: _muted, fontSize: 15),
+          ),
           const SizedBox(height: 28),
           if (_errorMessage != null) ...[
             _errorBox(context),
@@ -211,11 +222,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _usernameController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _fieldDecoration(S.enterUsername, Icons.person_outline),
+                  decoration: _fieldDecoration(
+                    S.enterUsername,
+                    Icons.person_outline,
+                  ),
                   textInputAction: TextInputAction.next,
                   enabled: !_isLoading,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? S.usernameRequired : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? S.usernameRequired
+                      : null,
                 ),
                 const SizedBox(height: 18),
                 _label(S.password),
@@ -223,17 +238,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _passwordController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _fieldDecoration(S.enterPassword, Icons.lock_outline,
-                      suffix: IconButton(
-                        icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: _muted,
-                            size: 20),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
-                      )),
+                  decoration: _fieldDecoration(
+                    S.enterPassword,
+                    Icons.lock_outline,
+                    suffix: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: _muted,
+                        size: 20,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   enabled: !_isLoading,
@@ -253,13 +272,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       elevation: 8,
                       shadowColor: _red.withValues(alpha: 0.4),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: _isLoading
                         ? const SmallLoadingIndicator()
-                        : const Text(S.login,
+                        : const Text(
+                            S.login,
                             style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w700)),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                   ),
                 ),
                 _biometricButton(context),
@@ -275,19 +299,27 @@ class _LoginScreenState extends State<LoginScreen> {
               foregroundColor: Colors.white,
               side: BorderSide(color: Colors.white.withValues(alpha: 0.24)),
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text(S.memberEntry,
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+            child: const Text(
+              S.memberEntry,
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            ),
           ),
           const SizedBox(height: 20),
-          const Text(S.roleAutoResolved,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF808080), fontSize: 13)),
+          const Text(
+            S.roleAutoResolved,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFF808080), fontSize: 13),
+          ),
           const SizedBox(height: 14),
-          Text('Version ${AppConstants.appVersion}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF5A5A5A), fontSize: 12)),
+          Text(
+            'Version ${AppConstants.appVersion}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF5A5A5A), fontSize: 12),
+          ),
         ],
       ),
     );
@@ -316,7 +348,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _title(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final branding = context.watch<GymBrandingProvider>();
-    final displayName = auth.isAuthenticated &&
+    final displayName =
+        auth.isAuthenticated &&
             branding.isSetupComplete &&
             branding.gymId != null
         ? branding.gymName
@@ -325,7 +358,10 @@ class _LoginScreenState extends State<LoginScreen> {
       displayName,
       textAlign: TextAlign.center,
       style: const TextStyle(
-          color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+        color: Colors.white,
+        fontSize: 26,
+        fontWeight: FontWeight.w900,
+      ),
     );
   }
 
@@ -340,13 +376,16 @@ class _LoginScreenState extends State<LoginScreen> {
             child: OutlinedButton.icon(
               onPressed: _isLoading ? null : _handleBiometricLogin,
               icon: const Icon(Icons.fingerprint, size: 26),
-              label: const Text(S.loginWithBiometrics,
-                  style: TextStyle(fontSize: 15)),
+              label: const Text(
+                S.loginWithBiometrics,
+                style: TextStyle(fontSize: 15),
+              ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
                 side: BorderSide(color: _red.withValues(alpha: 0.6)),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -369,8 +408,10 @@ class _LoginScreenState extends State<LoginScreen> {
           const Icon(Icons.error_outline, color: Color(0xFFF87171), size: 20),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(_errorMessage!,
-                style: const TextStyle(color: Color(0xFFF87171), fontSize: 14)),
+            child: Text(
+              _errorMessage!,
+              style: const TextStyle(color: Color(0xFFF87171), fontSize: 14),
+            ),
           ),
           InkWell(
             onTap: () => setState(() => _errorMessage = null),
@@ -387,7 +428,10 @@ class _LoginScreenState extends State<LoginScreen> {
         const Expanded(child: Divider(color: Colors.white10)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text(S.or, style: const TextStyle(color: Color(0xFF6A6A6A), fontSize: 12)),
+          child: Text(
+            S.or,
+            style: const TextStyle(color: Color(0xFF6A6A6A), fontSize: 12),
+          ),
         ),
         const Expanded(child: Divider(color: Colors.white10)),
       ],
@@ -395,17 +439,26 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _label(String text) => Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: Text(text,
-            style: const TextStyle(
-                color: _muted, fontSize: 13, fontWeight: FontWeight.w600)),
-      );
+    alignment: AlignmentDirectional.centerStart,
+    child: Text(
+      text,
+      style: const TextStyle(
+        color: _muted,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
 
-  InputDecoration _fieldDecoration(String hint, IconData icon, {Widget? suffix}) {
+  InputDecoration _fieldDecoration(
+    String hint,
+    IconData icon, {
+    Widget? suffix,
+  }) {
     OutlineInputBorder border(Color c, [double w = 1]) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: c, width: w),
-        );
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: c, width: w),
+    );
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFF6A6A6A)),
@@ -422,23 +475,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _logoMark(double size) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: _red,
-          borderRadius: BorderRadius.circular(size * 0.28),
-          boxShadow: [
-            BoxShadow(
-                color: _red.withValues(alpha: 0.5),
-                blurRadius: 18,
-                offset: const Offset(0, 6)),
-          ],
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(size * 0.28),
+      boxShadow: [
+        BoxShadow(
+          color: _red.withValues(alpha: 0.5),
+          blurRadius: 18,
+          offset: const Offset(0, 6),
         ),
-        alignment: Alignment.center,
-        child: Text('P',
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: size * 0.56)),
-      );
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.28),
+      child: Image.asset('assets/icon/powerfit.jpeg', fit: BoxFit.cover),
+    ),
+  );
 }
