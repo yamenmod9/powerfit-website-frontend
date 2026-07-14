@@ -13,6 +13,7 @@ import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'firebase_options.dart';
 import 'core/providers/gym_branding_provider.dart';
+import 'core/providers/locale_provider.dart';
 import 'core/services/fcm_notification_service.dart';
 import 'routes/app_router.dart';
 import 'features/owner/providers/owner_dashboard_provider.dart';
@@ -106,9 +107,14 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => GymBrandingProvider(),
         ),
+
+        // App-wide language preference
+        ChangeNotifierProvider(
+          create: (_) => LocaleProvider(),
+        ),
       ],
-      child: Consumer2<AuthProvider, GymBrandingProvider>(
-        builder: (context, authProvider, branding, _) {
+      child: Consumer3<AuthProvider, GymBrandingProvider, LocaleProvider>(
+        builder: (context, authProvider, branding, localeProvider, _) {
           final router = AppRouter(authProvider, branding);
           final shouldUseGymBranding = authProvider.isAuthenticated &&
               branding.isSetupComplete &&
@@ -127,12 +133,13 @@ class MyApp extends StatelessWidget {
               : AppConstants.appName;
 
           return MaterialApp.router(
+            key: ValueKey(localeProvider.isArabic),
             title: title,
             debugShowCheckedModeBanner: false,
             theme: theme,
             scaffoldMessengerKey: FcmNotificationService.scaffoldMessengerKey,
-            locale: const Locale('ar'),
-            supportedLocales: const [Locale('ar')],
+            locale: localeProvider.locale,
+            supportedLocales: const [Locale('ar'), Locale('en')],
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,

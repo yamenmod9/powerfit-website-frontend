@@ -80,7 +80,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                   trailing: const Icon(Icons.info_outline),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(S.appUsesDarkTheme),
                       ),
                     );
@@ -94,7 +94,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(S.languageComingSoon),
                       ),
                     );
@@ -136,7 +136,7 @@ class ProfileSettingsScreen extends StatelessWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(S.helpSupportComingSoon),
                       ),
                     );

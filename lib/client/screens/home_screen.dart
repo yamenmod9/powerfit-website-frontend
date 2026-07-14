@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(S.dashboard),
+        title: Text(S.dashboard),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _loadSubscription,
-                          child: const Text(S.retry),
+                          child: Text(S.retry),
                         ),
                       ],
                     ),

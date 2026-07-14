@@ -13,6 +13,7 @@ class AuthService {
   static const String _userIdKey = 'user_id';
   static const String _usernameKey = 'username';
   static const String _branchIdKey = 'branch_id';
+  static const String _preferredLanguageKey = 'preferred_language';
   
   AuthService(this._apiService);
   
@@ -84,7 +85,14 @@ class AuthService {
           if (branchId != null) {
             await _storage.write(key: _branchIdKey, value: branchId.toString());
           }
-          
+
+          final preferredLanguage = user?['preferred_language'] as String?;
+          if (preferredLanguage != null) {
+            await _storage.write(key: _preferredLanguageKey, value: preferredLanguage);
+          } else {
+            await _storage.delete(key: _preferredLanguageKey);
+          }
+
           // Extract gym data (returned for owner users)
           final gymData = data['gym'] as Map<String, dynamic>?;
 
@@ -95,6 +103,7 @@ class AuthService {
             'user_id': userId,
             'username': userUsername,
             'branch_id': branchId,
+            'preferred_language': user?['preferred_language'],
             if (gymData != null) 'gym': gymData,
           };
         }
@@ -188,6 +197,7 @@ class AuthService {
     await _storage.delete(key: _userIdKey);
     await _storage.delete(key: _usernameKey);
     await _storage.delete(key: _branchIdKey);
+    await _storage.delete(key: _preferredLanguageKey);
   }
   
   // Check if user is authenticated
@@ -222,7 +232,17 @@ class AuthService {
   Future<String?> getBranchId() async {
     return await _storage.read(key: _branchIdKey);
   }
-  
+
+  // Get cached preferred language
+  Future<String?> getPreferredLanguage() async {
+    return await _storage.read(key: _preferredLanguageKey);
+  }
+
+  // Cache the preferred language locally after it's saved to the backend
+  Future<void> savePreferredLanguage(String language) async {
+    await _storage.write(key: _preferredLanguageKey, value: language);
+  }
+
   // Get token
   Future<String?> getToken() async {
     return await _storage.read(key: _tokenKey);

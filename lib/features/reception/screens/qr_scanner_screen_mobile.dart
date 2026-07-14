@@ -88,7 +88,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
+        builder: (context) => Center(
           child: Card(
             child: Padding(
               padding: EdgeInsets.all(20.0),
@@ -203,11 +203,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, 'cancel'),
-            child: const Text(S.cancel),
+            child: Text(S.cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, 'confirm'),
-            child: const Text(S.confirm),
+            child: Text(S.confirm),
           ),
         ],
       ),

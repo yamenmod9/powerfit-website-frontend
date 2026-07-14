@@ -6,6 +6,7 @@ import '../core/constants/app_constants.dart';
 import '../core/providers/gym_branding_provider.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/gym_setup_wizard.dart';
+import '../features/auth/screens/staff_language_setup_screen.dart';
 import '../features/owner/screens/owner_dashboard.dart';
 import '../features/branch_manager/screens/branch_manager_dashboard.dart';
 import '../features/reception/screens/reception_main_screen.dart';
@@ -27,6 +28,7 @@ class AppRouter {
 
       final isLoginRoute = state.matchedLocation == '/login';
       final isSetupRoute = state.matchedLocation == '/gym-setup';
+      final isStaffLanguageSetupRoute = state.matchedLocation == '/staff-language-setup';
 
       // Still loading auth state
       if (isLoading) {
@@ -44,6 +46,12 @@ class AppRouter {
         if (isSetupRoute) return null;
         // Redirect to wizard
         return '/gym-setup';
+      }
+
+      // Staff (any non-owner role) with no saved language preference → onboard
+      if (authProvider.needsLanguageSetup) {
+        if (isStaffLanguageSetupRoute) return null;
+        return '/staff-language-setup';
       }
 
       // Authenticated, on login page, redirect to role dashboard
@@ -100,6 +108,10 @@ class AppRouter {
       GoRoute(
         path: '/gym-setup',
         builder: (context, state) => const GymSetupWizard(),
+      ),
+      GoRoute(
+        path: '/staff-language-setup',
+        builder: (context, state) => const StaffLanguageSetupScreen(),
       ),
       GoRoute(
         path: '/owner',

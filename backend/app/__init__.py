@@ -107,6 +107,26 @@ def _ensure_db_schema(app):
                     ))
                     db.session.commit()
                     app.logger.info('Auto-migration: added discount column to transactions table')
+
+            # Add preferred_language column to users table if missing
+            if 'users' in existing_tables:
+                columns = [col['name'] for col in inspector.get_columns('users')]
+                if 'preferred_language' not in columns:
+                    db.session.execute(text(
+                        'ALTER TABLE users ADD COLUMN preferred_language VARCHAR(5)'
+                    ))
+                    db.session.commit()
+                    app.logger.info('Auto-migration: added preferred_language column to users table')
+
+            # Add preferred_language column to customers table if missing
+            if 'customers' in existing_tables:
+                columns = [col['name'] for col in inspector.get_columns('customers')]
+                if 'preferred_language' not in columns:
+                    db.session.execute(text(
+                        'ALTER TABLE customers ADD COLUMN preferred_language VARCHAR(5)'
+                    ))
+                    db.session.commit()
+                    app.logger.info('Auto-migration: added preferred_language column to customers table')
         except Exception as e:
             app.logger.warning(f'Schema migration check: {e}')
 

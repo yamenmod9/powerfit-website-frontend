@@ -45,7 +45,7 @@ class BiometricSettingsSection extends StatelessWidget {
                       ? Theme.of(context).colorScheme.primary
                       : null,
                 ),
-                title: const Text(S.biometricLogin),
+                title: Text(S.biometricLogin),
                 subtitle: Text(
                   authProvider.isBiometricEnabled
                       ? S.useBiometricToLogin
@@ -85,7 +85,7 @@ class BiometricSettingsSection extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(S.setupBiometricLogin),
+        title: Text(S.setupBiometricLogin),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -135,7 +135,7 @@ class BiometricSettingsSection extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(S.cancel),
+            child: Text(S.cancel),
           ),
           ElevatedButton.icon(
             onPressed: () {
@@ -143,7 +143,7 @@ class BiometricSettingsSection extends StatelessWidget {
               _verifyBiometric(context, authProvider);
             },
             icon: const Icon(Icons.arrow_forward, size: 18),
-            label: const Text(S.continueText),
+            label: Text(S.continueText),
           ),
         ],
       ),
@@ -165,7 +165,7 @@ class BiometricSettingsSection extends StatelessWidget {
 
     if (!authenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(S.biometricVerificationFailed),
         ),
       );
@@ -193,11 +193,11 @@ class BiometricSettingsSection extends StatelessWidget {
             color: Theme.of(ctx).colorScheme.primary,
             size: 48,
           ),
-          title: const Text(S.biometricVerified),
+          title: Text(S.biometricVerified),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 S.enterPasswordToComplete,
               ),
               const SizedBox(height: 16),
@@ -219,7 +219,7 @@ class BiometricSettingsSection extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(S.cancel),
+              child: Text(S.cancel),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -235,13 +235,13 @@ class BiometricSettingsSection extends StatelessWidget {
 
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text(S.biometricEnabled),
                     ),
                   );
                 }
               },
-              child: const Text(S.enable),
+              child: Text(S.enable),
             ),
           ],
         ),
@@ -258,14 +258,14 @@ class BiometricSettingsSection extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(S.disableBiometricLogin),
-        content: const Text(
+        title: Text(S.disableBiometricLogin),
+        content: Text(
           S.disableBiometricConfirm,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(S.cancel),
+            child: Text(S.cancel),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -273,7 +273,7 @@ class BiometricSettingsSection extends StatelessWidget {
               await authProvider.disableBiometric();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
+                  SnackBar(
                     content: Text(S.biometricDisabled),
                   ),
                 );
@@ -283,7 +283,7 @@ class BiometricSettingsSection extends StatelessWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text(S.disable),
+            child: Text(S.disable),
           ),
         ],
       ),

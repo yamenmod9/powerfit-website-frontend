@@ -35,7 +35,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     });
   }
 
-  static const _titles = [
+  static List<String> get _titles => [
     S.overview,
     S.branches,
     S.staff,
@@ -71,7 +71,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       onSelect: (i) => setState(() => _selectedIndex = i),
       pageTitle: _selectedIndex == 0 ? gymName : _titles[_selectedIndex],
       pageSub: _selectedIndex == 0 ? S.overview : null,
-      navItems: const [
+      navItems: [
         DashNavItem(Icons.dashboard_outlined, S.overview),
         DashNavItem(Icons.store_outlined, S.branches),
         DashNavItem(Icons.people_outline, S.staff),
@@ -121,7 +121,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           }
         },
         icon: const Icon(Icons.add_business),
-        label: const Text(S.createBranch),
+        label: Text(S.createBranch),
       );
     }
     // Tab 2 = Staff → show "Add Staff" FAB only if branches exist
@@ -129,7 +129,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
       return FloatingActionButton.extended(
         onPressed: () => _showAddStaffDialog(context),
         icon: const Icon(Icons.person_add),
-        label: const Text(S.addStaff),
+        label: Text(S.addStaff),
         backgroundColor: Colors.green,
       );
     }
@@ -402,7 +402,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   if (created == true) provider.refresh();
                 },
                 icon: const Icon(Icons.add_business),
-                label: const Text(S.createBranch),
+                label: Text(S.createBranch),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -503,7 +503,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                             ),
                           ),
                         if (!isActive)
-                          const Chip(label: Text(S.inactive), backgroundColor: Colors.grey),
+                          Chip(label: Text(S.inactive), backgroundColor: Colors.grey),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -579,7 +579,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                   setState(() => _selectedIndex = 1); // switch to branches tab
                 },
                 icon: const Icon(Icons.add_business),
-                label: const Text(S.createBranch),
+                label: Text(S.createBranch),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -618,7 +618,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
               ElevatedButton.icon(
                 onPressed: () => _showAddStaffDialog(context),
                 icon: const Icon(Icons.person_add),
-                label: const Text(S.addStaff),
+                label: Text(S.addStaff),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   backgroundColor: Colors.green,
@@ -651,7 +651,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                         );
                       },
                       icon: const Icon(Icons.emoji_events, size: 18),
-                      label: const Text(S.leaderboard),
+                      label: Text(S.leaderboard),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -663,7 +663,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                     child: ElevatedButton.icon(
                       onPressed: () => _showAddStaffDialog(context),
                       icon: const Icon(Icons.person_add, size: 18),
-                      label: const Text(S.addStaff),
+                      label: Text(S.addStaff),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         backgroundColor: Colors.green,
@@ -820,7 +820,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 
   Widget _buildComplaintsTab(BuildContext context, OwnerDashboardProvider provider) {
     if (provider.complaints.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

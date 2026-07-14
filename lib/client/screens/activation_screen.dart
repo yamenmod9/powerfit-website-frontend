@@ -34,7 +34,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
     final code = _controllers.map((c) => c.text).join();
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(S.pleaseEnterAllDigits),
           backgroundColor: Colors.orange,
         ),
@@ -73,7 +73,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(S.activationCodeResent),
             backgroundColor: Colors.green,
           ),
@@ -99,7 +99,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(S.activateAccount),
+        title: Text(S.activateAccount),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -190,7 +190,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
                           ),
                         ),
                       )
-                    : const Text(S.verify),
+                    : Text(S.verify),
               ),
               const SizedBox(height: 16),
 

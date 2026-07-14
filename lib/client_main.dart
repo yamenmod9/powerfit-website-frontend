@@ -11,6 +11,7 @@ import 'client/core/theme/client_theme.dart';
 import 'firebase_options.dart';
 import 'client/routes/client_router.dart';
 import 'core/providers/gym_branding_provider.dart';
+import 'core/providers/locale_provider.dart';
 import 'core/services/fcm_notification_service.dart';
 
 @pragma('vm:entry-point')
@@ -42,6 +43,7 @@ class _GymClientAppState extends State<GymClientApp> {
   late final ClientApiService _apiService;
   late final ClientAuthProvider _authProvider;
   late final GymBrandingProvider _brandingProvider;
+  late final LocaleProvider _localeProvider;
   late final ClientRouter _router;
 
   @override
@@ -51,8 +53,9 @@ class _GymClientAppState extends State<GymClientApp> {
     _authProvider = ClientAuthProvider(_apiService);
     _brandingProvider = GymBrandingProvider();
     _authProvider.setBrandingProvider(_brandingProvider);
+    _localeProvider = LocaleProvider();
     _router = ClientRouter(_authProvider);
-    
+
     // Initialize auth state
     _authProvider.initialize();
   }
@@ -70,9 +73,12 @@ class _GymClientAppState extends State<GymClientApp> {
         ChangeNotifierProvider<GymBrandingProvider>.value(
           value: _brandingProvider,
         ),
+        ChangeNotifierProvider<LocaleProvider>.value(
+          value: _localeProvider,
+        ),
       ],
-      child: Consumer2<ClientAuthProvider, GymBrandingProvider>(
-        builder: (context, auth, branding, _) {
+      child: Consumer3<ClientAuthProvider, GymBrandingProvider, LocaleProvider>(
+        builder: (context, auth, branding, localeProvider, _) {
           final shouldUseGymBranding = auth.isAuthenticated && branding.gymId != null;
 
             // Login/activation screens use app branding.
@@ -85,12 +91,13 @@ class _GymClientAppState extends State<GymClientApp> {
               : 'عميل النادي';
 
           return MaterialApp.router(
+            key: ValueKey(localeProvider.isArabic),
             title: title,
             debugShowCheckedModeBanner: false,
             theme: theme,
             scaffoldMessengerKey: FcmNotificationService.scaffoldMessengerKey,
-            locale: const Locale('ar'),
-            supportedLocales: const [Locale('ar')],
+            locale: localeProvider.locale,
+            supportedLocales: const [Locale('ar'), Locale('en')],
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,

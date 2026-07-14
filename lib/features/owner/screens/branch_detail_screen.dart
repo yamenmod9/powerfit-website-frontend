@@ -88,7 +88,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          tabs: const [
+          tabs: [
             Tab(text: S.overview, icon: Icon(Icons.dashboard)),
             Tab(text: S.revenue, icon: Icon(Icons.attach_money)),
             Tab(text: S.staff, icon: Icon(Icons.people)),
@@ -117,7 +117,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: _loadBranchData,
-                          child: const Text(S.retry),
+                          child: Text(S.retry),
                         ),
                       ],
                     ),
@@ -241,7 +241,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
           ),
           const SizedBox(height: 12),
           if (revenueByService.isEmpty)
-            const Card(
+            Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(child: Text(S.noRevenueData)),
@@ -293,7 +293,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen> with SingleTick
           ),
           const SizedBox(height: 12),
           if (staff.isEmpty)
-            const Card(
+            Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Center(child: Text(S.noStaffData)),

@@ -47,6 +47,10 @@ class Customer(db.Model):
     password_hash = db.Column(db.String(255), nullable=True)  # Hashed password for client app
     temp_password = db.Column(db.String(20), nullable=True)  # Plain temporary password (for first login)
     password_changed = db.Column(db.Boolean, default=False, nullable=False)  # Has client changed password?
+
+    # Preferred UI language ('ar' or 'en'). NULL means the client hasn't
+    # set one yet — used as the signal to show the first-login language step.
+    preferred_language = db.Column(db.String(5), nullable=True)
     
     # Branch relationship
     branch_id = db.Column(db.Integer, db.ForeignKey('branches.id'), nullable=False, index=True)
@@ -188,6 +192,7 @@ class Customer(db.Model):
             'branch_name': self.branch.name if self.branch else None,
             'is_active': self.is_active,
             'password_changed': self.password_changed,
+            'preferred_language': self.preferred_language,
             'has_active_subscription': has_active_subscription,  # ✅ CRITICAL FIX
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()

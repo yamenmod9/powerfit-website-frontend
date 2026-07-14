@@ -13,7 +13,7 @@ class SuperAdminSettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(S.settings),
+        title: Text(S.settings),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -73,14 +73,14 @@ class SuperAdminSettingsScreen extends StatelessWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text(S.appVersion),
+                  title: Text(S.appVersion),
                   trailing: const Text('1.0.0'),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.storage),
-                  title: const Text(S.platform),
-                  trailing: const Text(S.multiGymSaas),
+                  title: Text(S.platform),
+                  trailing: Text(S.multiGymSaas),
                 ),
               ],
             ),
@@ -100,17 +100,17 @@ class SuperAdminSettingsScreen extends StatelessWidget {
           Card(
             child: ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text(S.logout, style: TextStyle(color: Colors.red)),
+              title: Text(S.logout, style: TextStyle(color: Colors.red)),
               onTap: () {
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text(S.logout),
-                    content: const Text(S.confirmLogout),
+                    title: Text(S.logout),
+                    content: Text(S.confirmLogout),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: const Text(S.cancel),
+                        child: Text(S.cancel),
                       ),
                       ElevatedButton(
                         onPressed: () {
@@ -118,7 +118,7 @@ class SuperAdminSettingsScreen extends StatelessWidget {
                           authProvider.logout();
                         },
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                        child: const Text(S.logout),
+                        child: Text(S.logout),
                       ),
                     ],
                   ),

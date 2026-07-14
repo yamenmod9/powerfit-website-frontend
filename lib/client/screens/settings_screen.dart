@@ -16,17 +16,17 @@ class SettingsScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(S.deleteAccount),
-        content: const Text(S.deleteAccountWarning),
+        title: Text(S.deleteAccount),
+        content: Text(S.deleteAccountWarning),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text(S.cancel),
+            child: Text(S.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text(S.requestDeletion),
+            child: Text(S.requestDeletion),
           ),
         ],
       ),
@@ -39,7 +39,7 @@ class SettingsScreen extends StatelessWidget {
       await auth.requestAccountDeletion();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(S.deleteAccountRequested),
           backgroundColor: Colors.orange,
           duration: Duration(seconds: 4),
@@ -62,17 +62,17 @@ class SettingsScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text(S.logout),
-        content: const Text(S.signOutQuestion),
+        title: Text(S.logout),
+        content: Text(S.signOutQuestion),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text(S.cancel),
+            child: Text(S.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text(S.logout),
+            child: Text(S.logout),
           ),
         ],
       ),
@@ -159,7 +159,7 @@ class SettingsScreen extends StatelessWidget {
                         applicationVersion: '1.0.0',
                         applicationIcon: const Icon(Icons.fitness_center,
                             size: 48, color: ClientTheme.primaryRed),
-                        children: const [Text(S.modernGymApp)],
+                        children: [Text(S.modernGymApp)],
                       )),
               _divider(),
               _row(context,
@@ -179,7 +179,7 @@ class SettingsScreen extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: () => _confirmLogout(context),
               icon: const Icon(Icons.logout, size: 18),
-              label: const Text(S.logout),
+              label: Text(S.logout),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFFEF4444),
                 side: BorderSide(

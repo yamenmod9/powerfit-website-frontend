@@ -51,10 +51,10 @@ class _MemberNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <_NavItem>[
-      const _NavItem(Icons.home_rounded, Icons.home_outlined, S.home),
-      const _NavItem(Icons.qr_code_rounded, Icons.qr_code_outlined, S.checkInNav),
-      const _NavItem(Icons.history_rounded, Icons.history_outlined, S.history),
-      const _NavItem(Icons.person_rounded, Icons.person_outline, S.profile),
+      _NavItem(Icons.home_rounded, Icons.home_outlined, S.home),
+      _NavItem(Icons.qr_code_rounded, Icons.qr_code_outlined, S.checkInNav),
+      _NavItem(Icons.history_rounded, Icons.history_outlined, S.history),
+      _NavItem(Icons.person_rounded, Icons.person_outline, S.profile),
     ];
 
     return Container(

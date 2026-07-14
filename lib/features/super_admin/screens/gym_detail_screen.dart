@@ -157,7 +157,7 @@ class GymDetailScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.palette, size: 20, color: Colors.grey),
                         const SizedBox(width: 12),
-                        const Text(S.primaryColor),
+                        Text(S.primaryColor),
                         const Spacer(),
                         Container(
                           width: 32,
@@ -177,7 +177,7 @@ class GymDetailScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.palette_outlined, size: 20, color: Colors.grey),
                         const SizedBox(width: 12),
-                        const Text(S.secondaryColor),
+                        Text(S.secondaryColor),
                         const Spacer(),
                         Container(
                           width: 32,
@@ -197,7 +197,7 @@ class GymDetailScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.email, size: 20, color: Colors.grey),
                         const SizedBox(width: 12),
-                        const Text(S.emailDomain),
+                        Text(S.emailDomain),
                         const Spacer(),
                         Text(
                           '@${gym.emailDomain}',

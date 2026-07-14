@@ -7,6 +7,7 @@ class ClientModel {
   final String subscriptionStatus;
   final String? branchName;
   final DateTime? createdAt;
+  final String? preferredLanguage;
 
   ClientModel({
     required this.id,
@@ -17,6 +18,7 @@ class ClientModel {
     required this.subscriptionStatus,
     this.branchName,
     this.createdAt,
+    this.preferredLanguage,
   });
 
   factory ClientModel.fromJson(Map<String, dynamic> json) {
@@ -62,6 +64,7 @@ class ClientModel {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
+      preferredLanguage: json['preferred_language'],
     );
   }
 
@@ -75,7 +78,22 @@ class ClientModel {
       'subscription_status': subscriptionStatus,
       'branch_name': branchName,
       'created_at': createdAt?.toIso8601String(),
+      'preferred_language': preferredLanguage,
     };
+  }
+
+  ClientModel copyWith({String? preferredLanguage}) {
+    return ClientModel(
+      id: id,
+      fullName: fullName,
+      phone: phone,
+      email: email,
+      qrCode: qrCode,
+      subscriptionStatus: subscriptionStatus,
+      branchName: branchName,
+      createdAt: createdAt,
+      preferredLanguage: preferredLanguage ?? this.preferredLanguage,
+    );
   }
 
   bool get isActive => subscriptionStatus.toLowerCase() == 'active';

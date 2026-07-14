@@ -199,6 +199,30 @@ def cancel_account_deletion():
     )
 
 
+_SUPPORTED_LANGUAGES = {'ar', 'en'}
+
+
+@client_bp.route('/language', methods=['PATCH'])
+@client_token_required
+def update_preferred_language():
+    """Set the current client's preferred UI language ('ar' or 'en').
+
+    Called from the first-login onboarding step and from in-app settings.
+    """
+    customer = get_current_client()
+    if not customer:
+        return error_response('Customer not found', 404)
+
+    language = (request.json or {}).get('preferred_language', '').strip().lower()
+    if language not in _SUPPORTED_LANGUAGES:
+        return error_response(f"preferred_language must be one of {sorted(_SUPPORTED_LANGUAGES)}", 400)
+
+    customer.preferred_language = language
+    db.session.commit()
+
+    return success_response(customer.to_dict(), 'Language preference saved')
+
+
 @client_bp.route('/change-password', methods=['POST'])
 @client_token_required
 def change_password():

@@ -26,6 +26,19 @@ class ClientAuthProvider extends ChangeNotifier {
   ClientModel? get currentClient => _currentClient;
   bool get isAuthenticated => _isAuthenticated;
   bool get passwordChanged => _passwordChanged;
+  bool get needsLanguageSetup =>
+      _isAuthenticated && _currentClient?.preferredLanguage == null;
+
+  Future<void> setPreferredLanguage(String languageCode) async {
+    await _apiService.patch(
+      '/client/language',
+      data: {'preferred_language': languageCode},
+    );
+    if (_currentClient != null) {
+      _currentClient = _currentClient!.copyWith(preferredLanguage: languageCode);
+    }
+    notifyListeners();
+  }
 
   Future<void> initialize() async {
     print('🔐 ClientAuthProvider: Initializing...');

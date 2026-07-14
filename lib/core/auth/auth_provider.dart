@@ -3,6 +3,7 @@ import 'auth_service.dart';
 import 'biometric_service.dart';
 import '../services/fcm_notification_service.dart';
 import '../api/api_service.dart';
+import '../constants/app_constants.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
@@ -15,6 +16,7 @@ class AuthProvider extends ChangeNotifier {
   String? _userId;
   String? _username;
   String? _branchId;
+  String? _preferredLanguage;
 
   // Biometric state
   bool _isBiometricAvailable = false;
@@ -43,6 +45,15 @@ class AuthProvider extends ChangeNotifier {
   String? get userId => _userId;
   String? get username => _username;
   String? get branchId => _branchId;
+  String? get preferredLanguage => _preferredLanguage;
+
+  /// Staff (any non-owner, non-super-admin role) who hasn't chosen a
+  /// language yet — owners get their own step inside the setup wizard.
+  bool get needsLanguageSetup =>
+      _isAuthenticated &&
+      _userRole != AppConstants.roleOwner &&
+      _userRole != AppConstants.roleSuperAdmin &&
+      _preferredLanguage == null;
 
   // Biometric getters
   bool get isBiometricAvailable => _isBiometricAvailable;
@@ -62,6 +73,7 @@ class AuthProvider extends ChangeNotifier {
       _userId = await _authService.getUserId();
       _username = await _authService.getUsername();
       _branchId = await _authService.getBranchId();
+      _preferredLanguage = await _authService.getPreferredLanguage();
     }
 
     // Check biometric state
@@ -88,6 +100,7 @@ class AuthProvider extends ChangeNotifier {
       _userId = result['user_id']?.toString();
       _username = result['username']?.toString();
       _branchId = result['branch_id']?.toString();
+      _preferredLanguage = result['preferred_language']?.toString();
 
       // Register FCM token with backend
       if (_apiService != null) {
@@ -160,6 +173,20 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
   
+  /// Save the staff member's chosen language, both to the backend and to
+  /// local storage, so `needsLanguageSetup` doesn't re-trigger next launch.
+  Future<void> setPreferredLanguage(String languageCode) async {
+    if (_apiService != null) {
+      await _apiService!.patch(
+        '/api/auth/language',
+        data: {'preferred_language': languageCode},
+      );
+    }
+    await _authService.savePreferredLanguage(languageCode);
+    _preferredLanguage = languageCode;
+    notifyListeners();
+  }
+
   // Logout
   Future<void> logout() async {
     // Unregister FCM token
@@ -172,6 +199,7 @@ class AuthProvider extends ChangeNotifier {
     _userId = null;
     _username = null;
     _branchId = null;
+    _preferredLanguage = null;
     // NOTE: We intentionally do NOT clear biometric credentials on logout.
     // That way the user can still use biometric to log back in.
     notifyListeners();
@@ -189,9 +217,10 @@ class AuthProvider extends ChangeNotifier {
     _userId = null;
     _username = null;
     _branchId = null;
+    _preferredLanguage = null;
     notifyListeners();
   }
-  
+
   // Refresh auth status
   Future<void> refresh() async {
     await _checkAuthStatus();

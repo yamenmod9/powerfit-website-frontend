@@ -51,11 +51,10 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Map<String, String> get _t => _ar ? _arText : _enText;
 
-  // ── Region-aware pricing ────────────────────────────────────────────────
+  // ── Region-aware pricing (auto-detected only, no manual override) ───────
   final _pricingService = PricingService();
   PricingData? _pricing;
   bool _pricingLoading = true;
-  String? _regionOverride; // null = auto-detect
 
   @override
   void initState() {
@@ -65,19 +64,12 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Future<void> _loadPricing() async {
     setState(() => _pricingLoading = true);
-    final override = await PricingPreferences.getOverride();
-    final data = await _pricingService.fetchPricing(countryOverride: override);
+    final data = await _pricingService.fetchPricing();
     if (!mounted) return;
     setState(() {
-      _regionOverride = override;
       _pricing = data;
       _pricingLoading = false;
     });
-  }
-
-  Future<void> _setRegion(String? countryCode) async {
-    await PricingPreferences.setOverride(countryCode);
-    await _loadPricing();
   }
 
   void _scrollTo(GlobalKey key) {
@@ -1071,13 +1063,7 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
           const SizedBox(height: 22),
-          Wrap(
-            spacing: 14,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [_billingToggle(), _regionSwitcher()],
-          ),
+          Center(child: _billingToggle()),
           const SizedBox(height: 40),
           layout,
           if (data != null && !data.isFinalized) ...[
@@ -1141,63 +1127,6 @@ class _LandingScreenState extends State<LandingScreen> {
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _regionSwitcher() {
-    final current = _regionOverride == null
-        ? _t['regionAuto']!
-        : (_regionOverride == 'EG' ? _t['regionEgypt']! : _t['regionIntl']!);
-    return PopupMenuButton<String?>(
-      onSelected: _setRegion,
-      color: _card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: null,
-          child: Text(
-            _t['regionAuto']!,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-        PopupMenuItem(
-          value: 'EG',
-          child: Text(
-            _t['regionEgypt']!,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-        PopupMenuItem(
-          value: 'INTL',
-          child: Text(
-            _t['regionIntl']!,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              current,
-              style: const TextStyle(
-                color: _muted,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.expand_more, size: 16, color: _muted),
-          ],
         ),
       ),
     );
@@ -2070,9 +1999,6 @@ const Map<String, String> _arText = {
   'noCardRequired': 'بدون بطاقة ائتمان',
   'pricingDisclaimerUsd':
       'الأسعار معروضة بالدولار الأمريكي — تواصل معنا للعملات المحلية',
-  'regionAuto': '🌍 تلقائي',
-  'regionEgypt': '🇪🇬 جنيه مصري',
-  'regionIntl': '🌐 دولار أمريكي',
   'enterprisePriceLabel': 'مخصّص',
   'enterpriseFrom': 'ابتداءً من',
   'perBranchMonthly': '/فرع شهرياً',
@@ -2193,9 +2119,6 @@ const Map<String, String> _enText = {
   'noCardRequired': 'No credit card required',
   'pricingDisclaimerUsd':
       'Prices shown in USD — contact us for local currency options',
-  'regionAuto': '🌍 Auto',
-  'regionEgypt': '🇪🇬 EGP',
-  'regionIntl': '🌐 USD',
   'enterprisePriceLabel': 'Custom',
   'enterpriseFrom': 'From',
   'perBranchMonthly': '/branch monthly',

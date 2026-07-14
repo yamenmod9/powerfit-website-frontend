@@ -79,7 +79,7 @@ class _CreateGymScreenState extends State<CreateGymScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(S.createGymOwner),
+        title: Text(S.createGymOwner),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -145,7 +145,7 @@ class _CreateGymScreenState extends State<CreateGymScreen> {
 
               TextFormField(
                 controller: _ownerNameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.fullNameLabel,
                   hintText: S.fullNameHintOwner,
                   prefixIcon: Icon(Icons.person),
@@ -163,7 +163,7 @@ class _CreateGymScreenState extends State<CreateGymScreen> {
 
               TextFormField(
                 controller: _ownerUsernameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.usernameLabel,
                   hintText: S.usernameHintOwner,
                   prefixIcon: Icon(Icons.alternate_email),
@@ -216,7 +216,7 @@ class _CreateGymScreenState extends State<CreateGymScreen> {
 
               TextFormField(
                 controller: _ownerEmailController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.emailOptional,
                   hintText: S.emailHint,
                   prefixIcon: Icon(Icons.email),
@@ -229,7 +229,7 @@ class _CreateGymScreenState extends State<CreateGymScreen> {
 
               TextFormField(
                 controller: _ownerPhoneController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: S.phoneOptionalLabel,
                   hintText: S.phoneHint,
                   prefixIcon: Icon(Icons.phone),

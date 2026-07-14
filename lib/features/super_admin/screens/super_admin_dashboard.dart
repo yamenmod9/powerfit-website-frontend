@@ -52,7 +52,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       onSelect: (i) => setState(() => _selectedIndex = i),
       pageTitle: _selectedIndex == 0 ? S.platformAdmin : S.owners,
       pageSub: _selectedIndex == 0 ? S.platformOverview : null,
-      navItems: const [
+      navItems: [
         DashNavItem(Icons.dashboard_outlined, S.overview),
         DashNavItem(Icons.manage_accounts_outlined, S.owners),
       ],
@@ -77,7 +77,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 ).then((_) => provider.refresh());
               },
               icon: const Icon(Icons.person_add),
-              label: const Text(S.newOwner),
+              label: Text(S.newOwner),
             )
           : null,
       body: body,
@@ -208,7 +208,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               TextButton.icon(
                 onPressed: () => setState(() => _selectedIndex = 1),
                 icon: const Icon(Icons.arrow_forward, size: 16),
-                label: const Text(S.viewAll),
+                label: Text(S.viewAll),
               ),
             ],
           ),

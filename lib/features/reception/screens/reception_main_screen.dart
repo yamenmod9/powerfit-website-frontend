@@ -29,7 +29,7 @@ class _ReceptionMainScreenState extends State<ReceptionMainScreen> {
     ProfileSettingsScreen(),
   ];
 
-  static const _titles = [S.home, S.subs, S.ops, S.clients, S.profile];
+  static List<String> get _titles => [S.home, S.subs, S.ops, S.clients, S.profile];
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +44,7 @@ class _ReceptionMainScreenState extends State<ReceptionMainScreen> {
       onSelect: (i) => setState(() => _selectedIndex = i),
       pageTitle: _titles[_selectedIndex],
       showTopbar: false,
-      navItems: const [
+      navItems: [
         DashNavItem(Icons.home_outlined, S.home),
         DashNavItem(Icons.card_membership_outlined, S.subs),
         DashNavItem(Icons.assignment_outlined, S.ops),

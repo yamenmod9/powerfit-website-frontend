@@ -28,7 +28,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     });
   }
 
-  static const _titles = [S.overview, S.staff, S.complaints];
+  static List<String> get _titles => [S.overview, S.staff, S.complaints];
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +58,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
       onSelect: (i) => setState(() => _selectedIndex = i),
       pageTitle: _selectedIndex == 0 ? gymName : _titles[_selectedIndex],
       pageSub: _selectedIndex == 0 ? S.performanceOverview : null,
-      navItems: const [
+      navItems: [
         DashNavItem(Icons.dashboard_outlined, S.overview),
         DashNavItem(Icons.people_outline, S.staff),
         DashNavItem(Icons.report_problem_outlined, S.complaints),
@@ -185,7 +185,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   Widget _buildStaffTab(BranchManagerProvider provider) {
     final staffList = provider.staff;
     if (staffList.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -267,7 +267,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                                   color: Colors.red.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(S.inactive, style: TextStyle(fontSize: 11, color: Colors.red)),
+                                child: Text(S.inactive, style: TextStyle(fontSize: 11, color: Colors.red)),
                               ),
                             ],
                           ],
@@ -311,7 +311,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     final complaints = provider.complaints;
 
     if (complaints.isEmpty) {
-      return const Center(child: Text(S.noComplaints));
+      return Center(child: Text(S.noComplaints));
     }
 
     return ListView.builder(

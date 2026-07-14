@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../models/pricing_model.dart';
 
@@ -36,28 +35,6 @@ class PricingService {
       return null;
     } catch (_) {
       return null;
-    }
-  }
-}
-
-/// Persists the visitor's manual region/currency choice so it sticks
-/// across visits and takes precedence over auto-detection next time.
-/// `null` means "auto-detect" (the default, first-visit state).
-class PricingPreferences {
-  static const _key = 'pricing_region_override';
-
-  static Future<String?> getOverride() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_key);
-  }
-
-  /// Pass null to clear the override and go back to auto-detection.
-  static Future<void> setOverride(String? countryCode) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (countryCode == null) {
-      await prefs.remove(_key);
-    } else {
-      await prefs.setString(_key, countryCode);
     }
   }
 }

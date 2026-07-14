@@ -244,7 +244,7 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: S.fullNameRequired,
                           prefixIcon: Icon(Icons.person, size: 20),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -291,12 +291,12 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
 
                       DropdownButtonFormField<String>(
                         value: _gender,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: S.genderRequired,
                           prefixIcon: Icon(Icons.wc, size: 18),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        items: const [
+                        items: [
                           DropdownMenuItem(value: 'male', child: Text(S.male)),
                           DropdownMenuItem(value: 'female', child: Text(S.female)),
                         ],
@@ -306,7 +306,7 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
 
                       TextFormField(
                         controller: _ageController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: S.ageRequired,
                           prefixIcon: Icon(Icons.cake, size: 20),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),

@@ -8,6 +8,7 @@ import '../screens/subscription_screen.dart';
 import '../screens/entry_history_screen.dart';
 import '../screens/change_password_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/language_setup_screen.dart';
 
 class ClientRouter {
   final ClientAuthProvider authProvider;
@@ -29,8 +30,16 @@ class ClientRouter {
         return '/welcome';
       }
 
+      // First login with no saved language preference — ask before anything else.
+      if (isAuth && authProvider.needsLanguageSetup && currentPath != '/language-setup') {
+        print('➡️ Redirecting to /language-setup (no preferred_language set)');
+        return '/language-setup';
+      }
+
       // If authenticated and trying to access auth pages, go to home
-      if (isAuth && (currentPath == '/welcome' || currentPath == '/activation')) {
+      if (isAuth &&
+          !authProvider.needsLanguageSetup &&
+          (currentPath == '/welcome' || currentPath == '/activation')) {
         print('➡️ Redirecting to /home (already authenticated)');
         return '/home';
       }
@@ -85,6 +94,11 @@ class ClientRouter {
         path: '/settings',
         name: 'settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/language-setup',
+        name: 'language-setup',
+        builder: (context, state) => const LanguageSetupScreen(),
       ),
     ],
     initialLocation: '/welcome',

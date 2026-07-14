@@ -88,7 +88,7 @@ class _QrScreenState extends State<QrScreen> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(S.qrRefreshed),
               backgroundColor: Color(0xFF10B981),
             ),
@@ -158,7 +158,7 @@ class _QrScreenState extends State<QrScreen> {
                     )
                   else
                     const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       S.entryCode,
                       textAlign: TextAlign.center,

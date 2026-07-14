@@ -45,7 +45,7 @@ class ErrorDisplay extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text(S.retry),
+                label: Text(S.retry),
               ),
             ],
           ],
