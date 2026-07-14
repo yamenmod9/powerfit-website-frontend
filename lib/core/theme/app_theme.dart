@@ -33,6 +33,7 @@ class AppTheme {
   // Dark Theme with modern design
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
+    fontFamily: 'Cairo',
     brightness: Brightness.dark,
     scaffoldBackgroundColor: darkBackground,
     colorScheme: ColorScheme.dark(
@@ -165,6 +166,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Cairo',
       brightness: Brightness.dark,
       scaffoldBackgroundColor: darkBackground,
       colorScheme: ColorScheme.dark(
@@ -285,6 +287,7 @@ class AppTheme {
     final sec = secondary ?? seedColor.withValues(alpha: 0.8);
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Cairo',
       brightness: Brightness.dark,
       scaffoldBackgroundColor: darkBackground,
       colorScheme: ColorScheme.dark(

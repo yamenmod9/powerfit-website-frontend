@@ -14,6 +14,7 @@ class ClientTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Cairo',
       brightness: Brightness.dark,
       scaffoldBackgroundColor: darkGrey,
       primaryColor: primaryRed,
@@ -167,6 +168,7 @@ class ClientTheme {
   static ThemeData buildBrandedTheme(Color primary, Color secondary) {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Cairo',
       brightness: Brightness.dark,
       scaffoldBackgroundColor: darkGrey,
       primaryColor: primary,
