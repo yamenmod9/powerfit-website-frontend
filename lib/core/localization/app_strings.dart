@@ -52,6 +52,10 @@ class S {
   static const String passwordRequired = 'كلمة المرور مطلوبة';
   static const String loginWithBiometrics = 'تسجيل الدخول بالبصمة';
   static const String biometricLoginFailed = 'فشل تسجيل الدخول بالبصمة';
+  static const String staffConsoleSubtitle = 'ادخل إلى كونسول الموظفين';
+  static const String memberEntry = 'دخول الأعضاء';
+  static const String roleAutoResolved = 'يحدّد النظام دورك تلقائياً بعد تسجيل الدخول.';
+  static const String backToHome = 'الرئيسية';
 
   // ─── GYM SETUP WIZARD ──────────────────────────────────────
   static const String setupYourGym = 'إعداد النادي الرياضي';
@@ -652,6 +656,21 @@ class S {
   static const String qr = 'QR';
   static const String plan = 'الخطة';
   static const String history = 'السجل';
+
+  // ─── CLIENT MEMBER-APP REDESIGN ────────────────────────────
+  static const String checkInNav = 'الدخول';
+  static const String quickCheckIn = 'دخول سريع';
+  static const String showQrAtDoor = 'اعرض رمز QR عند الباب';
+  static const String untilRenewal = 'متبقٍ حتى التجديد';
+  static const String manageSubscription = 'إدارة الاشتراك';
+  static const String dayUnit = 'يوم';
+  static const String coinUnit = 'عملة';
+  static const String sessionUnit = 'جلسة';
+  static const String entryCode = 'رمز الدخول';
+  static const String pointCodeAtScanner = 'وجّه الرمز نحو الماسح الضوئي عند مدخل النادي.';
+  static const String signUp = 'إنشاء حساب';
+  static const String yourGymInPocket = 'ناديك في جيبك — اشترك، ادخل، وتابع تقدمك.';
+  static const String recentVisits = 'آخر زياراتك للنادي';
 
   // ─── CLIENT OVERVIEW TAB ───────────────────────────────────
   static const String subEndpointNotAvailable = 'نقطة نهاية الاشتراك غير متاحة.';

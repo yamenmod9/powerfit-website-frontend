@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/auth/auth_provider.dart';
@@ -7,6 +6,7 @@ import '../../../core/providers/gym_branding_provider.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
 import '../../../shared/widgets/stat_card.dart';
+import '../../../shared/widgets/dashboard_shell.dart';
 import '../../../shared/widgets/date_range_picker.dart';
 import '../../../core/utils/helpers.dart';
 import '../providers/accountant_provider.dart';
@@ -44,142 +44,66 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
         ? branding.gymName
         : S.accountantDashboard;
 
-    return Scaffold(
-      extendBody: true,
-      appBar: AppBar(
-        title: Text(gymName),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.date_range),
-            onPressed: () {
-              showDateRangePickerDialog(
-                context: context,
-                initialStartDate: provider.startDate,
-                initialEndDate: provider.endDate,
-                onDateRangeSelected: (start, end) {
-                  provider.setFilters(start: start, end: end);
-                },
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => provider.refresh(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AccountantSettingsScreen(),
-                ),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.person),
-            onSelected: (value) {
-              if (value == 'logout') {
-                authProvider.logout();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.black54),
-                    SizedBox(width: 8),
-                    Text(S.logout),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: provider.isLoading
-          ? const DashboardSkeleton()
-          : provider.error != null
-              ? ErrorDisplay(
-                  message: provider.error!,
-                  onRetry: () => provider.refresh(),
-                )
-              : _buildCurrentTab(context, provider, authProvider),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: NavigationBar(
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (index) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                },
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                height: 65,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                indicatorColor: Theme.of(context).primaryColor.withOpacity(0.15),
-                destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.dashboard_outlined),
-                    selectedIcon: const Icon(Icons.dashboard),
-                    label: S.overview,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.point_of_sale_outlined),
-                    selectedIcon: const Icon(Icons.point_of_sale),
-                    label: S.sales,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.money_off_outlined),
-                    selectedIcon: const Icon(Icons.money_off),
-                    label: S.expenses,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.store_outlined),
-                    selectedIcon: const Icon(Icons.store),
-                    label: S.branches,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.assessment_outlined),
-                    selectedIcon: const Icon(Icons.assessment),
-                    label: S.reports,
-                  ),
-                ],
-              ),
-            ),
+    final body = provider.isLoading
+        ? const DashboardSkeleton()
+        : provider.error != null
+            ? ErrorDisplay(
+                message: provider.error!,
+                onRetry: () => provider.refresh(),
+              )
+            : _buildCurrentTab(context, provider, authProvider);
+
+    return DashboardShell(
+      accent: Theme.of(context).colorScheme.primary,
+      appTitle: 'PowerFit',
+      roleTag: S.accountant,
+      userName: authProvider.username ?? S.accountant,
+      userRole: S.accountantRole,
+      selectedIndex: _selectedIndex,
+      onSelect: (i) => setState(() => _selectedIndex = i),
+      pageTitle: _selectedIndex == 0 ? gymName : _titles[_selectedIndex],
+      pageSub: _selectedIndex == 0 ? S.todaysSummary : null,
+      navItems: const [
+        DashNavItem(Icons.dashboard_outlined, S.overview),
+        DashNavItem(Icons.point_of_sale_outlined, S.sales),
+        DashNavItem(Icons.money_off_outlined, S.expenses),
+        DashNavItem(Icons.store_outlined, S.branches),
+        DashNavItem(Icons.assessment_outlined, S.reports),
+      ],
+      actions: [
+        DashIconAction(
+          icon: Icons.date_range,
+          tooltip: S.selectDateRange,
+          onTap: () => showDateRangePickerDialog(
+            context: context,
+            initialStartDate: provider.startDate,
+            initialEndDate: provider.endDate,
+            onDateRangeSelected: (start, end) =>
+                provider.setFilters(start: start, end: end),
           ),
         ),
-      ),
+        DashIconAction(
+            icon: Icons.refresh, tooltip: S.refresh, onTap: () => provider.refresh()),
+        DashIconAction(
+          icon: Icons.settings_outlined,
+          tooltip: S.settings,
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const AccountantSettingsScreen())),
+        ),
+        DashIconAction(
+            icon: Icons.logout, tooltip: S.logout, onTap: authProvider.logout),
+      ],
+      body: body,
     );
   }
+
+  static const _titles = [
+    S.overview,
+    S.sales,
+    S.expenses,
+    S.branches,
+    S.reports,
+  ];
 
   Widget _buildCurrentTab(BuildContext context, AccountantProvider provider, AuthProvider authProvider) {
     switch (_selectedIndex) {
@@ -211,148 +135,98 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
     final changePercent = (ds['change_percentage'] ?? 0).toDouble();
     final changeAmount = (ds['change_amount'] ?? 0).toDouble();
 
-    return RefreshIndicator(
+    final accent = Theme.of(context).colorScheme.primary;
+    return DashBody(
       onRefresh: () => provider.loadDashboardData(),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome Card
-            _buildWelcomeCard(context, authProvider.username ?? S.accountant),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildWelcomeCard(context, authProvider.username ?? S.accountant),
+          const SizedBox(height: 22),
+          DashKpiGrid(cards: [
+            DashKpiCard(
+                label: S.todaysSales,
+                value: NumberHelper.formatCurrency(todaySales),
+                icon: Icons.today,
+                iconColor: accent),
+            DashKpiCard(
+                label: S.transactions,
+                value: NumberHelper.formatNumber(transactionCount),
+                icon: Icons.receipt_long,
+                iconColor: DashColors.blue),
+            DashKpiCard(
+                label: S.revenue,
+                value: NumberHelper.formatCurrency(monthlyRevenue),
+                icon: Icons.trending_up,
+                iconColor: DashColors.emerald,
+                valueColor: DashColors.emerald),
+            DashKpiCard(
+                label: S.expenses,
+                value: NumberHelper.formatCurrency(monthlyExpenses),
+                icon: Icons.trending_down,
+                iconColor: DashColors.amber),
+            DashKpiCard(
+                label: S.netProfit,
+                value: NumberHelper.formatCurrency(monthlyNet),
+                icon: Icons.account_balance_wallet,
+                iconColor: monthlyNet >= 0 ? DashColors.blue : Colors.redAccent,
+                valueColor: monthlyNet >= 0 ? null : Colors.redAccent),
+            DashKpiCard(
+                label: S.pending,
+                value: NumberHelper.formatNumber(pendingExpenses),
+                icon: Icons.pending_actions,
+                iconColor: DashColors.amber),
+          ]),
+          const SizedBox(height: 20),
+          _buildPaymentBreakdownCard(context, ds),
+          if (changePercent != 0 || changeAmount != 0) ...[
             const SizedBox(height: 20),
-
-            // Today's Summary
-            Text(S.todaysSummary,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    title: S.todaysSales,
-                    value: NumberHelper.formatCurrency(todaySales),
-                    icon: Icons.today,
-                    color: Colors.teal,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    title: S.transactions,
-                    value: NumberHelper.formatNumber(transactionCount),
-                    icon: Icons.receipt_long,
-                    color: Colors.purple,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Payment Breakdown
-            _buildPaymentBreakdownCard(context, ds),
-            const SizedBox(height: 20),
-
-            // Monthly Summary
-            Text(S.thisMonth,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: MediaQuery.sizeOf(context).width >= 1200
-                  ? 4
-                  : MediaQuery.sizeOf(context).width >= 800
-                      ? 3
-                      : 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.5,
-              children: [
-                StatCard(
-                  title: S.revenue,
-                  value: NumberHelper.formatCurrency(monthlyRevenue),
-                  icon: Icons.trending_up,
-                  color: Colors.green,
-                ),
-                StatCard(
-                  title: S.expenses,
-                  value: NumberHelper.formatCurrency(monthlyExpenses),
-                  icon: Icons.trending_down,
-                  color: Colors.orange,
-                ),
-                StatCard(
-                  title: S.netProfit,
-                  value: NumberHelper.formatCurrency(monthlyNet),
-                  icon: Icons.account_balance_wallet,
-                  color: monthlyNet >= 0 ? Colors.blue : Colors.red,
-                ),
-                StatCard(
-                  title: S.pending,
-                  value: NumberHelper.formatNumber(pendingExpenses),
-                  icon: Icons.pending_actions,
-                  color: Colors.deepOrange,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Month-over-Month Comparison
-            if (changePercent != 0 || changeAmount != 0) ...[
-              _buildComparisonCard(context, changeAmount, changePercent),
-              const SizedBox(height: 20),
-            ],
-
-            // Alerts
-            if (provider.alerts.isNotEmpty) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(S.alerts,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                  Text(S.itemsCount(provider.alerts.length),
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ...provider.alerts.map((alert) => _buildAlertCard(context, alert)),
-            ],
+            _buildComparisonCard(context, changeAmount, changePercent),
           ],
-        ),
+          if (provider.alerts.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(S.alerts,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            ...provider.alerts.map((alert) => _buildAlertCard(context, alert)),
+          ],
+        ],
       ),
     );
   }
 
   Widget _buildWelcomeCard(BuildContext context, String name) {
+    final accent = Theme.of(context).colorScheme.primary;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.8),
-          ],
+          colors: [accent, accent.withValues(alpha: 0.75)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).primaryColor.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
+              color: accent.withValues(alpha: 0.3),
+              blurRadius: 24,
+              offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(S.welcomeBack,
-            style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 16)),
-          const SizedBox(height: 8),
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9), fontSize: 15)),
+          const SizedBox(height: 6),
           Text(name,
-            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
         ],
       ),
     );

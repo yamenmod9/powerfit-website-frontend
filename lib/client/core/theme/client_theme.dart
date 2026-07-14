@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 class ClientTheme {
-  // Colors
-  static const Color primaryRed = Color(0xFFDC143C);
-  static const Color darkGrey = Color(0xFF1F1F1F);
-  static const Color mediumGrey = Color(0xFF2D2D2D);
-  static const Color lightGrey = Color(0xFF3D3D3D);
+  // Colors — aligned to the PowerFit Member App design canvas.
+  static const Color primaryRed = Color(0xFFDC143C); // Crimson brand
+  static const Color darkGrey = Color(0xFF121212);   // Scaffold / background
+  static const Color mediumGrey = Color(0xFF1A1A1A); // Nav / app bar surface
+  static const Color cardGrey = Color(0xFF2A2A2A);   // Cards & rows
+  static const Color lightGrey = Color(0xFF2A2A2A);  // Filled inputs
   static const Color textWhite = Color(0xFFFFFFFF);
   static const Color textGrey = Color(0xFFB0B0B0);
+  static const Color subtleGrey = Color(0xFF808080); // Captions / hints
 
   static ThemeData get darkTheme {
     return ThemeData(
@@ -26,7 +28,7 @@ class ClientTheme {
 
       // Card theme
       cardTheme: CardThemeData(
-        color: mediumGrey,
+        color: cardGrey,
         elevation: 4,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(16)),
@@ -152,12 +154,10 @@ class ClientTheme {
         primary: primaryRed,
         secondary: primaryRed,
         surface: mediumGrey,
-        background: darkGrey,
         error: Colors.red,
         onPrimary: textWhite,
         onSecondary: textWhite,
         onSurface: textWhite,
-        onBackground: textWhite,
         onError: textWhite,
       ),
     );
@@ -177,7 +177,7 @@ class ClientTheme {
         centerTitle: true,
       ),
       cardTheme: CardThemeData(
-        color: mediumGrey,
+        color: cardGrey,
         elevation: 4,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(16)),
@@ -227,12 +227,10 @@ class ClientTheme {
         primary: primary,
         secondary: secondary,
         surface: mediumGrey,
-        background: darkGrey,
         error: Colors.red,
         onPrimary: textWhite,
         onSecondary: textWhite,
         onSurface: textWhite,
-        onBackground: textWhite,
         onError: textWhite,
       ),
     );

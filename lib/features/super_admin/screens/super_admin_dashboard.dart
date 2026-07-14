@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/auth/auth_provider.dart';
@@ -6,7 +5,7 @@ import '../../../core/localization/app_strings.dart';
 import '../../../shared/models/owner_model.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
-import '../../../shared/widgets/stat_card.dart';
+import '../../../shared/widgets/dashboard_shell.dart';
 import '../providers/super_admin_provider.dart';
 import 'create_gym_screen.dart';
 import 'super_admin_settings_screen.dart';
@@ -34,122 +33,54 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     final authProvider = context.watch<AuthProvider>();
     final provider = context.watch<SuperAdminProvider>();
 
-    return Scaffold(
-      extendBody: true,
-      appBar: AppBar(
-        title: const Text(S.platformAdmin),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => provider.refresh(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const SuperAdminSettingsScreen(),
-              ),
-            ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.person),
-            onSelected: (value) {
-              if (value == 'logout') authProvider.logout();
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.white70),
-                    SizedBox(width: 8),
-                    Text(S.logout),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: provider.isLoading
-          ? const DashboardSkeleton()
-          : provider.error != null
-              ? ErrorDisplay(
-                  message: provider.error!,
-                  onRetry: () => provider.refresh(),
-                )
-              : _buildCurrentTab(context, provider),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
+    final body = provider.isLoading
+        ? const DashboardSkeleton()
+        : provider.error != null
+            ? ErrorDisplay(
+                message: provider.error!,
+                onRetry: () => provider.refresh(),
+              )
+            : _buildCurrentTab(context, provider);
+
+    return DashboardShell(
+      accent: Theme.of(context).colorScheme.primary,
+      appTitle: 'PowerFit',
+      roleTag: S.superAdmin,
+      userName: authProvider.username ?? S.superAdmin,
+      userRole: S.platformAdministrator,
+      selectedIndex: _selectedIndex,
+      onSelect: (i) => setState(() => _selectedIndex = i),
+      pageTitle: _selectedIndex == 0 ? S.platformAdmin : S.owners,
+      pageSub: _selectedIndex == 0 ? S.platformOverview : null,
+      navItems: const [
+        DashNavItem(Icons.dashboard_outlined, S.overview),
+        DashNavItem(Icons.manage_accounts_outlined, S.owners),
+      ],
+      actions: [
+        DashIconAction(
+            icon: Icons.refresh, tooltip: S.refresh, onTap: () => provider.refresh()),
+        DashIconAction(
+          icon: Icons.settings_outlined,
+          tooltip: S.settings,
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const SuperAdminSettingsScreen())),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                color:
-                    Theme.of(context).colorScheme.surface.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: NavigationBar(
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (index) {
-                  setState(() => _selectedIndex = index);
-                },
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                height: 65,
-                labelBehavior:
-                    NavigationDestinationLabelBehavior.alwaysShow,
-                indicatorColor:
-                    Theme.of(context).primaryColor.withOpacity(0.15),
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(Icons.dashboard),
-                    label: S.overview,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.manage_accounts_outlined),
-                    selectedIcon: Icon(Icons.manage_accounts),
-                    label: S.owners,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+        DashIconAction(
+            icon: Icons.logout, tooltip: S.logout, onTap: authProvider.logout),
+      ],
       floatingActionButton: _selectedIndex == 1
           ? FloatingActionButton.extended(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const CreateGymScreen()),
+                  MaterialPageRoute(builder: (_) => const CreateGymScreen()),
                 ).then((_) => provider.refresh());
               },
               icon: const Icon(Icons.person_add),
               label: const Text(S.newOwner),
             )
           : null,
+      body: body,
     );
   }
 
@@ -167,8 +98,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
   Widget _buildOverviewTab(
       BuildContext context, SuperAdminProvider provider) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+    return DashBody(
+      onRefresh: () => provider.refresh(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -246,32 +177,21 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           ),
           const SizedBox(height: 16),
 
-          GridView.count(
-            crossAxisCount: MediaQuery.sizeOf(context).width >= 1200
-                ? 4
-                : MediaQuery.sizeOf(context).width >= 800
-                    ? 3
-                    : 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.8,
-            children: [
-              StatCard(
-                title: S.totalOwners,
-                value: '${provider.totalOwners}',
-                icon: Icons.manage_accounts,
-                color: const Color(0xFFF59E0B),
-              ),
-              StatCard(
-                title: S.activeOwners,
-                value: '${provider.activeOwners}',
-                icon: Icons.check_circle,
-                color: const Color(0xFF10B981),
-              ),
-            ],
-          ),
+          DashKpiGrid(cards: [
+            DashKpiCard(
+              label: S.totalOwners,
+              value: '${provider.totalOwners}',
+              icon: Icons.manage_accounts,
+              iconColor: const Color(0xFFF59E0B),
+            ),
+            DashKpiCard(
+              label: S.activeOwners,
+              value: '${provider.activeOwners}',
+              icon: Icons.check_circle,
+              iconColor: const Color(0xFF10B981),
+              valueColor: const Color(0xFF10B981),
+            ),
+          ]),
 
           const SizedBox(height: 24),
 

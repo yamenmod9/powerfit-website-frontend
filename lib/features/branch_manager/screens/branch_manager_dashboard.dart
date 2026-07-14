@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/auth/auth_provider.dart';
@@ -6,7 +5,7 @@ import '../../../core/localization/app_strings.dart';
 import '../../../core/providers/gym_branding_provider.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
-import '../../../shared/widgets/stat_card.dart';
+import '../../../shared/widgets/dashboard_shell.dart';
 import '../../../core/utils/helpers.dart';
 import '../providers/branch_manager_provider.dart';
 import 'branch_manager_settings_screen.dart';
@@ -29,6 +28,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     });
   }
 
+  static const _titles = [S.overview, S.staff, S.complaints];
+
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -38,145 +39,53 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         ? branding.gymName
         : S.branchManagerTitle;
 
-    return Scaffold(
-      extendBody: true,
-      appBar: AppBar(
-        title: Text(gymName),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => provider.loadDashboardData(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const BranchManagerSettingsScreen(),
-                ),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.person),
-            onSelected: (value) {
-              if (value == 'logout') {
-                authProvider.logout();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.black54),
-                    SizedBox(width: 8),
-                    Text(S.logout),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: provider.isLoading
-          ? const DashboardSkeleton()
-          : provider.error != null
-              ? ErrorDisplay(
-                  message: provider.error!,
-                  onRetry: () => provider.loadDashboardData(),
-                )
-              : _buildCurrentTab(context, provider, authProvider),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
+    final body = provider.isLoading
+        ? const DashboardSkeleton()
+        : provider.error != null
+            ? ErrorDisplay(
+                message: provider.error!,
+                onRetry: () => provider.loadDashboardData(),
+              )
+            : _buildCurrentTab(context, provider, authProvider);
+
+    return DashboardShell(
+      accent: Theme.of(context).colorScheme.primary,
+      appTitle: 'PowerFit',
+      roleTag: S.branchManagerRole,
+      userName: authProvider.username ?? S.manager,
+      userRole: S.branchManagerRole,
+      selectedIndex: _selectedIndex,
+      onSelect: (i) => setState(() => _selectedIndex = i),
+      pageTitle: _selectedIndex == 0 ? gymName : _titles[_selectedIndex],
+      pageSub: _selectedIndex == 0 ? S.performanceOverview : null,
+      navItems: const [
+        DashNavItem(Icons.dashboard_outlined, S.overview),
+        DashNavItem(Icons.people_outline, S.staff),
+        DashNavItem(Icons.report_problem_outlined, S.complaints),
+      ],
+      actions: [
+        DashIconAction(
+            icon: Icons.refresh,
+            tooltip: S.refresh,
+            onTap: () => provider.loadDashboardData()),
+        DashIconAction(
+          icon: Icons.settings_outlined,
+          tooltip: S.settings,
+          onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const BranchManagerSettingsScreen())),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: NavigationBar(
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (index) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                },
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                height: 65,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                indicatorColor: Theme.of(context).primaryColor.withOpacity(0.15),
-                destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.dashboard_outlined),
-                    selectedIcon: const Icon(Icons.dashboard),
-                    label: S.overview,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.people_outlined),
-                    selectedIcon: const Icon(Icons.people),
-                    label: S.staff,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.report_problem_outlined),
-                    selectedIcon: const Icon(Icons.report_problem),
-                    label: S.complaints,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+        DashIconAction(
+            icon: Icons.logout, tooltip: S.logout, onTap: authProvider.logout),
+      ],
+      body: body,
     );
   }
 
   Widget _buildCurrentTab(BuildContext context, BranchManagerProvider provider, AuthProvider authProvider) {
     if (_selectedIndex == 0) {
-      return RefreshIndicator(
-        onRefresh: () => provider.loadDashboardData(),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildWelcomeCard(context, authProvider.username ?? 'Manager'),
-              const SizedBox(height: 20),
-              Text(
-                S.performanceOverview,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              _buildStatsGrid(context, provider),
-              const SizedBox(height: 24),
-              // Could add charts or other widgets here
-            ],
-          ),
-        ),
-      );
+      return _buildOverviewTab(context, provider, authProvider);
     } else if (_selectedIndex == 1) {
       return _buildStaffTab(provider);
     } else {
@@ -184,99 +93,92 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
     }
   }
 
-  Widget _buildWelcomeCard(BuildContext context, String name) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.8),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).primaryColor.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
+  Widget _buildOverviewTab(BuildContext context, BranchManagerProvider provider,
+      AuthProvider authProvider) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final performance = provider.branchPerformance ?? {};
+    final dailyOps = provider.dailyOperations ?? {};
+    final todayRevenue =
+        (dailyOps['total_revenue'] ?? performance['today_revenue'] ?? 0)
+            .toDouble();
+    final activeMembers = performance['active_members'] ??
+        performance['active_subscriptions'] ??
+        0;
+    final totalCustomers = performance['total_customers'] ?? 0;
+    final pendingComplaints = provider.complaints
+        .where((c) =>
+            c['status']?.toString().toLowerCase() == 'pending' ||
+            c['status']?.toString().toLowerCase() == 'open')
+        .length;
+    final expiringCount = performance['expiring_subscriptions'] ?? 0;
+
+    return DashBody(
+      onRefresh: () => provider.loadDashboardData(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            S.welcomeBack,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          _welcomeCard(context, authProvider.username ?? S.manager),
+          const SizedBox(height: 22),
+          DashKpiGrid(cards: [
+            DashKpiCard(
+                label: S.todaysRevenue,
+                value: NumberHelper.formatCurrency(todayRevenue),
+                icon: Icons.attach_money,
+                iconColor: accent),
+            DashKpiCard(
+                label: S.activeMembers,
+                value: NumberHelper.formatNumber(activeMembers),
+                icon: Icons.people,
+                iconColor: DashColors.emerald,
+                valueColor: DashColors.emerald),
+            DashKpiCard(
+                label: S.totalCustomers,
+                value: NumberHelper.formatNumber(totalCustomers),
+                icon: Icons.person,
+                iconColor: DashColors.blue),
+            DashKpiCard(
+                label: expiringCount > 0 ? S.expiringSoon(expiringCount) : S.pendingIssues,
+                value: NumberHelper.formatNumber(
+                    expiringCount > 0 ? expiringCount : pendingComplaints),
+                icon: expiringCount > 0 ? Icons.timer_off : Icons.report_problem,
+                iconColor: DashColors.amber),
+          ]),
         ],
       ),
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, BranchManagerProvider provider) {
-    final performance = provider.branchPerformance ?? {};
-    final dailyOps = provider.dailyOperations ?? {};
-
-    final todayRevenue = (dailyOps['total_revenue'] ?? performance['today_revenue'] ?? 0).toDouble();
-    final activeMembers = performance['active_members'] ?? performance['active_subscriptions'] ?? 0;
-    final totalCustomers = performance['total_customers'] ?? 0;
-    final pendingComplaints = provider.complaints.where((c) =>
-        c['status']?.toString().toLowerCase() == 'pending' ||
-        c['status']?.toString().toLowerCase() == 'open').length;
-    final expiringCount = performance['expiring_subscriptions'] ?? 0;
-    final width = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = width >= 1200 ? 4 : width >= 800 ? 3 : 2;
-
-    return GridView.count(
-      crossAxisCount: crossAxisCount,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
-      children: [
-        StatCard(
-          title: S.todaysRevenue,
-          value: NumberHelper.formatCurrency(todayRevenue),
-          icon: Icons.attach_money,
-          color: Colors.green,
+  Widget _welcomeCard(BuildContext context, String name) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [accent, accent.withValues(alpha: 0.75)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        StatCard(
-          title: S.activeMembers,
-          value: NumberHelper.formatNumber(activeMembers),
-          icon: Icons.people,
-          color: Colors.blue,
-        ),
-        StatCard(
-          title: S.totalCustomers,
-          value: NumberHelper.formatNumber(totalCustomers),
-          icon: Icons.person,
-          color: Colors.orange,
-        ),
-        StatCard(
-          title: expiringCount > 0 ? S.expiringSoon(expiringCount) : S.pendingIssues,
-          value: NumberHelper.formatNumber(expiringCount > 0 ? expiringCount : pendingComplaints),
-          icon: expiringCount > 0 ? Icons.timer_off : Icons.report_problem,
-          color: expiringCount > 0 ? Colors.deepOrange : Colors.red,
-        ),
-      ],
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: accent.withValues(alpha: 0.3),
+              blurRadius: 24,
+              offset: const Offset(0, 10)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(S.welcomeBack,
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9), fontSize: 15)),
+          const SizedBox(height: 6),
+          Text(name,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+        ],
+      ),
     );
   }
 

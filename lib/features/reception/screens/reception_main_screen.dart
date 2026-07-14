@@ -1,5 +1,7 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/auth/auth_provider.dart';
+import '../../../shared/widgets/dashboard_shell.dart';
 import 'reception_home_screen.dart';
 import 'subscription_operations_screen.dart';
 import 'operations_screen.dart';
@@ -7,6 +9,8 @@ import 'customers_list_screen.dart';
 import 'profile_settings_screen.dart';
 import '../../../core/localization/app_strings.dart';
 
+/// Front-desk console. The five workspaces keep their own screen chrome, so
+/// the shell hides its topbar and just provides the sidebar navigation.
 class ReceptionMainScreen extends StatefulWidget {
   const ReceptionMainScreen({super.key});
 
@@ -25,90 +29,29 @@ class _ReceptionMainScreenState extends State<ReceptionMainScreen> {
     ProfileSettingsScreen(),
   ];
 
+  static const _titles = [S.home, S.subs, S.ops, S.clients, S.profile];
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true, // Allow content to extend behind the nav bar
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                  width: 1,
-                ),
-              ),
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  textTheme: Theme.of(context).textTheme.copyWith(
-                    labelSmall: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                child: NavigationBar(
-                  selectedIndex: _selectedIndex,
-                  onDestinationSelected: (index) {
-                    setState(() {
-                      _selectedIndex = index;
-                    });
-                  },
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  height: 70,
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                  destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.home_outlined, size: 22),
-                    selectedIcon: const Icon(Icons.home, size: 22),
-                    label: S.home,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.card_membership_outlined, size: 22),
-                    selectedIcon: const Icon(Icons.card_membership, size: 22),
-                    label: S.subs,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.assignment_outlined, size: 22),
-                    selectedIcon: const Icon(Icons.assignment, size: 22),
-                    label: S.ops,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.people_outlined, size: 22),
-                    selectedIcon: const Icon(Icons.people, size: 22),
-                    label: S.clients,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.person_outlined, size: 22),
-                    selectedIcon: const Icon(Icons.person, size: 22),
-                    label: S.profile,
-                  ),
-                ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    final auth = context.watch<AuthProvider>();
+    return DashboardShell(
+      accent: Theme.of(context).colorScheme.primary,
+      appTitle: 'PowerFit',
+      roleTag: S.reception,
+      userName: auth.username ?? S.reception,
+      userRole: S.frontDesk,
+      selectedIndex: _selectedIndex,
+      onSelect: (i) => setState(() => _selectedIndex = i),
+      pageTitle: _titles[_selectedIndex],
+      showTopbar: false,
+      navItems: const [
+        DashNavItem(Icons.home_outlined, S.home),
+        DashNavItem(Icons.card_membership_outlined, S.subs),
+        DashNavItem(Icons.assignment_outlined, S.ops),
+        DashNavItem(Icons.people_outline, S.clients),
+        DashNavItem(Icons.person_outline, S.profile),
+      ],
+      body: IndexedStack(index: _selectedIndex, children: _screens),
     );
   }
 }

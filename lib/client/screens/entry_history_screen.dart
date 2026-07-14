@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:go_router/go_router.dart';
 import '../../core/localization/app_strings.dart';
 import '../core/api/client_api_service.dart';
+import '../core/theme/client_theme.dart';
 import '../models/entry_history_model.dart';
-import '../../shared/widgets/skeleton_loader.dart';
 
+/// Visit history, styled to the PowerFit Member App design: a lean list of
+/// dark cards, each with a crimson status glyph, the visit date, branch, and
+/// the check-in time.
 class EntryHistoryScreen extends StatefulWidget {
   const EntryHistoryScreen({super.key});
 
@@ -38,288 +41,196 @@ class _EntryHistoryScreenState extends State<EntryHistoryScreen> {
       if (response['status'] == 'success' || response['success'] == true) {
         final List<dynamic> data = response['data'] ?? [];
         setState(() {
-          _entries = data
-              .map((entry) => EntryHistoryModel.fromJson(entry))
-              .toList();
+          _entries =
+              data.map((entry) => EntryHistoryModel.fromJson(entry)).toList();
         });
       } else {
-        setState(() {
-          _error = response['message'] ?? 'Failed to load entry history';
-        });
+        setState(() =>
+            _error = response['message'] ?? 'Failed to load entry history');
       }
     } catch (e) {
-      setState(() {
-        _error = S.entryHistoryNotAvailable;
-      });
-      print('❌ Entry history error: $e');
+      setState(() => _error = S.entryHistoryNotAvailable);
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/client/home');
-            }
-          },
+    return Container(
+      color: ClientTheme.darkGrey,
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _header(),
+            Expanded(child: _body()),
+          ],
         ),
-        title: const Text(S.entryHistoryTitle),
       ),
-      body: _isLoading
-          ? const DashboardSkeleton()
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadEntries,
-                        child: const Text(S.retry),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadEntries,
-                  child: _entries.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.history,
-                                size: 64,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                S.noEntryHistory,
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                S.visitsAppearHere,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _entries.length,
-                          itemBuilder: (context, index) {
-                            final entry = _entries[index];
-                            return _buildEntryCard(context, entry);
-                          },
-                        ),
-                ),
     );
   }
 
-  Widget _buildEntryCard(BuildContext context, EntryHistoryModel entry) {
-    final dateTime = entry.dateTime;
-    final dateFormat = DateFormat('dd MMM yyyy');
-    final timeFormat = DateFormat('hh:mm a');
+  Widget _header() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+      child: Row(
+        children: [
+          if (context.canPop())
+            IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.pop(),
+            ),
+          if (context.canPop()) const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(S.entryHistoryTitle,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 2),
+              Text(S.recentVisits,
+                  style: const TextStyle(
+                      color: ClientTheme.subtleGrey, fontSize: 12)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-    // Pick icon based on entry type
-    IconData entryIcon;
-    switch (entry.entryType.toLowerCase()) {
-      case 'qr_scan':
-        entryIcon = Icons.qr_code_scanner;
-        break;
-      case 'barcode':
-        entryIcon = Icons.qr_code;
-        break;
-      case 'fingerprint':
-        entryIcon = Icons.fingerprint;
-        break;
-      case 'manual':
-        entryIcon = Icons.person;
-        break;
-      default:
-        entryIcon = Icons.login;
+  Widget _body() {
+    if (_isLoading) {
+      return const Center(
+          child: CircularProgressIndicator(color: ClientTheme.primaryRed));
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline,
+                  size: 64, color: ClientTheme.primaryRed),
+              const SizedBox(height: 16),
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                  onPressed: _loadEntries, child: const Text(S.retry)),
+            ],
+          ),
+        ),
+      );
     }
 
-    final bool isApproved = entry.isApproved;
-    final Color statusColor = isApproved ? Colors.green : Colors.red;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Entry type icon
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                entryIcon,
-                color: statusColor,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-
-            // Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Entry type label + status
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          entry.entryTypeLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            isApproved ? S.approvedEntry : S.deniedEntry,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-
-                  // Branch
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 16,
-                        color: Theme.of(context).textTheme.bodySmall?.color,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          entry.branch,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Date and time
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 6,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            dateFormat.format(dateTime),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.access_time,
-                            size: 14,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            timeFormat.format(dateTime),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Coins used
-            if (entry.coinsUsed > 0)
-              Container(
-                margin: const EdgeInsets.only(left: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.monetization_on,
-                      size: 16,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '-${entry.coinsUsed}',
+    return RefreshIndicator(
+      color: ClientTheme.primaryRed,
+      onRefresh: _loadEntries,
+      child: _entries.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                const SizedBox(height: 120),
+                Icon(Icons.history, size: 64, color: Colors.grey[700]),
+                const SizedBox(height: 16),
+                const Center(
+                  child: Text(S.noEntryHistory,
                       style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700)),
                 ),
+                const SizedBox(height: 8),
+                const Center(
+                  child: Text(S.visitsAppearHere,
+                      style: TextStyle(color: ClientTheme.subtleGrey)),
+                ),
+              ],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
+              itemCount: _entries.length,
+              separatorBuilder: (_, i) => const SizedBox(height: 10),
+              itemBuilder: (context, index) => _entryCard(_entries[index]),
+            ),
+    );
+  }
+
+  Widget _entryCard(EntryHistoryModel entry) {
+    final dateFormat = DateFormat('dd MMM yyyy');
+    final timeFormat = DateFormat('HH:mm');
+    final bool isApproved = entry.isApproved;
+    final Color color =
+        isApproved ? ClientTheme.primaryRed : const Color(0xFFEF4444);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: ClientTheme.cardGrey,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(isApproved ? Icons.check_rounded : Icons.close_rounded,
+                color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(dateFormat.format(entry.dateTime),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(entry.branch,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: ClientTheme.subtleGrey, fontSize: 12)),
+              ],
+            ),
+          ),
+          if (entry.coinsUsed > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsetsDirectional.only(end: 10),
+              decoration: BoxDecoration(
+                color: ClientTheme.primaryRed.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
               ),
+              child: Text('-${entry.coinsUsed}',
+                  style: const TextStyle(
+                      color: ClientTheme.primaryRed,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12)),
+            ),
           ],
-        ),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(timeFormat.format(entry.dateTime),
+                style: const TextStyle(
+                    color: ClientTheme.textGrey,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
+          ),
+        ],
       ),
     );
   }

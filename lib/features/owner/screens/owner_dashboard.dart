@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/auth/auth_provider.dart';
@@ -6,6 +5,7 @@ import '../../../core/providers/gym_branding_provider.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
 import '../../../shared/widgets/stat_card.dart';
+import '../../../shared/widgets/dashboard_shell.dart';
 import '../../../shared/widgets/date_range_picker.dart';
 import '../../../core/utils/helpers.dart';
 import '../providers/owner_dashboard_provider.dart';
@@ -35,6 +35,14 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     });
   }
 
+  static const _titles = [
+    S.overview,
+    S.branches,
+    S.staff,
+    S.finance,
+    S.issues,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -44,141 +52,58 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         ? branding.gymName
         : S.ownerDashboard;
 
-    return Scaffold(
-      extendBody: true,
-      appBar: AppBar(
-        title: Text(gymName),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.date_range),
-            onPressed: () {
-              showDateRangePickerDialog(
-                context: context,
-                initialStartDate: dashboardProvider.startDate,
-                initialEndDate: dashboardProvider.endDate,
-                onDateRangeSelected: (start, end) {
-                  dashboardProvider.setDateRange(start, end);
-                },
-              );
-            },
+    final body = dashboardProvider.isLoading
+        ? const DashboardSkeleton()
+        : dashboardProvider.error != null
+            ? ErrorDisplay(
+                message: dashboardProvider.error!,
+                onRetry: () => dashboardProvider.refresh(),
+              )
+            : _buildCurrentTab(context, dashboardProvider, authProvider);
+
+    return DashboardShell(
+      accent: Theme.of(context).colorScheme.primary,
+      appTitle: 'PowerFit',
+      roleTag: S.owner,
+      userName: authProvider.username ?? S.owner,
+      userRole: S.ownerRole,
+      selectedIndex: _selectedIndex,
+      onSelect: (i) => setState(() => _selectedIndex = i),
+      pageTitle: _selectedIndex == 0 ? gymName : _titles[_selectedIndex],
+      pageSub: _selectedIndex == 0 ? S.overview : null,
+      navItems: const [
+        DashNavItem(Icons.dashboard_outlined, S.overview),
+        DashNavItem(Icons.store_outlined, S.branches),
+        DashNavItem(Icons.people_outline, S.staff),
+        DashNavItem(Icons.assessment_outlined, S.finance),
+        DashNavItem(Icons.report_problem_outlined, S.issues),
+      ],
+      actions: [
+        DashIconAction(
+          icon: Icons.date_range,
+          tooltip: S.selectDateRange,
+          onTap: () => showDateRangePickerDialog(
+            context: context,
+            initialStartDate: dashboardProvider.startDate,
+            initialEndDate: dashboardProvider.endDate,
+            onDateRangeSelected: dashboardProvider.setDateRange,
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => dashboardProvider.refresh(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const OwnerSettingsScreen(),
-                ),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.person),
-            onSelected: (value) {
-              if (value == 'logout') {
-                authProvider.logout();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.black54),
-                    SizedBox(width: 8),
-                    Text(S.logout),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: dashboardProvider.isLoading
-          ? const DashboardSkeleton()
-          : dashboardProvider.error != null
-              ? ErrorDisplay(
-                  message: dashboardProvider.error!,
-                  onRetry: () => dashboardProvider.refresh(),
-                )
-              : _buildCurrentTab(context, dashboardProvider, authProvider),
+        ),
+        DashIconAction(
+            icon: Icons.refresh,
+            tooltip: S.refresh,
+            onTap: () => dashboardProvider.refresh()),
+        DashIconAction(
+          icon: Icons.settings_outlined,
+          tooltip: S.settings,
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const OwnerSettingsScreen())),
+        ),
+        DashIconAction(
+            icon: Icons.logout, tooltip: S.logout, onTap: authProvider.logout),
+      ],
       floatingActionButton: _buildFab(context, dashboardProvider),
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withOpacity(0.85),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: NavigationBar(
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (index) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                },
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                height: 65,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                indicatorColor: Theme.of(context).primaryColor.withOpacity(0.15),
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(Icons.dashboard),
-                    label: S.overview,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.store_outlined),
-                    selectedIcon: Icon(Icons.store),
-                    label: S.branches,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.people_outlined),
-                    selectedIcon: Icon(Icons.people),
-                    label: S.staff,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.assessment_outlined),
-                    selectedIcon: Icon(Icons.assessment),
-                    label: S.finance,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.report_problem_outlined),
-                    selectedIcon: Icon(Icons.report_problem),
-                    label: S.issues,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      body: body,
     );
   }
 
@@ -229,179 +154,218 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   }
 
   Widget _buildOverviewTab(BuildContext context, OwnerDashboardProvider provider, AuthProvider authProvider) {
-    return RefreshIndicator(
+    final accent = Theme.of(context).colorScheme.primary;
+    final rd = provider.revenueData ?? {};
+    final totalRevenue = (rd['total_revenue'] as num?)?.toDouble() ?? 0.0;
+    final activeSubscriptions = rd['active_subscriptions'] ?? 0;
+    final totalCustomers = rd['total_customers'] ?? 0;
+    final totalBranches = rd['total_branches'] ?? provider.branchComparison.length;
+    final wide = MediaQuery.sizeOf(context).width >= 1000;
+
+    final chart = _revenueByBranchCard(context, provider, accent);
+    final alerts = _alertsCard(context, provider, accent);
+
+    return DashBody(
       onRefresh: () => provider.refresh(),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWelcomeCard(context, authProvider.username ?? S.owner),
-            const SizedBox(height: 20),
-            Text(
-              S.keyMetrics,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            _buildStatsGrid(context, provider),
-            const SizedBox(height: 24),
-            // Recent Alerts
-            if (provider.alerts.isNotEmpty) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _welcomeCard(context, authProvider.username ?? S.owner),
+          const SizedBox(height: 22),
+          DashKpiGrid(cards: [
+            DashKpiCard(
+                label: S.totalRevenue,
+                value: NumberHelper.formatCurrency(totalRevenue),
+                icon: Icons.attach_money,
+                iconColor: accent),
+            DashKpiCard(
+                label: S.totalCustomers,
+                value: NumberHelper.formatNumber(totalCustomers),
+                icon: Icons.people,
+                iconColor: accent),
+            DashKpiCard(
+                label: S.activeSubs,
+                value: NumberHelper.formatNumber(activeSubscriptions),
+                icon: Icons.card_membership,
+                iconColor: DashColors.emerald,
+                valueColor: DashColors.emerald),
+            DashKpiCard(
+                label: S.branches,
+                value: NumberHelper.formatNumber(totalBranches),
+                icon: Icons.store,
+                iconColor: DashColors.amber),
+          ]),
+          const SizedBox(height: 20),
+          if (wide)
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    S.recentAlerts,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const SmartAlertsScreen()),
-                      );
-                    },
-                    child: const Text(S.viewAll),
-                  ),
+                  Expanded(flex: 17, child: chart),
+                  const SizedBox(width: 18),
+                  Expanded(flex: 10, child: alerts),
                 ],
               ),
-              const SizedBox(height: 12),
-              _buildAlertsList(context, provider),
-            ],
+            )
+          else ...[
+            chart,
+            const SizedBox(height: 18),
+            alerts,
           ],
-        ),
+          const SizedBox(height: 20),
+          _branchComparisonCard(context, provider, accent),
+        ],
       ),
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context, String name) {
+  Widget _welcomeCard(BuildContext context, String name) {
+    final accent = Theme.of(context).colorScheme.primary;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Theme.of(context).primaryColor,
-            Theme.of(context).primaryColor.withOpacity(0.8),
-          ],
+          colors: [accent, accent.withValues(alpha: 0.75)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).primaryColor.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
+              color: accent.withValues(alpha: 0.3),
+              blurRadius: 24,
+              offset: const Offset(0, 10)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            S.welcomeBack,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(S.welcomeBack,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 15)),
+          const SizedBox(height: 6),
+          Text(name,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
         ],
       ),
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, OwnerDashboardProvider provider) {
-    final revenueData = provider.revenueData ?? {};
-    final totalRevenue = (revenueData['total_revenue'] as num?)?.toDouble() ?? 0.0;
-    final activeSubscriptions = revenueData['active_subscriptions'] ?? 0;
-    final totalCustomers = revenueData['total_customers'] ?? 0;
-    final totalBranches = revenueData['total_branches'] ?? provider.branchComparison.length;
-    final width = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = width >= 1200 ? 4 : width >= 800 ? 3 : 2;
-
-    return GridView.count(
-      crossAxisCount: crossAxisCount,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
-      children: [
-        StatCard(
-          title: S.totalRevenue,
-          value: NumberHelper.formatCurrency(totalRevenue),
-          icon: Icons.attach_money,
-          color: Colors.green,
-        ),
-        StatCard(
-          title: S.activeSubs,
-          value: NumberHelper.formatNumber(activeSubscriptions),
-          icon: Icons.card_membership,
-          color: Colors.blue,
-        ),
-        StatCard(
-          title: S.totalCustomers,
-          value: NumberHelper.formatNumber(totalCustomers),
-          icon: Icons.people,
-          color: Colors.orange,
-        ),
-        StatCard(
-          title: S.branches,
-          value: NumberHelper.formatNumber(totalBranches),
-          icon: Icons.store,
-          color: Colors.purple,
-        ),
-      ],
+  Widget _revenueByBranchCard(
+      BuildContext context, OwnerDashboardProvider provider, Color accent) {
+    final branches = provider.branchComparison.take(7).toList();
+    return DashSectionCard(
+      title: S.revenue,
+      accent: accent,
+      child: branches.isEmpty
+          ? _emptyHint(S.noRevenueData)
+          : DashBarChart(
+              accent: accent,
+              bars: [
+                for (final b in branches)
+                  ((b['revenue'] ?? 0) as num).toDouble(),
+              ],
+              labels: [
+                for (final b in branches) _shortName(_branchName(b)),
+              ],
+            ),
     );
   }
 
-  Widget _buildAlertsList(BuildContext context, OwnerDashboardProvider provider) {
-    return Column(
-      children: provider.alerts.take(3).map((alert) => Card(
-        elevation: 2,
-        margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: (alert['risk_level'] == 'high')
-                ? Colors.red.withOpacity(0.1)
-                : (alert['risk_level'] == 'medium')
-                    ? Colors.orange.withOpacity(0.1)
-                    : Colors.blue.withOpacity(0.1),
-            child: Icon(
-              Icons.notifications_active,
-              color: (alert['risk_level'] == 'high')
-                  ? Colors.red
-                  : (alert['risk_level'] == 'medium')
-                      ? Colors.orange
-                      : Colors.blue,
-              size: 20,
+  Widget _alertsCard(
+      BuildContext context, OwnerDashboardProvider provider, Color accent) {
+    final alerts = provider.alerts.take(4).toList();
+    return DashSectionCard(
+      title: S.recentAlerts,
+      accent: accent,
+      actionLabel: alerts.isEmpty ? null : S.viewAll,
+      onAction: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const SmartAlertsScreen())),
+      child: alerts.isEmpty
+          ? _emptyHint(S.allClear)
+          : Column(
+              children: [
+                for (var i = 0; i < alerts.length; i++) ...[
+                  DashAlertTile(
+                    color: _riskColor(alerts[i]['risk_level'], accent),
+                    title: alerts[i]['title'] ??
+                        alerts[i]['message'] ??
+                        S.alert,
+                    subtitle: alerts[i]['description'] ?? '',
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(
+                            builder: (_) => const SmartAlertsScreen())),
+                  ),
+                  if (i < alerts.length - 1) const SizedBox(height: 12),
+                ],
+              ],
             ),
-          ),
-          title: Text(alert['title'] ?? alert['message'] ?? S.alert),
-          subtitle: Text(alert['description'] ?? ''),
-          trailing: const Icon(Icons.chevron_right, size: 16),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SmartAlertsScreen()),
-            );
-          },
-        ),
-      )).toList(),
     );
+  }
+
+  Widget _branchComparisonCard(
+      BuildContext context, OwnerDashboardProvider provider, Color accent) {
+    final branches = provider.branchComparison;
+    if (branches.isEmpty) {
+      return DashSectionCard(
+        title: S.branches,
+        accent: accent,
+        child: _emptyHint(S.noBranchesYet),
+      );
+    }
+    final maxRev = branches.fold<double>(
+        1, (m, b) => ((b['revenue'] ?? 0) as num).toDouble() > m
+            ? ((b['revenue'] ?? 0) as num).toDouble()
+            : m);
+    return DashSectionCard(
+      title: S.leaderboard,
+      accent: accent,
+      actionLabel: S.branches,
+      onAction: () => setState(() => _selectedIndex = 1),
+      child: Column(
+        children: [
+          for (var i = 0; i < branches.length; i++) ...[
+            DashProgressRow(
+              accent: accent,
+              name: _branchName(branches[i]),
+              trailing: NumberHelper.formatCurrency(
+                  ((branches[i]['revenue'] ?? 0) as num).toDouble()),
+              fraction:
+                  ((branches[i]['revenue'] ?? 0) as num).toDouble() / maxRev,
+            ),
+            if (i < branches.length - 1) const SizedBox(height: 18),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _branchName(Map b) =>
+      (b['name'] ?? b['branch_name'] ?? S.unknown).toString();
+
+  String _shortName(String s) {
+    final first = s.split(' ').first;
+    return first.length > 8 ? first.substring(0, 8) : first;
+  }
+
+  Widget _emptyHint(String text) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        child: Center(
+          child: Text(text,
+              style: const TextStyle(color: DashColors.subtle, fontSize: 14)),
+        ),
+      );
+
+  Color _riskColor(dynamic risk, Color accent) {
+    switch (risk) {
+      case 'high':
+        return accent;
+      case 'medium':
+        return DashColors.amber;
+      default:
+        return DashColors.blue;
+    }
   }
 
   // Other specific tab build methods...
