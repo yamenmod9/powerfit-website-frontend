@@ -75,6 +75,12 @@ class S {
   static String get roleAutoResolved => _t('يحدّد النظام دورك تلقائياً بعد تسجيل الدخول.', 'Your role is resolved automatically after login.');
   static String get backToHome => _t('الرئيسية', 'Home');
 
+  // ─── UNIFIED LOGIN SCREEN (web) ──────────────────────────────
+  static String get unifiedLoginSubtitle => _t('سجّل الدخول للمتابعة — للموظفين والإداريين والأعضاء', 'Sign in to continue — for staff, admins, and members');
+  static String get loginIdentifier => _t('اسم المستخدم أو الهاتف أو البريد الإلكتروني', 'Username, phone, or email');
+  static String get enterLoginIdentifier => _t('أدخل اسم المستخدم أو رقم الهاتف أو البريد الإلكتروني', 'Enter your username, phone, or email');
+  static String get loginIdentifierRequired => _t('هذا الحقل مطلوب', 'This field is required');
+
   // ─── GYM SETUP WIZARD ──────────────────────────────────────
   static String get setupYourGym => _t('إعداد النادي الرياضي', 'Set up your gym');
   static String stepOf(int step) => _t(

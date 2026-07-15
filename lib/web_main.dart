@@ -22,7 +22,7 @@ import 'features/accountant/providers/accountant_provider.dart';
 import 'features/super_admin/providers/super_admin_provider.dart';
 
 import 'features/auth/screens/landing_screen.dart';
-import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/unified_login_screen.dart';
 import 'features/auth/screens/gym_setup_wizard.dart';
 import 'features/auth/screens/staff_language_setup_screen.dart';
 import 'features/owner/screens/owner_dashboard.dart';
@@ -34,7 +34,6 @@ import 'features/super_admin/screens/super_admin_dashboard.dart';
 import 'client/core/api/client_api_service.dart';
 import 'client/core/auth/client_auth_provider.dart';
 import 'client/core/theme/client_theme.dart';
-import 'client/screens/welcome_screen.dart';
 import 'client/screens/activation_screen.dart';
 import 'client/screens/client_main_screen.dart';
 import 'client/screens/qr_screen.dart';
@@ -134,9 +133,14 @@ class _WebAppState extends State<WebApp> {
       redirect: (context, state) {
         final loc = state.matchedLocation;
         final isRootRoute = loc == '/';
+        final isLoginRoute = loc == '/login';
 
-        // Already logged in as a client and landing on the chooser? Skip straight in.
-        if (isRootRoute &&
+        // Legacy bookmark for the old member-only login page.
+        if (loc == '/client/welcome') return '/login';
+
+        // Already logged in as a client and landing on the chooser or the
+        // unified login page? Skip straight in.
+        if ((isRootRoute || isLoginRoute) &&
             _clientAuthProvider.isAuthenticated &&
             !_authProvider.isAuthenticated) {
           return '/client/home';
@@ -145,13 +149,12 @@ class _WebAppState extends State<WebApp> {
         // ───────────── Client section ─────────────
         if (loc.startsWith('/client')) {
           final isAuth = _clientAuthProvider.isAuthenticated;
-          final isWelcome = loc == '/client/welcome';
           final isActivation = loc.startsWith('/client/activation');
 
-          if (!isAuth && !isWelcome && !isActivation) {
-            return '/client/welcome';
+          if (!isAuth && !isActivation) {
+            return '/login';
           }
-          if (isAuth && (isWelcome || isActivation)) {
+          if (isAuth && isActivation) {
             return '/client/home';
           }
           return null;
@@ -161,7 +164,6 @@ class _WebAppState extends State<WebApp> {
         final isAuthenticated = _authProvider.isAuthenticated;
         final isLoading = _authProvider.isLoading;
         final userRole = _authProvider.userRole;
-        final isLoginRoute = loc == '/login';
         final isSetupRoute = loc == '/gym-setup';
         final isStaffLanguageSetupRoute = loc == '/staff-language-setup';
 
@@ -218,7 +220,14 @@ class _WebAppState extends State<WebApp> {
         ),
         GoRoute(
           path: '/login',
-          builder: (context, state) => const LoginScreen(),
+          // Named 'welcome' too so `context.goNamed('welcome')` (used by the
+          // shared client settings screen on logout) still resolves — it's
+          // now the same unified login page rather than a member-only one.
+          name: 'welcome',
+          builder: (context, state) => UnifiedLoginScreen(
+            staffBranding: _brandingProvider,
+            clientBranding: _clientBranding,
+          ),
         ),
         GoRoute(
           path: '/gym-setup',
@@ -250,10 +259,12 @@ class _WebAppState extends State<WebApp> {
         ),
         ShellRoute(
           builder: (context, state, child) {
+            // ClientApiService and ClientAuthProvider are already provided
+            // above (build() method) so the unified /login route can reach
+            // them too — only the branding instance needs overriding here,
+            // scoped to the client subtree.
             return MultiProvider(
               providers: [
-                Provider<ClientApiService>.value(value: _clientApiService),
-                ChangeNotifierProvider<ClientAuthProvider>.value(value: _clientAuthProvider),
                 ChangeNotifierProvider<GymBrandingProvider>.value(value: _clientBranding),
               ],
               child: Consumer2<ClientAuthProvider, GymBrandingProvider>(
@@ -268,11 +279,6 @@ class _WebAppState extends State<WebApp> {
             );
           },
           routes: [
-            GoRoute(
-              path: '/client/welcome',
-              name: 'welcome',
-              builder: (context, state) => const WelcomeScreen(),
-            ),
             GoRoute(
               path: '/client/activation',
               name: 'activation',
@@ -343,6 +349,10 @@ class _WebAppState extends State<WebApp> {
       providers: [
         Provider<ApiService>.value(value: _apiService),
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
+        // Client stack — also needed at this level (not just inside the
+        // /client ShellRoute) so the unified /login route can reach them.
+        Provider<ClientApiService>.value(value: _clientApiService),
+        ChangeNotifierProvider<ClientAuthProvider>.value(value: _clientAuthProvider),
         ChangeNotifierProxyProvider<AuthProvider, OwnerDashboardProvider>(
           create: (_) => OwnerDashboardProvider(_apiService),
           update: (_, auth, previous) => previous ?? OwnerDashboardProvider(_apiService),

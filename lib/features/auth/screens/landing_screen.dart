@@ -5,9 +5,9 @@ import '../../../core/services/pricing_service.dart';
 
 /// Public marketing homepage served at '/'. Full bilingual (AR/EN) PowerFit
 /// site — hero, features, how-it-works, screenshots, testimonials, pricing,
-/// FAQ, and a role gateway. Matches the PowerFit Landing design. Staff and
-/// Admin share the same login form (backend resolves the role), so both route
-/// to '/login'; members go to the client app.
+/// FAQ, and a role gateway. Matches the PowerFit Landing design. Members,
+/// staff, and admins all share the same unified login form at '/login' —
+/// the backend resolves which kind of account it is after submit.
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
 
@@ -1396,7 +1396,7 @@ class _LandingScreenState extends State<LandingScreen> {
                   _crimson,
                   _t['roleMember']!,
                   _t['roleMemberD']!,
-                  () => context.go('/client/welcome'),
+                  () => context.go('/login'),
                 ),
                 _roleCard(
                   Icons.badge,
