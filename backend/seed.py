@@ -27,6 +27,19 @@ from app.models.gym import Gym
 # Set seed for reproducible results (can be commented out for true randomness)
 random.seed(42)
 
+# Single source of truth for the platform-level super admin account, used
+# both to create the user and to print its credentials after seeding —
+# keeping these in one place avoids the printed credentials drifting out
+# of sync with what's actually created (as happened when this account was
+# renamed from 'Zyad' to 'powerfit').
+SUPER_ADMIN = {
+    'username': 'powerfit',
+    'password': 'PowerFit2026!',
+    'email': 'admin@powerfit.com',
+    'full_name': 'PowerFit Admin',
+    'phone': '0200000000',
+}
+
 # Dedicated, stable account for Google Play review/testing.
 GOOGLE_PLAY_TEST_CLIENT = {
     'full_name': 'Google Play Test Client',
@@ -153,8 +166,8 @@ def seed_database():
         print("[*] TEST ACCOUNTS - ALL ROLES (15 USERS TOTAL)")
         print("="*70)
         print("\n[SUPER ADMIN] SUPER ADMIN ROLE (1):")
-        print("  Username: Zyad | Password: ZWL@2009")
-        print("  Full Name: Zyad")
+        print(f"  Username: {SUPER_ADMIN['username']} | Password: {SUPER_ADMIN['password']}")
+        print(f"  Full Name: {SUPER_ADMIN['full_name']}")
         print("  Access: Platform-level - creates and manages gym owners")
         print("\n[OWNER] OWNER ROLE (1):")
         print("  Username: owner | Password: owner123")
@@ -281,14 +294,14 @@ def create_users(branches):
     
     # ========== SUPER ADMIN (platform-level) ==========
     super_admin = User(
-        username='powerfit',
-        email='admin@powerfit.com',
-        full_name='PowerFit Admin',
-        phone='0200000000',
+        username=SUPER_ADMIN['username'],
+        email=SUPER_ADMIN['email'],
+        full_name=SUPER_ADMIN['full_name'],
+        phone=SUPER_ADMIN['phone'],
         role=UserRole.SUPER_ADMIN,
         is_active=True
     )
-    super_admin.set_password('PowerFit2026!')
+    super_admin.set_password(SUPER_ADMIN['password'])
     users.append(super_admin)
     
     # ========== OWNER (exactly 1 — the default/test owner) ==========
