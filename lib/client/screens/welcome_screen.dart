@@ -3,14 +3,17 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/localization/app_strings.dart';
 import '../core/auth/client_auth_provider.dart';
-import '../core/theme/client_theme.dart';
 import '../../core/providers/gym_branding_provider.dart';
 import '../../core/providers/locale_provider.dart';
 import '../../shared/models/gym_model.dart';
 import '../../shared/widgets/loading_indicator.dart';
+import '../../features/auth/widgets/login_shell.dart';
 
-/// Member login, styled to the PowerFit Member App welcome design: a crimson
-/// logo glowing on a dark radial ground above the sign-in form.
+/// Member login for the native single-audience client app (client_main.dart).
+/// Shares its visual chrome with [LoginScreen] (native staff/admin app) and
+/// UnifiedLoginScreen (web build) via [LoginShell] — this screen only owns
+/// the member-specific form and submit logic, since it's the only one of
+/// the three with a backend that authenticates members.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -19,10 +22,12 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -49,24 +54,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   Future<void> _login() async {
-    final identifier = _identifierController.text.trim();
-    final password = _passwordController.text.trim();
+    if (!_formKey.currentState!.validate()) return;
 
-    if (identifier.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(S.pleaseEnterCredentials),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
       final authProvider = context.read<ClientAuthProvider>();
-      final data = await authProvider.login(identifier, password);
+      final data = await authProvider.login(
+        _identifierController.text.trim(),
+        _passwordController.text.trim(),
+      );
       if (!mounted) return;
 
       _loadGymBranding(data);
@@ -75,8 +75,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(S.loginSuccessful),
-          backgroundColor: Color(0xFF10B981),
-          duration: Duration(seconds: 1),
+          backgroundColor: const Color(0xFF10B981),
+          duration: const Duration(seconds: 1),
         ),
       );
 
@@ -90,12 +90,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
+        setState(
+          () => _errorMessage = e.toString().replaceAll('Exception: ', ''),
         );
       }
     } finally {
@@ -105,217 +101,123 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ClientTheme.darkGrey,
-      body: Column(
-        children: [
-          _header(context),
-          Expanded(
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment(0, -0.7),
-                  radius: 1.0,
-                  colors: [Color(0xFF2A0A12), ClientTheme.darkGrey],
-                  stops: [0.0, 0.6],
+    return LoginShell(
+      title: S.gymMemberPortal,
+      subtitle: S.yourGymInPocket,
+      errorMessage: _errorMessage,
+      onDismissError: () => setState(() => _errorMessage = null),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            loginFieldLabel(S.phoneOrEmail),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _identifierController,
+              style: const TextStyle(color: Colors.white),
+              decoration: loginFieldDecoration(
+                S.enterPhoneOrEmail,
+                Icons.person_outline,
+                helperText: S.credentialsFromReception,
+              ),
+              textInputAction: TextInputAction.next,
+              enabled: !_isLoading,
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? S.loginIdentifierRequired
+                  : null,
+            ),
+            const SizedBox(height: 18),
+            loginFieldLabel(S.password),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _passwordController,
+              style: const TextStyle(color: Colors.white),
+              decoration: loginFieldDecoration(
+                S.enterPassword,
+                Icons.lock_outline,
+                helperText: S.firstTimeHint,
+                suffix: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                    color: kLoginMuted,
+                    size: 20,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
-              child: SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 24),
-
-                      // Logo mark.
-                      Center(child: _logoMark(88)),
-                      const SizedBox(height: 26),
-
-                      Text(
-                        S.gymMemberPortal,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        S.yourGymInPocket,
-                        style: TextStyle(
-                          color: ClientTheme.textGrey,
-                          fontSize: 15,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 40),
-
-                      TextField(
-                        controller: _identifierController,
-                        decoration: InputDecoration(
-                          labelText: S.phoneOrEmail,
-                          prefixIcon: Icon(Icons.person_outline),
-                          hintText: S.enterPhoneOrEmail,
-                          helperText: S.credentialsFromReception,
-                        ),
-                        keyboardType: TextInputType.text,
-                        enabled: !_isLoading,
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(
-                          labelText: S.password,
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          helperText: S.firstTimeHint,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
-                          ),
-                        ),
-                        obscureText: _obscurePassword,
-                        enabled: !_isLoading,
-                        onSubmitted: (_) => _login(),
-                      ),
-                      const SizedBox(height: 28),
-
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _login,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: _isLoading
-                            ? const SmallLoadingIndicator()
-                            : Text(S.login),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // New-member hint.
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: ClientTheme.cardGrey,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: ClientTheme.primaryRed.withValues(
-                              alpha: 0.25,
-                            ),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.info_outline,
-                              color: ClientTheme.primaryRed,
-                              size: 30,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              S.newMember,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              S.visitReception,
-                              style: TextStyle(
-                                color: ClientTheme.textGrey,
-                                fontSize: 13,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+              obscureText: _obscurePassword,
+              textInputAction: TextInputAction.done,
+              enabled: !_isLoading,
+              onFieldSubmitted: (_) => _login(),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? S.passwordRequired : null,
+            ),
+            const SizedBox(height: 26),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _login,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kLoginRed,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: const Color(0xFF991B1B),
+                  elevation: 8,
+                  shadowColor: kLoginRed.withValues(alpha: 0.4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: _isLoading
+                    ? const SmallLoadingIndicator()
+                    : Text(
+                        S.login,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _header(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0x12FFFFFF))),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          child: Row(
-            children: [
-              InkWell(
-                onTap: () => context.go('/'),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _logoMark(32),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'PowerFit',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kLoginFieldBg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kLoginRed.withValues(alpha: 0.25)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: kLoginRed,
+                    size: 30,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    S.newMember,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    S.visitReception,
+                    style: const TextStyle(color: kLoginMuted, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () => context.go('/'),
-                icon: const Icon(
-                  Icons.arrow_back,
-                  size: 16,
-                  color: ClientTheme.textGrey,
-                ),
-                label: Text(
-                  S.backToHome,
-                  style: TextStyle(color: ClientTheme.textGrey),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-
-  Widget _logoMark(double size) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(size * 0.28),
-      boxShadow: [
-        BoxShadow(
-          color: ClientTheme.primaryRed.withValues(alpha: 0.5),
-          blurRadius: size * 0.4,
-          offset: Offset(0, size * 0.14),
-        ),
-      ],
-    ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.28),
-      child: Image.asset('assets/icon/powerfit.jpeg', fit: BoxFit.cover),
-    ),
-  );
 }
