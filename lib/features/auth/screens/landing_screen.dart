@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -10,10 +12,11 @@ import '../../../core/services/pricing_service.dart';
 const _contactEmail = 'yamen.mahmoud912@gmail.com';
 
 /// Public marketing homepage served at '/'. Full bilingual (AR/EN) PowerFit
-/// site — hero, features, how-it-works, screenshots, testimonials, pricing,
-/// FAQ, and a role gateway. Matches the PowerFit Landing design. Members,
-/// staff, and admins all share the same unified login form at '/login' —
-/// the backend resolves which kind of account it is after submit.
+/// site, repositioned around the two pillars a gym business actually buys:
+/// accounting/financial control and business intelligence. Everything else
+/// (check-in, subscriptions, staff) is presented as the plumbing that feeds
+/// those two. Members, staff, and admins all share the unified login at
+/// '/login' — the backend resolves the account kind after submit.
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
 
@@ -21,33 +24,62 @@ class LandingScreen extends StatefulWidget {
   State<LandingScreen> createState() => _LandingScreenState();
 }
 
-// Palette (mirrors the design canvas / AppTheme).
-const _bg = Color(0xFF121212);
-const _bg2 = Color(0xFF1A1A1A);
-const _card = Color(0xFF2A2A2A);
-const _red = Color(0xFFDC2626);
-const _red2 = Color(0xFFEF4444);
-const _red3 = Color(0xFFF87171);
-const _crimson = Color(0xFFDC143C);
-const _gold = Color(0xFFF59E0B);
-const _emerald = Color(0xFF10B981);
-const _muted = Color(0xFFB0B0B0);
-const _subtle = Color(0xFF808080);
+// ── Instrument-panel palette ─────────────────────────────────────────────────
+// Deep charcoal-navy base + off-white sections. Brand red survives from the
+// PowerFit logo but is confined to the logo and primary CTAs; money-positive
+// numbers are emerald, KPI/insight callouts are gold, and electric blue is
+// reserved exclusively for chart marks (validated against _panel surface).
+const _navy = Color(0xFF0E1425); // dark section base
+const _navyDeep = Color(0xFF0A0F1D); // footer / deepest band
+const _panel = Color(0xFF16203A); // raised panels on navy
+const _edgeOnNavy = Color(0xFF243050); // hairlines on navy
+const _paper = Color(0xFFF6F7F9); // light section base
+const _cardOnPaper = Colors.white;
+const _edgeOnPaper = Color(0xFFE2E5EC); // hairlines on paper
+const _ink = Color(0xFF141A2A); // headings on paper
+const _body = Color(0xFF3A4356); // body text on paper
+const _mutedNavy = Color(0xFF9AA3B8); // body text on navy
+const _subtleNavy = Color(0xFF6B7590); // captions on navy
+const _red = Color(0xFFDC2626); // brand red — logo + primary CTA only
+const _emerald = Color(0xFF1F7A5C); // accent on paper
+const _emeraldUp = Color(0xFF34C48E); // positive deltas on navy
+const _gold = Color(0xFFD4A73D); // KPI / insight moments, sparingly
+const _blue = Color(0xFF4C6FFF); // charts only
+const _blueDeep = Color(0xFF2B49C9); // charts only
+const _bluePale = Color(0xFF8FA5FF); // charts only
+const _chartNeutral = Color(0xFF55607A); // labeled "other" slice
+const _monoFamily = 'IBMPlexMono';
+
+/// Every number, metric, and data label on the page wears the mono face.
+/// Cairo fallback keeps Arabic words legible inside mono-styled labels.
+TextStyle _mono({
+  double size = 13,
+  Color color = Colors.white,
+  FontWeight weight = FontWeight.w400,
+  double? spacing,
+  double? height,
+}) {
+  return TextStyle(
+    fontFamily: _monoFamily,
+    fontFamilyFallback: const ['Cairo'],
+    fontSize: size,
+    color: color,
+    fontWeight: weight,
+    letterSpacing: spacing,
+    height: height,
+  );
+}
 
 class _LandingScreenState extends State<LandingScreen> {
   final _scrollController = ScrollController();
-  final _featuresKey = GlobalKey();
-  final _howKey = GlobalKey();
+  final _pillar1Key = GlobalKey();
+  final _pillar2Key = GlobalKey();
   final _pricingKey = GlobalKey();
   final _faqKey = GlobalKey();
-  final _gatewayKey = GlobalKey();
 
   // Reads through the app-wide LocaleProvider (persisted via
   // SharedPreferences) rather than owning local state, so the choice
-  // survives both navigating away from this route and a full page reload
-  // — this used to be a plain field that only lived in memory, which is
-  // why toggling the language here and reloading used to snap back to
-  // Arabic.
+  // survives both navigating away from this route and a full page reload.
   bool get _ar => context.watch<LocaleProvider>().isArabic;
   int _faqOpen = -1;
 
@@ -57,6 +89,9 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Map<String, String> get _t => _ar ? _arText : _enText;
+
+  // Arabic script must never be letterspaced; Latin eyebrows/labels are.
+  double get _ls => _ar ? 0 : 1.6;
 
   // ── Region-aware pricing (auto-detected only, no manual override) ───────
   final _pricingService = PricingService();
@@ -96,22 +131,22 @@ class _LandingScreenState extends State<LandingScreen> {
     super.dispose();
   }
 
-  bool _isWide(BuildContext c) => MediaQuery.of(c).size.width >= 900;
+  bool _isWide(BuildContext c) => MediaQuery.of(c).size.width >= 980;
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: _ar ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: _bg,
+        backgroundColor: _navy,
         body: Column(
           children: [
             _Header(
               t: _t,
               langLabel: _ar ? 'EN' : 'ع',
               onToggleLang: _toggleLang,
-              onNavFeatures: () => _scrollTo(_featuresKey),
-              onNavHow: () => _scrollTo(_howKey),
+              onNavP1: () => _scrollTo(_pillar1Key),
+              onNavP2: () => _scrollTo(_pillar2Key),
               onNavPricing: () => _scrollTo(_pricingKey),
               onNavFaq: () => _scrollTo(_faqKey),
               onLogin: () => context.go('/login'),
@@ -123,14 +158,15 @@ class _LandingScreenState extends State<LandingScreen> {
                 child: Column(
                   children: [
                     _hero(context),
-                    _trustBar(context),
-                    _RevealOnScroll(child: _features(context)),
-                    _RevealOnScroll(child: _how(context)),
-                    _RevealOnScroll(child: _screenshots(context)),
-                    _RevealOnScroll(child: _testimonials(context)),
+                    _capStrip(context),
+                    _RevealOnScroll(child: _problem(context)),
+                    _RevealOnScroll(child: _pillar1(context)),
+                    _RevealOnScroll(child: _pillar2(context)),
+                    _RevealOnScroll(child: _supporting(context)),
+                    _RevealOnScroll(child: _proof(context)),
                     _RevealOnScroll(child: _pricingSection(context)),
                     _RevealOnScroll(child: _faq(context)),
-                    _gateway(context),
+                    _finalCta(context),
                     _footer(context),
                   ],
                 ),
@@ -147,7 +183,7 @@ class _LandingScreenState extends State<LandingScreen> {
     required Widget child,
     Color? color,
     Key? key,
-    double vPad = 100,
+    double vPad = 96,
   }) {
     return Container(
       key: key,
@@ -163,81 +199,137 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
+  /// Pillar eyebrow — the one place section labels are allowed, because the
+  /// two pillars are genuinely distinct product areas.
+  Widget _eyebrow(String text, {required bool onDark}) {
+    return Text(
+      text,
+      style: _mono(
+        size: 12.5,
+        weight: FontWeight.w600,
+        color: onDark ? _emeraldUp : _emerald,
+        spacing: _ls,
+      ),
+    );
+  }
+
+  Widget _sectionHead(String head, String? sub, {required bool onDark}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          head,
+          style: TextStyle(
+            color: onDark ? Colors.white : _ink,
+            fontSize: 36,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.4,
+            height: 1.2,
+          ),
+        ),
+        if (sub != null) ...[
+          const SizedBox(height: 14),
+          Text(
+            sub,
+            style: TextStyle(
+              color: onDark ? _mutedNavy : _body,
+              fontSize: 17,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   // ── Hero ─────────────────────────────────────────────────────────────────
   Widget _hero(BuildContext context) {
     final wide = _isWide(context);
+
+    final copy = Column(
+      crossAxisAlignment:
+          wide ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        Text(
+          _t['heroEyebrow']!,
+          textAlign: wide ? null : TextAlign.center,
+          style: _mono(
+            size: 12.5,
+            weight: FontWeight.w600,
+            color: _emeraldUp,
+            spacing: _ls,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          _t['heroHead']!,
+          textAlign: wide ? null : TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: wide ? 52 : 36,
+            height: 1.12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          _t['heroSub']!,
+          textAlign: wide ? null : TextAlign.center,
+          style: const TextStyle(color: _mutedNavy, fontSize: 17, height: 1.65),
+        ),
+        const SizedBox(height: 32),
+        Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          alignment: wide ? WrapAlignment.start : WrapAlignment.center,
+          children: [
+            _primaryCta(_t['cta1']!, () => context.go('/login')),
+            _outlineCta(
+              _t['cta2']!,
+              () => _scrollTo(_pillar2Key),
+              onDark: true,
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Text(
+          _t['heroNote']!,
+          style: _mono(size: 12, color: _subtleNavy, spacing: _ar ? 0 : 0.6),
+        ),
+      ],
+    );
+
+    final mock = _DashboardMock(t: _t, ar: _ar);
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: wide ? 100 : 64),
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: wide ? 88 : 56),
       decoration: const BoxDecoration(
         gradient: RadialGradient(
-          center: Alignment(0, -1.1),
-          radius: 1.2,
-          colors: [Color(0xFF1E1E1E), _bg],
-          stops: [0.0, 0.7],
+          center: Alignment(-0.6, -1.2),
+          radius: 1.6,
+          colors: [Color(0xFF17223E), _navy],
+          stops: [0.0, 0.72],
         ),
       ),
       child: _HeroFadeIn(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Column(
-              children: [
-                _pill(_t['heroBadge']!),
-                const SizedBox(height: 24),
-                Text(
-                  _t['heroHead']!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: wide ? 58 : 38,
-                    height: 1.15,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
+            constraints: const BoxConstraints(maxWidth: 1180),
+            child: wide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(flex: 6, child: copy),
+                      const SizedBox(width: 56),
+                      Expanded(flex: 5, child: Center(child: mock)),
+                    ],
+                  )
+                : Column(
+                    children: [copy, const SizedBox(height: 48), mock],
                   ),
-                ),
-                const SizedBox(height: 22),
-                Text(
-                  _t['heroSub']!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: _muted,
-                    fontSize: 18,
-                    height: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 36),
-                Wrap(
-                  spacing: 14,
-                  runSpacing: 14,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _primaryCta(_t['cta1']!, () => _scrollTo(_gatewayKey)),
-                    _outlineCta(_t['cta2']!, () => _scrollTo(_howKey)),
-                  ],
-                ),
-              ],
-            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _pill(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-      decoration: BoxDecoration(
-        color: _red.withValues(alpha: 0.14),
-        border: Border.all(color: _red.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: _red3,
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -249,368 +341,343 @@ class _LandingScreenState extends State<LandingScreen> {
       style: ElevatedButton.styleFrom(
         backgroundColor: _red,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 18),
-        elevation: 8,
-        shadowColor: _red.withValues(alpha: 0.5),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 18),
+        elevation: 6,
+        shadowColor: _red.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          fontFamily: 'Cairo',
+        ),
       ),
       child: Text(label),
     );
   }
 
-  Widget _outlineCta(String label, VoidCallback onTap) {
+  Widget _outlineCta(String label, VoidCallback onTap, {required bool onDark}) {
+    final fg = onDark ? Colors.white : _ink;
+    final side = onDark
+        ? Colors.white.withValues(alpha: 0.28)
+        : _ink.withValues(alpha: 0.3);
     return OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white,
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.24)),
-        padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 18),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+        foregroundColor: fg,
+        side: BorderSide(color: side),
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'Cairo',
+        ),
       ),
       child: Text(label),
     );
   }
 
-  // ── Trust bar ────────────────────────────────────────────────────────────
-  static const _trustIcons = [
-    Icons.fitness_center,
-    Icons.sports_gymnastics,
-    Icons.sports_martial_arts,
-    Icons.pool,
-    Icons.sports_score,
-  ];
-
-  Widget _trustBar(BuildContext context) {
+  // ── Capability strip (replaces the fake trust bar with real product areas) ─
+  Widget _capStrip(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: const Color(0xFF151515),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+      decoration: const BoxDecoration(
+        color: _navyDeep,
+        border: Border(
+          top: BorderSide(color: _edgeOnNavy),
+          bottom: BorderSide(color: _edgeOnNavy),
+        ),
+      ),
       child: Center(
-        child: Wrap(
-          spacing: 34,
-          runSpacing: 16,
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              _t['trust']!,
-              style: const TextStyle(
-                color: _subtle,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            for (final icon in _trustIcons)
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: const Color(0xFF8A8A8A), size: 22),
-              ),
-          ],
+        child: Text(
+          _t['capStrip']!,
+          textAlign: TextAlign.center,
+          style: _mono(
+            size: 12,
+            color: _subtleNavy,
+            weight: FontWeight.w600,
+            spacing: _ar ? 0 : 2,
+            height: 1.8,
+          ),
         ),
       ),
     );
   }
 
-  // ── Features ─────────────────────────────────────────────────────────────
-  Widget _features(BuildContext context) {
-    final features = [
-      (Icons.qr_code_2, _t['f1t']!, _t['f1d']!),
-      (Icons.card_membership, _t['f2t']!, _t['f2d']!),
-      (Icons.store, _t['f3t']!, _t['f3d']!),
-      (Icons.bar_chart, _t['f4t']!, _t['f4d']!),
-      (Icons.notifications_active, _t['f5t']!, _t['f5d']!),
-      (Icons.groups, _t['f6t']!, _t['f6d']!),
+  // ── Problem framing ──────────────────────────────────────────────────────
+  Widget _problem(BuildContext context) {
+    final pains = [
+      (Icons.help_outline, _t['prob1t']!, _t['prob1d']!),
+      (Icons.receipt_long_outlined, _t['prob2t']!, _t['prob2d']!),
+      (Icons.call_split, _t['prob3t']!, _t['prob3d']!),
     ];
     return _section(
-      key: _featuresKey,
+      color: _paper,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHead(_t['featHead']!, _t['featSub']),
-          const SizedBox(height: 56),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: _sectionHead(_t['probHead']!, _t['probSub'], onDark: false),
+          ),
+          const SizedBox(height: 48),
           _responsiveGrid(context, [
-            for (final f in features) _featureCard(f.$1, f.$2, f.$3),
+            for (final p in pains) _painCard(p.$1, p.$2, p.$3),
           ]),
         ],
       ),
     );
   }
 
-  Widget _featureCard(IconData icon, String title, String desc) {
-    return Container(
-      padding: const EdgeInsets.all(30),
-      decoration: BoxDecoration(
-        color: _card,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 26,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+  Widget _painCard(IconData icon, String title, String desc) {
+    return _HoverCard(
+      baseBorder: _edgeOnPaper,
+      hoverBorder: _emerald.withValues(alpha: 0.45),
+      color: _cardOnPaper,
+      padding: const EdgeInsets.all(26),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: _red.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: _red2, size: 26),
-          ),
-          const SizedBox(height: 20),
+          Icon(icon, color: _body.withValues(alpha: 0.7), size: 24),
+          const SizedBox(height: 16),
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
+              color: _ink,
+              fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             desc,
-            style: const TextStyle(color: _muted, fontSize: 15, height: 1.6),
+            style: const TextStyle(color: _body, fontSize: 14.5, height: 1.65),
           ),
         ],
       ),
     );
   }
 
-  // ── How it works ─────────────────────────────────────────────────────────
-  Widget _how(BuildContext context) {
-    final steps = [
-      ('1', _t['s1t']!, _t['s1d']!),
-      ('2', _t['s2t']!, _t['s2d']!),
-      ('3', _t['s3t']!, _t['s3d']!),
+  // ── Pillar 1 — Accounting & financial control ────────────────────────────
+  Widget _pillar1(BuildContext context) {
+    final wide = _isWide(context);
+    final caps = [
+      (Icons.receipt_long, _t['p1c1t']!, _t['p1c1d']!),
+      (Icons.fact_check_outlined, _t['p1c2t']!, _t['p1c2d']!),
+      (Icons.account_balance_outlined, _t['p1c3t']!, _t['p1c3d']!),
+      (Icons.point_of_sale, _t['p1c4t']!, _t['p1c4d']!),
+      (Icons.description_outlined, _t['p1c5t']!, _t['p1c5d']!),
     ];
+
+    final copy = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _eyebrow(_t['p1Eyebrow']!, onDark: false),
+        const SizedBox(height: 14),
+        _sectionHead(_t['p1Head']!, _t['p1Sub'], onDark: false),
+        const SizedBox(height: 30),
+        for (final c in caps) _capabilityRow(c.$1, c.$2, c.$3, onDark: false),
+      ],
+    );
+
+    final visual = _LedgerPanel(t: _t, ar: _ar);
+
     return _section(
-      key: _howKey,
-      color: _bg2,
-      child: Column(
+      key: _pillar1Key,
+      color: _paper,
+      child: wide
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(flex: 6, child: copy),
+                const SizedBox(width: 64),
+                Expanded(flex: 5, child: Center(child: visual)),
+              ],
+            )
+          : Column(children: [copy, const SizedBox(height: 48), visual]),
+    );
+  }
+
+  // ── Pillar 2 — Business intelligence ─────────────────────────────────────
+  Widget _pillar2(BuildContext context) {
+    final wide = _isWide(context);
+    final caps = [
+      (Icons.speed, _t['p2c1t']!, _t['p2c1d']!),
+      (Icons.compare_arrows, _t['p2c2t']!, _t['p2c2d']!),
+      (Icons.group_outlined, _t['p2c3t']!, _t['p2c3d']!),
+      (Icons.notifications_active_outlined, _t['p2c4t']!, _t['p2c4d']!),
+    ];
+
+    final copy = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _eyebrow(_t['p2Eyebrow']!, onDark: true),
+        const SizedBox(height: 14),
+        _sectionHead(_t['p2Head']!, _t['p2Sub'], onDark: true),
+        const SizedBox(height: 30),
+        for (final c in caps) _capabilityRow(c.$1, c.$2, c.$3, onDark: true),
+      ],
+    );
+
+    final visual = _BiPanel(t: _t, ar: _ar);
+
+    return _section(
+      key: _pillar2Key,
+      color: _navy,
+      child: wide
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(flex: 5, child: Center(child: visual)),
+                const SizedBox(width: 64),
+                Expanded(flex: 6, child: copy),
+              ],
+            )
+          : Column(children: [copy, const SizedBox(height: 48), visual]),
+    );
+  }
+
+  Widget _capabilityRow(
+    IconData icon,
+    String title,
+    String desc, {
+    required bool onDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 22),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _t['howHead']!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.4,
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: onDark
+                  ? _panel
+                  : _emerald.withValues(alpha: 0.09),
+              border: Border.all(
+                color: onDark ? _edgeOnNavy : _emerald.withValues(alpha: 0.2),
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: onDark ? _emeraldUp : _emerald,
             ),
           ),
-          const SizedBox(height: 56),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: onDark ? Colors.white : _ink,
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: TextStyle(
+                    color: onDark ? _mutedNavy : _body,
+                    fontSize: 14.5,
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Supporting features (deliberately secondary) ─────────────────────────
+  Widget _supporting(BuildContext context) {
+    final features = [
+      (Icons.qr_code_2, _t['s1t']!, _t['s1d']!),
+      (Icons.card_membership, _t['s2t']!, _t['s2d']!),
+      (Icons.store_outlined, _t['s3t']!, _t['s3d']!),
+      (Icons.badge_outlined, _t['s4t']!, _t['s4d']!),
+      (Icons.smartphone, _t['s5t']!, _t['s5d']!),
+      (Icons.notifications_none, _t['s6t']!, _t['s6d']!),
+    ];
+    return _section(
+      color: _paper,
+      vPad: 80,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _t['supHead']!,
+                  style: const TextStyle(
+                    color: _ink,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _t['supSub']!,
+                  style: const TextStyle(
+                    color: _body,
+                    fontSize: 15.5,
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 36),
           _responsiveGrid(context, [
-            for (final s in steps) _stepCard(s.$1, s.$2, s.$3),
+            for (final f in features) _supportCard(f.$1, f.$2, f.$3),
           ]),
         ],
       ),
     );
   }
 
-  Widget _stepCard(String n, String title, String desc) {
-    return Column(
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: _red,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: _red.withValues(alpha: 0.4),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            n,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-        const SizedBox(height: 22),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          desc,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: _muted, fontSize: 15, height: 1.6),
-        ),
-      ],
-    );
-  }
-
-  // ── Screenshots ──────────────────────────────────────────────────────────
-  Widget _screenshots(BuildContext context) {
-    return _section(
-      child: Column(
+  Widget _supportCard(IconData icon, String title, String desc) {
+    return _HoverCard(
+      baseBorder: _edgeOnPaper,
+      hoverBorder: _emerald.withValues(alpha: 0.4),
+      color: _cardOnPaper,
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHead(_t['shotHead']!, _t['shotSub']),
-          const SizedBox(height: 56),
-          Wrap(
-            spacing: 32,
-            runSpacing: 32,
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.end,
-            children: [_dashboardMock(), _phoneMock()],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dashboardMock() {
-    Widget kpi(String label, String value, {Color? valueColor}) => Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: const TextStyle(color: _subtle, fontSize: 12)),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                color: valueColor ?? Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    Widget bar(double h, {bool accent = false}) => Expanded(
-      child: Container(
-        height: 150 * h,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: accent
-                ? const [_red2, Color(0xFF991B1B)]
-                : const [_red, Color(0xFF7F1D1D)],
-          ),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-        ),
-      ),
-    );
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 620, minWidth: 300),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 60,
-            offset: const Offset(0, 24),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
-              ),
-            ),
-            child: Row(
-              children: [
-                _dot(_red),
-                const SizedBox(width: 7),
-                _dot(_gold),
-                const SizedBox(width: 7),
-                _dot(_emerald),
-                const Spacer(),
-                Text(
-                  _t['shotDash']!,
-                  style: const TextStyle(
-                    color: _subtle,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(22),
+          Icon(icon, size: 20, color: _body.withValues(alpha: 0.75)),
+          const SizedBox(width: 14),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    kpi(_t['kRevenue']!, '₪128k'),
-                    const SizedBox(width: 12),
-                    kpi(_t['kMembers']!, '1,284'),
-                    const SizedBox(width: 12),
-                    kpi(_t['kToday']!, '342', valueColor: _emerald),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: _card,
-                    borderRadius: BorderRadius.circular(12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: _ink,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
                   ),
-                  child: SizedBox(
-                    height: 150,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        bar(0.45),
-                        const SizedBox(width: 12),
-                        bar(0.70),
-                        const SizedBox(width: 12),
-                        bar(0.55),
-                        const SizedBox(width: 12),
-                        bar(0.88),
-                        const SizedBox(width: 12),
-                        bar(0.62),
-                        const SizedBox(width: 12),
-                        bar(0.78),
-                        const SizedBox(width: 12),
-                        bar(1.0, accent: true),
-                      ],
-                    ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    color: _body,
+                    fontSize: 13.5,
+                    height: 1.55,
                   ),
                 ),
               ],
@@ -621,187 +688,39 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _dot(Color c) => Container(
-    width: 11,
-    height: 11,
-    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-  );
-
-  Widget _phoneMock() {
-    return Container(
-      width: 270,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        border: Border.all(color: Colors.black, width: 8),
-        borderRadius: BorderRadius.circular(38),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.6),
-            blurRadius: 60,
-            offset: const Offset(0, 24),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        color: _bg,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 22, 18, 14),
-              child: Column(
-                children: [
-                  Text(
-                    _t['phGreet']!,
-                    style: const TextStyle(color: _subtle, fontSize: 12),
-                  ),
-                  Text(
-                    _t['phName']!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [_crimson, Color(0xFF7F1D1D)],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _t['phPlan']!,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 13,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _emerald,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          _t['phActive']!,
-                          style: const TextStyle(
-                            color: Color(0xFF04231A),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    '24 ${_t['phDays']!}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _t['phLeft']!,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: _card,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 96,
-                    height: 96,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.qr_code_2,
-                      size: 78,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _t['phScan']!,
-                    style: const TextStyle(color: _muted, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Testimonials ─────────────────────────────────────────────────────────
-  Widget _testimonials(BuildContext context) {
+  // ── Proof (placeholder-flagged until real customer data exists) ──────────
+  Widget _proof(BuildContext context) {
     final quotes = [
       (_t['q1']!, 'A', _t['n1']!, _t['g1']!),
       (_t['q2']!, 'B', _t['n2']!, _t['g2']!),
       (_t['q3']!, 'C', _t['n3']!, _t['g3']!),
     ];
     return _section(
-      color: _bg2,
+      color: _paper,
+      vPad: 80,
       child: Column(
         children: [
           Text(
-            _t['testHead']!,
+            _t['proofHead']!,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 40,
+              color: _ink,
+              fontSize: 32,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.4,
             ),
           ),
-          const SizedBox(height: 56),
+          const SizedBox(height: 44),
           _responsiveGrid(context, [
             for (final q in quotes) _quoteCard(q.$1, q.$2, q.$3, q.$4),
           ]),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
+          // Honesty marker: no real customer data yet — keep this visible
+          // until genuine quotes/metrics replace the placeholders.
           Text(
             _t['placeholderNote']!,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF5A5A5A),
-              fontFamily: 'monospace',
-              fontSize: 12,
-            ),
+            style: _mono(size: 12, color: const Color(0xFF8A93A5)),
           ),
         ],
       ),
@@ -810,59 +729,63 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _quoteCard(String quote, String initial, String name, String gym) {
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.all(26),
       decoration: BoxDecoration(
-        color: _card,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-        borderRadius: BorderRadius.circular(16),
+        color: _cardOnPaper,
+        border: Border.all(color: _edgeOnPaper),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '“$quote”',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              height: 1.7,
-            ),
+            style: const TextStyle(color: _ink, fontSize: 15.5, height: 1.7),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: _red,
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _emerald.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: _emerald.withValues(alpha: 0.3),
+                  ),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   initial,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: _emerald,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  Text(
-                    gym,
-                    style: const TextStyle(color: _subtle, fontSize: 13),
-                  ),
-                ],
+                    Text(
+                      gym,
+                      style: const TextStyle(
+                        color: Color(0xFF6E7787),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -881,14 +804,7 @@ class _LandingScreenState extends State<LandingScreen> {
     Widget priceRowFor(PricingTier? tier) {
       if (_pricingLoading) return const _PriceSkeleton();
       if (data == null || tier == null) {
-        return const Text(
-          '—',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 38,
-            fontWeight: FontWeight.w900,
-          ),
-        );
+        return Text('—', style: _mono(size: 36, weight: FontWeight.w600));
       }
       final amount =
           _billingAnnual ? tier.annualMonthlyEquivalent : tier.monthly;
@@ -901,16 +817,12 @@ class _LandingScreenState extends State<LandingScreen> {
             textDirection: TextDirection.ltr,
             child: Text(
               data.format(amount),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 38,
-                fontWeight: FontWeight.w900,
-              ),
+              style: _mono(size: 36, weight: FontWeight.w600),
             ),
           ),
           Text(
             ' ${_t['perMo']!}',
-            style: const TextStyle(color: _subtle, fontSize: 15),
+            style: const TextStyle(color: _subtleNavy, fontSize: 14),
           ),
         ],
       );
@@ -926,7 +838,7 @@ class _LandingScreenState extends State<LandingScreen> {
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: _subtle, fontSize: 11.5),
+          style: const TextStyle(color: _subtleNavy, fontSize: 11.5),
         ),
       );
     }
@@ -937,7 +849,7 @@ class _LandingScreenState extends State<LandingScreen> {
         padding: const EdgeInsets.only(top: 4),
         child: Text(
           _t['billingAnnualNote']!,
-          style: const TextStyle(color: _subtle, fontSize: 11.5),
+          style: const TextStyle(color: _subtleNavy, fontSize: 11.5),
         ),
       );
     }
@@ -949,7 +861,7 @@ class _LandingScreenState extends State<LandingScreen> {
         priceRow: priceRowFor(data?.starter),
         priceSubtitle: annualNoteFor(data?.starter),
         features: [_t['p1f1']!, _t['p1f2']!, _t['p1f3']!, _t['p1f4']!],
-        ctaLabel: _t['cta1']!,
+        ctaLabel: _t['ctaPlan']!,
         highlighted: false,
         trialHint: trialHintFor(data?.starter.trialEligible ?? false),
       ),
@@ -965,7 +877,7 @@ class _LandingScreenState extends State<LandingScreen> {
           _t['p2f4']!,
           _t['p2f5']!,
         ],
-        ctaLabel: _t['cta1']!,
+        ctaLabel: _t['ctaPlan']!,
         highlighted: true,
         badge: _t['mostPopular']!,
         trialHint: trialHintFor(data?.growth.trialEligible ?? false),
@@ -976,7 +888,7 @@ class _LandingScreenState extends State<LandingScreen> {
         priceRow: priceRowFor(data?.pro),
         priceSubtitle: annualNoteFor(data?.pro),
         features: [_t['p3f1']!, _t['p3f2']!, _t['p3f3']!, _t['p3f4']!],
-        ctaLabel: _t['cta1']!,
+        ctaLabel: _t['ctaPlan']!,
         highlighted: false,
       ),
       _priceCard(
@@ -986,7 +898,7 @@ class _LandingScreenState extends State<LandingScreen> {
           _t['enterprisePriceLabel']!,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 34,
+            fontSize: 32,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -998,7 +910,7 @@ class _LandingScreenState extends State<LandingScreen> {
                   textDirection: TextDirection.ltr,
                   child: Text(
                     '${_t['enterpriseFrom']!} ${data.format(data.enterprisePerBranchFrom)}${_t['perBranchMonthly']!}',
-                    style: const TextStyle(color: _subtle, fontSize: 12.5),
+                    style: _mono(size: 12, color: _subtleNavy),
                   ),
                 ),
               ),
@@ -1057,6 +969,7 @@ class _LandingScreenState extends State<LandingScreen> {
 
     return _section(
       key: _pricingKey,
+      color: _navy,
       child: Column(
         children: [
           Text(
@@ -1064,7 +977,7 @@ class _LandingScreenState extends State<LandingScreen> {
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 40,
+              fontSize: 38,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.4,
             ),
@@ -1078,7 +991,7 @@ class _LandingScreenState extends State<LandingScreen> {
             Text(
               _t['pricingDisclaimerUsd']!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _subtle, fontSize: 13),
+              style: const TextStyle(color: _subtleNavy, fontSize: 13),
             ),
           ],
         ],
@@ -1094,9 +1007,9 @@ class _LandingScreenState extends State<LandingScreen> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: _card,
+        color: _panel,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: _edgeOnNavy),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1130,7 +1043,7 @@ class _LandingScreenState extends State<LandingScreen> {
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : _muted,
+            color: selected ? Colors.white : _mutedNavy,
             fontSize: 13,
             fontWeight: FontWeight.w700,
           ),
@@ -1151,27 +1064,20 @@ class _LandingScreenState extends State<LandingScreen> {
     Widget? trialHint,
   }) {
     final card = Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        gradient: highlighted
-            ? const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF241416), _card],
-              )
-            : null,
-        color: highlighted ? null : _card,
+        color: _panel,
         border: Border.all(
-          color: highlighted ? _red : Colors.white.withValues(alpha: 0.08),
+          color: highlighted ? _red : _edgeOnNavy,
           width: highlighted ? 1.5 : 1,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: highlighted
             ? [
                 BoxShadow(
-                  color: _red.withValues(alpha: 0.22),
-                  blurRadius: 50,
-                  offset: const Offset(0, 20),
+                  color: _red.withValues(alpha: 0.18),
+                  blurRadius: 44,
+                  offset: const Offset(0, 18),
                 ),
               ]
             : null,
@@ -1183,12 +1089,12 @@ class _LandingScreenState extends State<LandingScreen> {
             name,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 19,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
-          Text(desc, style: const TextStyle(color: _muted, fontSize: 14)),
+          Text(desc, style: const TextStyle(color: _mutedNavy, fontSize: 14)),
           const SizedBox(height: 18),
           priceRow,
           ?priceSubtitle,
@@ -1196,8 +1102,12 @@ class _LandingScreenState extends State<LandingScreen> {
           SizedBox(
             width: double.infinity,
             child: highlighted
-                ? _primaryCta(ctaLabel, () => _scrollTo(_gatewayKey))
-                : _outlineCta(ctaLabel, () => _scrollTo(_gatewayKey)),
+                ? _primaryCta(ctaLabel, () => context.go('/login'))
+                : _outlineCta(
+                    ctaLabel,
+                    () => context.go('/login'),
+                    onDark: true,
+                  ),
           ),
           ?trialHint,
           const SizedBox(height: 22),
@@ -1209,7 +1119,10 @@ class _LandingScreenState extends State<LandingScreen> {
                 children: [
                   const Text(
                     '✓',
-                    style: TextStyle(color: _red2, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                      color: _emeraldUp,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -1218,7 +1131,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       style: TextStyle(
                         color: highlighted
                             ? Colors.white
-                            : const Color(0xFFD4D4D4),
+                            : const Color(0xFFCBD2E0),
                         fontSize: 14,
                       ),
                     ),
@@ -1272,7 +1185,7 @@ class _LandingScreenState extends State<LandingScreen> {
     ];
     return _section(
       key: _faqKey,
-      color: _bg2,
+      color: _paper,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 820),
@@ -1282,13 +1195,13 @@ class _LandingScreenState extends State<LandingScreen> {
                 _t['faqHead']!,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 40,
+                  color: _ink,
+                  fontSize: 36,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.4,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 44),
               for (var i = 0; i < items.length; i++) ...[
                 _faqItem(i, items[i].$1, items[i].$2),
                 const SizedBox(height: 14),
@@ -1304,9 +1217,9 @@ class _LandingScreenState extends State<LandingScreen> {
     final open = _faqOpen == i;
     return Container(
       decoration: BoxDecoration(
-        color: _card,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-        borderRadius: BorderRadius.circular(16),
+        color: _cardOnPaper,
+        border: Border.all(color: _edgeOnPaper),
+        borderRadius: BorderRadius.circular(14),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -1314,15 +1227,15 @@ class _LandingScreenState extends State<LandingScreen> {
           InkWell(
             onTap: () => setState(() => _faqOpen = open ? -1 : i),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       q,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
+                        color: _ink,
+                        fontSize: 16.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1330,7 +1243,7 @@ class _LandingScreenState extends State<LandingScreen> {
                   const SizedBox(width: 16),
                   Text(
                     open ? '−' : '+',
-                    style: const TextStyle(color: _red2, fontSize: 24),
+                    style: const TextStyle(color: _emerald, fontSize: 24),
                   ),
                 ],
               ),
@@ -1345,9 +1258,9 @@ class _LandingScreenState extends State<LandingScreen> {
                 child: Text(
                   a,
                   style: const TextStyle(
-                    color: _muted,
+                    color: _body,
                     fontSize: 15,
-                    height: 1.6,
+                    height: 1.65,
                   ),
                 ),
               ),
@@ -1362,22 +1275,21 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  // ── Gateway / final CTA ──────────────────────────────────────────────────
-  Widget _gateway(BuildContext context) {
+  // ── Final CTA ────────────────────────────────────────────────────────────
+  Widget _finalCta(BuildContext context) {
     return Container(
-      key: _gatewayKey,
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 104),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 100),
       decoration: const BoxDecoration(
         gradient: RadialGradient(
-          center: Alignment(0, 1.3),
-          radius: 1.1,
-          colors: [Color(0xFF1E1E1E), _bg],
+          center: Alignment(0, 1.4),
+          radius: 1.3,
+          colors: [Color(0xFF17223E), _navy],
         ),
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1000),
+          constraints: const BoxConstraints(maxWidth: 860),
           child: Column(
             children: [
               Text(
@@ -1385,7 +1297,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 44,
+                  fontSize: 42,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
                 ),
@@ -1394,13 +1306,27 @@ class _LandingScreenState extends State<LandingScreen> {
               Text(
                 _t['finalSub']!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: _muted, fontSize: 19),
+                style: const TextStyle(
+                  color: _mutedNavy,
+                  fontSize: 18,
+                  height: 1.6,
+                ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 36),
               // Single login entry — the form itself detects whether the
-              // account is a member, staff, or admin and routes to the
-              // matching dashboard, so there's no role to pick here.
+              // account is a member, staff, or admin and routes onward.
               _primaryCta(_t['login']!, () => context.go('/login')),
+              const SizedBox(height: 20),
+              Text(
+                _t['finalStrip']!,
+                textAlign: TextAlign.center,
+                style: _mono(
+                  size: 11.5,
+                  color: _subtleNavy,
+                  weight: FontWeight.w600,
+                  spacing: _ar ? 0 : 1.6,
+                ),
+              ),
             ],
           ),
         ),
@@ -1417,10 +1343,10 @@ class _LandingScreenState extends State<LandingScreen> {
 
     return Container(
       width: double.infinity,
-      color: _bg,
       padding: const EdgeInsets.fromLTRB(24, 56, 24, 32),
       decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0x12FFFFFF))),
+        color: _navyDeep,
+        border: Border(top: BorderSide(color: _edgeOnNavy)),
       ),
       child: Center(
         child: ConstrainedBox(
@@ -1453,7 +1379,7 @@ class _LandingScreenState extends State<LandingScreen> {
                   ],
                 ),
               const SizedBox(height: 40),
-              const Divider(color: Colors.white10, height: 1),
+              const Divider(color: _edgeOnNavy, height: 1),
               const SizedBox(height: 20),
               Wrap(
                 spacing: 16,
@@ -1461,9 +1387,9 @@ class _LandingScreenState extends State<LandingScreen> {
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     '© 2026 PowerFit',
-                    style: TextStyle(color: Color(0xFF5A5A5A), fontSize: 13),
+                    style: _mono(size: 12, color: _subtleNavy),
                   ),
                   _langButton(),
                 ],
@@ -1497,7 +1423,7 @@ class _LandingScreenState extends State<LandingScreen> {
         const SizedBox(height: 14),
         Text(
           _t['footerTagline']!,
-          style: const TextStyle(color: _muted, fontSize: 14, height: 1.6),
+          style: const TextStyle(color: _mutedNavy, fontSize: 14, height: 1.6),
         ),
       ],
     );
@@ -1516,7 +1442,9 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        _footerLink(_t['navFeatures']!, () => _scrollTo(_featuresKey)),
+        _footerLink(_t['navP1']!, () => _scrollTo(_pillar1Key)),
+        const SizedBox(height: 10),
+        _footerLink(_t['navP2']!, () => _scrollTo(_pillar2Key)),
         const SizedBox(height: 10),
         _footerLink(_t['navPricing']!, () => _scrollTo(_pricingKey)),
         const SizedBox(height: 10),
@@ -1531,9 +1459,9 @@ class _LandingScreenState extends State<LandingScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _card,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        borderRadius: BorderRadius.circular(16),
+        color: _panel,
+        border: Border.all(color: _edgeOnNavy),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1544,10 +1472,14 @@ class _LandingScreenState extends State<LandingScreen> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: _red.withValues(alpha: 0.14),
+                  color: _emeraldUp.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.mail_outline, color: _red3, size: 18),
+                child: const Icon(
+                  Icons.mail_outline,
+                  color: _emeraldUp,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -1563,7 +1495,11 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 10),
           Text(
             _t['contactUsDesc']!,
-            style: const TextStyle(color: _muted, fontSize: 13.5, height: 1.6),
+            style: const TextStyle(
+              color: _mutedNavy,
+              fontSize: 13.5,
+              height: 1.6,
+            ),
           ),
           const SizedBox(height: 16),
           InkWell(
@@ -1572,8 +1508,8 @@ class _LandingScreenState extends State<LandingScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: _bg,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                color: _navyDeep,
+                border: Border.all(color: _edgeOnNavy),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -1584,11 +1520,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       child: Text(
                         _contactEmail,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: _mono(size: 12.5, weight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -1603,7 +1535,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         child: Icon(
                           Icons.copy_rounded,
                           size: 16,
-                          color: _muted,
+                          color: _mutedNavy,
                         ),
                       ),
                     ),
@@ -1625,14 +1557,21 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _footerLink(String text, VoidCallback onTap) => InkWell(
     onTap: onTap,
-    child: Text(text, style: const TextStyle(color: _muted, fontSize: 14)),
+    borderRadius: BorderRadius.circular(6),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Text(
+        text,
+        style: const TextStyle(color: _mutedNavy, fontSize: 14),
+      ),
+    ),
   );
 
   Widget _langButton() => OutlinedButton(
     onPressed: _toggleLang,
     style: OutlinedButton.styleFrom(
       foregroundColor: Colors.white,
-      side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+      side: const BorderSide(color: _edgeOnNavy),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       minimumSize: Size.zero,
@@ -1643,37 +1582,11 @@ class _LandingScreenState extends State<LandingScreen> {
     ),
   );
 
-  // ── Shared bits ──────────────────────────────────────────────────────────
-  Widget _sectionHead(String head, String? sub) {
-    return Column(
-      children: [
-        Text(
-          head,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 40,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.4,
-          ),
-        ),
-        if (sub != null) ...[
-          const SizedBox(height: 12),
-          Text(
-            sub,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: _muted, fontSize: 18),
-          ),
-        ],
-      ],
-    );
-  }
-
   /// Lays children into a 3-col grid on wide screens, 1-col on narrow.
   Widget _responsiveGrid(BuildContext context, List<Widget> children) {
     final width = MediaQuery.of(context).size.width;
     final cols = width >= 900 ? 3 : (width >= 620 ? 2 : 1);
-    const gap = 22.0;
+    const gap = 20.0;
     final rows = <Widget>[];
     for (var i = 0; i < children.length; i += cols) {
       final rowChildren = <Widget>[];
@@ -1707,9 +1620,9 @@ Widget _logoMark(double size) => Container(
     borderRadius: BorderRadius.circular(size * 0.28),
     boxShadow: [
       BoxShadow(
-        color: _red.withValues(alpha: 0.5),
-        blurRadius: 14,
-        offset: const Offset(0, 4),
+        color: _red.withValues(alpha: 0.4),
+        blurRadius: 12,
+        offset: const Offset(0, 3),
       ),
     ],
   ),
@@ -1724,15 +1637,15 @@ class _Header extends StatelessWidget {
   final Map<String, String> t;
   final String langLabel;
   final VoidCallback onToggleLang;
-  final VoidCallback onNavFeatures, onNavHow, onNavPricing, onNavFaq, onLogin;
+  final VoidCallback onNavP1, onNavP2, onNavPricing, onNavFaq, onLogin;
   final bool wide;
 
   const _Header({
     required this.t,
     required this.langLabel,
     required this.onToggleLang,
-    required this.onNavFeatures,
-    required this.onNavHow,
+    required this.onNavP1,
+    required this.onNavP2,
     required this.onNavPricing,
     required this.onNavFaq,
     required this.onLogin,
@@ -1743,10 +1656,8 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _bg.withValues(alpha: 0.9),
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
-        ),
+        color: _navy.withValues(alpha: 0.92),
+        border: const Border(bottom: BorderSide(color: _edgeOnNavy)),
       ),
       child: SafeArea(
         bottom: false,
@@ -1769,22 +1680,20 @@ class _Header extends StatelessWidget {
                   ),
                   const Spacer(),
                   if (wide) ...[
-                    _navLink(t['navFeatures']!, onNavFeatures),
-                    const SizedBox(width: 26),
-                    _navLink(t['navHow']!, onNavHow),
-                    const SizedBox(width: 26),
+                    _navLink(t['navP1']!, onNavP1),
+                    const SizedBox(width: 22),
+                    _navLink(t['navP2']!, onNavP2),
+                    const SizedBox(width: 22),
                     _navLink(t['navPricing']!, onNavPricing),
-                    const SizedBox(width: 26),
+                    const SizedBox(width: 22),
                     _navLink(t['navFaq']!, onNavFaq),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 22),
                   ],
                   OutlinedButton(
                     onPressed: onToggleLang,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
+                      side: const BorderSide(color: _edgeOnNavy),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
@@ -1808,14 +1717,14 @@ class _Header extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
                       side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.24),
+                        color: Colors.white.withValues(alpha: 0.28),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
                         vertical: 10,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     child: Text(t['login']!),
@@ -1831,16 +1740,876 @@ class _Header extends StatelessWidget {
 
   Widget _navLink(String text, VoidCallback onTap) => InkWell(
     onTap: onTap,
-    child: Text(
-      text,
-      style: const TextStyle(
-        color: _muted,
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
+    borderRadius: BorderRadius.circular(6),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: _mutedNavy,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     ),
   );
 }
+
+// ── Hero dashboard mock — the page's one bold visual ─────────────────────────
+// A live-feeling owner console: revenue counting up, an expense donut drawing
+// itself in, a net-profit callout, and ledger entries. Every number is mono.
+class _DashboardMock extends StatefulWidget {
+  final Map<String, String> t;
+  final bool ar;
+  const _DashboardMock({required this.t, required this.ar});
+
+  @override
+  State<_DashboardMock> createState() => _DashboardMockState();
+}
+
+class _DashboardMockState extends State<_DashboardMock>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  );
+  bool _started = false;
+
+  static const _revenue = 48250;
+  // Expense slices — ordinal blue ramp (magnitude, one hue) + labeled neutral,
+  // validated against the _panel surface with the dataviz palette checker.
+  static const _slices = [
+    (0.46, _blueDeep),
+    (0.27, _blue),
+    (0.17, _bluePale),
+    (0.10, _chartNeutral),
+  ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (MediaQuery.of(context).disableAnimations) {
+      _c.value = 1;
+    } else {
+      _c.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  static String _fmt(int v) => v.toString().replaceAllMapped(
+        RegExp(r'(\d)(?=(\d{3})+$)'),
+        (m) => '${m[1]},',
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.t;
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 460),
+      decoration: BoxDecoration(
+        color: _panel,
+        border: Border.all(color: _edgeOnNavy),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.45),
+            blurRadius: 60,
+            offset: const Offset(0, 28),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Console header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: _edgeOnNavy)),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  t['mockTitle']!,
+                  style: _mono(
+                    size: 12,
+                    color: _mutedNavy,
+                    weight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: _emeraldUp,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  t['mockLive']!,
+                  style: _mono(
+                    size: 11,
+                    color: _emeraldUp,
+                    weight: FontWeight.w600,
+                    spacing: widget.ar ? 0 : 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (context, _) {
+                final tv = Curves.easeOutCubic.transform(_c.value);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Revenue counter
+                    Text(
+                      t['mockRevLabel']!,
+                      style: _mono(
+                        size: 10.5,
+                        color: _subtleNavy,
+                        weight: FontWeight.w600,
+                        spacing: widget.ar ? 0 : 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      children: [
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text(
+                            '\$${_fmt((_revenue * tv).round())}',
+                            style: _mono(size: 34, weight: FontWeight.w600),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _emeraldUp.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Directionality(
+                                textDirection: TextDirection.ltr,
+                                child: Text(
+                                  '▲ ${t['mockDeltaVal']!}',
+                                  style: _mono(
+                                    size: 11,
+                                    color: _emeraldUp,
+                                    weight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                t['mockDeltaSuffix']!,
+                                style: _mono(
+                                  size: 11,
+                                  color: _emeraldUp,
+                                  weight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Expense donut + legend
+                    Text(
+                      t['mockExpLabel']!,
+                      style: _mono(
+                        size: 10.5,
+                        color: _subtleNavy,
+                        weight: FontWeight.w600,
+                        spacing: widget.ar ? 0 : 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 110,
+                          height: 110,
+                          child: CustomPaint(
+                            painter: _DonutPainter(
+                              progress: tv,
+                              slices: _slices,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '\$35.2k',
+                                style: _mono(
+                                  size: 13,
+                                  weight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _legendRow(t['legSalaries']!, '46%', _blueDeep),
+                              _legendRow(t['legRent']!, '27%', _blue),
+                              _legendRow(t['legEquip']!, '17%', _bluePale),
+                              _legendRow(t['legOther']!, '10%', _chartNeutral),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    // Net profit callout — the gold "insight" moment
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _gold.withValues(alpha: 0.07),
+                        border: BorderDirectional(
+                          start: const BorderSide(color: _gold, width: 3),
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t['mockProfitLabel']!,
+                            style: _mono(
+                              size: 10.5,
+                              color: _subtleNavy,
+                              weight: FontWeight.w600,
+                              spacing: widget.ar ? 0 : 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Directionality(
+                                textDirection: TextDirection.ltr,
+                                child: Text(
+                                  '\$${_fmt((13090 * tv).round())}',
+                                  style: _mono(
+                                    size: 21,
+                                    color: _gold,
+                                    weight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                t['mockMargin']!,
+                                style: _mono(size: 11.5, color: _mutedNavy),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    // Ledger feed
+                    Text(
+                      t['mockLedgerLabel']!,
+                      style: _mono(
+                        size: 10.5,
+                        color: _subtleNavy,
+                        weight: FontWeight.w600,
+                        spacing: widget.ar ? 0 : 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _ledgerRow('19:42', t['lr1d']!, '+\$45', up: true),
+                    _ledgerRow('19:36', t['lr2d']!, '+\$8', up: true),
+                    _ledgerRow('19:14', t['lr3d']!, '−\$220', up: false),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendRow(String name, String pct, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(color: _mutedNavy, fontSize: 12.5),
+            ),
+          ),
+          Text(pct, style: _mono(size: 12, color: Colors.white)),
+        ],
+      ),
+    );
+  }
+
+  Widget _ledgerRow(String time, String desc, String amount,
+      {required bool up}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(time, style: _mono(size: 11, color: _subtleNavy)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              desc,
+              style: const TextStyle(color: _mutedNavy, fontSize: 12.5),
+            ),
+          ),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Text(
+              amount,
+              style: _mono(
+                size: 12.5,
+                color: up ? _emeraldUp : _mutedNavy,
+                weight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Expense-breakdown donut. Slices sweep in with [progress]; a 2px-equivalent
+/// angular gap separates fills, per the mark spec.
+class _DonutPainter extends CustomPainter {
+  final double progress;
+  final List<(double, Color)> slices;
+  _DonutPainter({required this.progress, required this.slices});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2 - 10;
+    const stroke = 18.0;
+    const gap = 0.055; // radians ≈ 2px at this radius
+    final total = 2 * math.pi - gap * slices.length;
+    var start = -math.pi / 2;
+    for (final (frac, color) in slices) {
+      final sweep = total * frac * progress;
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..color = color;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        start,
+        sweep,
+        false,
+        paint,
+      );
+      start += total * frac + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DonutPainter old) =>
+      old.progress != progress || old.slices != slices;
+}
+
+// ── Pillar 1 visual — the self-writing ledger ────────────────────────────────
+class _LedgerPanel extends StatelessWidget {
+  final Map<String, String> t;
+  final bool ar;
+  const _LedgerPanel({required this.t, required this.ar});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget row(String label, String? count, String value,
+        {Color valueColor = _ink, Widget? trailing}) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(color: _body, fontSize: 14),
+              ),
+            ),
+            if (count != null) ...[
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(
+                  count,
+                  style: _mono(size: 12, color: const Color(0xFF8A93A5)),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: Text(
+                value,
+                style: _mono(
+                  size: 14,
+                  color: valueColor,
+                  weight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ?trailing,
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 440),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: _cardOnPaper,
+        border: Border.all(color: _edgeOnPaper),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF141A2A).withValues(alpha: 0.06),
+            blurRadius: 34,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t['lpTitle']!,
+            style: _mono(
+              size: 11,
+              color: const Color(0xFF8A93A5),
+              weight: FontWeight.w600,
+              spacing: ar ? 0 : 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          row(t['lp1']!, '×34', '+\$2,180', valueColor: _emerald),
+          const Divider(color: _edgeOnPaper, height: 1),
+          row(t['lp2']!, '×6', '−\$640'),
+          const Divider(color: _edgeOnPaper, height: 1),
+          row(
+            t['lp3']!,
+            '×2',
+            '\$310',
+            valueColor: const Color(0xFFA07A18),
+            trailing: Padding(
+              padding: const EdgeInsetsDirectional.only(start: 10),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _gold.withValues(alpha: 0.12),
+                  border: Border.all(color: _gold.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(
+                  t['lpPending']!,
+                  style: _mono(
+                    size: 9.5,
+                    color: const Color(0xFFA07A18),
+                    weight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: _emerald.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    t['lpNet']!,
+                    style: const TextStyle(
+                      color: _ink,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    '+\$1,540',
+                    style: _mono(
+                      size: 17,
+                      color: _emerald,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Icon(Icons.check_circle_outline,
+                  size: 15, color: _emerald),
+              const SizedBox(width: 6),
+              Text(
+                t['lpChip']!,
+                style: const TextStyle(
+                  color: _emerald,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pillar 2 visual — dashboards that answer questions ───────────────────────
+class _BiPanel extends StatelessWidget {
+  final Map<String, String> t;
+  final bool ar;
+  const _BiPanel({required this.t, required this.ar});
+
+  // Six months of revenue, in $k — matches the hero's $48.2k current month.
+  static const _points = [33.5, 36.2, 34.8, 39.9, 43.1, 48.2];
+  static const _branches = [
+    ('bn1', '\$21.6k', 1.0, true),
+    ('bn2', '\$14.9k', 0.69, false),
+    ('bn3', '\$11.7k', 0.54, false),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 460),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: _panel,
+        border: Border.all(color: _edgeOnNavy),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 50,
+            offset: const Offset(0, 22),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t['biChartTitle']!,
+            style: _mono(
+              size: 11,
+              color: _subtleNavy,
+              weight: FontWeight.w600,
+              spacing: ar ? 0 : 1.4,
+            ),
+          ),
+          const SizedBox(height: 14),
+          // Chart draws itself in the first time it scrolls into view.
+          _ChartReveal(
+            builder: (progress) => SizedBox(
+              height: 130,
+              width: double.infinity,
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: CustomPaint(
+                  painter: _LineChartPainter(
+                    progress: progress,
+                    points: _points,
+                    lastLabel: '\$48.2k',
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                for (final m in const ['02', '03', '04', '05', '06', '07'])
+                  Text(m, style: _mono(size: 10, color: _subtleNavy)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text(
+            t['biBranchTitle']!,
+            style: _mono(
+              size: 11,
+              color: _subtleNavy,
+              weight: FontWeight.w600,
+              spacing: ar ? 0 : 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final (key, value, frac, top) in _branches)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          t[key]!,
+                          style: const TextStyle(
+                            color: _mutedNavy,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      if (top) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: _gold.withValues(alpha: 0.55),
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            t['biTop']!,
+                            style: _mono(
+                              size: 9,
+                              color: _gold,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(
+                          value,
+                          style: _mono(size: 12.5, weight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: Container(
+                      height: 6,
+                      color: _navyDeep,
+                      child: FractionallySizedBox(
+                        alignment: AlignmentDirectional.centerStart,
+                        widthFactor: frac,
+                        child: Container(color: _blue),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 6),
+          // Smart alert — real product behavior (revenue-decline detection).
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: _gold.withValues(alpha: 0.07),
+              border: Border.all(color: _gold.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    size: 15, color: _gold),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    t['biAlert']!,
+                    style: const TextStyle(
+                      color: _mutedNavy,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Revenue trend line — 2px blue stroke that trims in with [progress], a soft
+/// area fill, recessive hairline grid, and a single direct label on the
+/// latest point (gold ring = the "now" insight).
+class _LineChartPainter extends CustomPainter {
+  final double progress;
+  final List<double> points;
+  final String lastLabel;
+  _LineChartPainter({
+    required this.progress,
+    required this.points,
+    required this.lastLabel,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final min = points.reduce(math.min) * 0.9;
+    final max = points.reduce(math.max) * 1.05;
+    Offset pt(int i) => Offset(
+          i / (points.length - 1) * size.width,
+          size.height - (points[i] - min) / (max - min) * size.height,
+        );
+
+    // Recessive grid — 3 hairlines.
+    final grid = Paint()
+      ..color = Colors.white.withValues(alpha: 0.07)
+      ..strokeWidth = 1;
+    for (var g = 1; g <= 3; g++) {
+      final y = size.height * g / 4;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    }
+
+    final path = Path()..moveTo(pt(0).dx, pt(0).dy);
+    for (var i = 1; i < points.length; i++) {
+      final p0 = pt(i - 1);
+      final p1 = pt(i);
+      final cx = (p0.dx + p1.dx) / 2;
+      path.cubicTo(cx, p0.dy, cx, p1.dy, p1.dx, p1.dy);
+    }
+
+    // Trim the path to the reveal progress.
+    final metrics = path.computeMetrics().toList();
+    final drawn = Path();
+    for (final m in metrics) {
+      drawn.addPath(m.extractPath(0, m.length * progress), Offset.zero);
+    }
+
+    // Area fill under the drawn portion.
+    if (progress > 0.01) {
+      final endX = size.width * progress;
+      final area = Path.from(drawn)
+        ..lineTo(endX, size.height)
+        ..lineTo(0, size.height)
+        ..close();
+      canvas.drawPath(
+        area,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              _blue.withValues(alpha: 0.20),
+              _blue.withValues(alpha: 0.0),
+            ],
+          ).createShader(Offset.zero & size),
+      );
+    }
+
+    canvas.drawPath(
+      drawn,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..color = _blue,
+    );
+
+    // Direct label on the latest point once the line arrives.
+    if (progress > 0.97) {
+      final last = pt(points.length - 1);
+      canvas.drawCircle(last, 4, Paint()..color = _blue);
+      canvas.drawCircle(
+        last,
+        6.5,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..color = _gold,
+      );
+      final tp = TextPainter(
+        text: TextSpan(
+          text: lastLabel,
+          style: const TextStyle(
+            fontFamily: _monoFamily,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(
+        canvas,
+        Offset(last.dx - tp.width - 10, last.dy - tp.height - 6),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LineChartPainter old) => old.progress != progress;
+}
+
+// ── Motion helpers (all respect reduced-motion) ──────────────────────────────
 
 /// Fades + slides its child up on first build.
 class _HeroFadeIn extends StatefulWidget {
@@ -1855,7 +2624,21 @@ class _HeroFadeInState extends State<_HeroFadeIn>
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 800),
-  )..forward();
+  );
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (MediaQuery.of(context).disableAnimations) {
+      _c.value = 1;
+    } else {
+      _c.forward();
+    }
+  }
+
   @override
   void dispose() {
     _c.dispose();
@@ -1918,7 +2701,11 @@ class _RevealOnScrollState extends State<_RevealOnScroll>
     final vh = MediaQuery.of(context).size.height;
     if (top < vh * 0.9) {
       _revealed = true;
-      _c.forward();
+      if (MediaQuery.of(context).disableAnimations) {
+        _c.value = 1;
+      } else {
+        _c.forward();
+      }
     }
   }
 
@@ -1944,6 +2731,113 @@ class _RevealOnScrollState extends State<_RevealOnScroll>
         );
       },
       child: widget.child,
+    );
+  }
+}
+
+/// Hands a 0→1 progress value to [builder] the first time the widget scrolls
+/// into view — used for charts that draw themselves in.
+class _ChartReveal extends StatefulWidget {
+  final Widget Function(double progress) builder;
+  const _ChartReveal({required this.builder});
+  @override
+  State<_ChartReveal> createState() => _ChartRevealState();
+}
+
+class _ChartRevealState extends State<_ChartReveal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  );
+  ScrollPosition? _position;
+  bool _revealed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final p = Scrollable.of(context).position;
+    if (p != _position) {
+      _position?.removeListener(_maybeReveal);
+      _position = p;
+      _position?.addListener(_maybeReveal);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeReveal());
+  }
+
+  void _maybeReveal() {
+    if (_revealed || !mounted) return;
+    final ro = context.findRenderObject();
+    if (ro is! RenderBox || !ro.attached) return;
+    final top = ro.localToGlobal(Offset.zero).dy;
+    final vh = MediaQuery.of(context).size.height;
+    if (top < vh * 0.9) {
+      _revealed = true;
+      if (MediaQuery.of(context).disableAnimations) {
+        _c.value = 1;
+      } else {
+        _c.forward();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _position?.removeListener(_maybeReveal);
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) =>
+          widget.builder(Curves.easeInOut.transform(_c.value)),
+    );
+  }
+}
+
+/// Card with a border that warms up on hover — the page's only per-card
+/// micro-interaction.
+class _HoverCard extends StatefulWidget {
+  final Widget child;
+  final Color baseBorder;
+  final Color hoverBorder;
+  final Color color;
+  final EdgeInsets padding;
+  const _HoverCard({
+    required this.child,
+    required this.baseBorder,
+    required this.hoverBorder,
+    required this.color,
+    required this.padding,
+  });
+
+  @override
+  State<_HoverCard> createState() => _HoverCardState();
+}
+
+class _HoverCardState extends State<_HoverCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: widget.padding,
+        decoration: BoxDecoration(
+          color: widget.color,
+          border: Border.all(
+            color: _hover ? widget.hoverBorder : widget.baseBorder,
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: widget.child,
+      ),
     );
   }
 }
@@ -1993,72 +2887,147 @@ class _PriceSkeletonState extends State<_PriceSkeleton>
 
 // ── Content ────────────────────────────────────────────────────────────────
 const Map<String, String> _arText = {
-  'navFeatures': 'الميزات',
-  'navHow': 'كيف يعمل',
+  'navP1': 'المحاسبة',
+  'navP2': 'لوحات المتابعة',
   'navPricing': 'الأسعار',
   'navFaq': 'الأسئلة',
   'login': 'تسجيل الدخول',
-  'footerTagline': 'نظام متكامل لإدارة صالات الألعاب الرياضية — الاشتراكات والفروع والأعضاء في مكان واحد.',
-  'footerLinksHead': 'روابط سريعة',
-  'contactUsHead': 'تواصل معنا',
-  'contactUsDesc': 'لديك سؤال أو تريد طلب عرض توضيحي؟ راسلنا مباشرة وسنرد عليك في أقرب وقت.',
-  'copyEmail': 'نسخ البريد الإلكتروني',
-  'emailCopied': 'تم نسخ البريد الإلكتروني',
-  'heroBadge': 'نظام إدارة النوادي الرياضية',
-  'heroHead': 'أدر ناديك بالكامل من مكان واحد',
+
+  // Hero
+  'heroEyebrow': 'المالية وذكاء الأعمال للنوادي الرياضية',
+  'heroHead': 'اعرف بالضبط كم يُدخل ناديك — وأين تذهب أموالك.',
   'heroSub':
-      'إدارة كاملة للاشتراكات والفروع والدخول عبر رمز QR — لأعضاء النادي والموظفين والإدارة، في مكان واحد.',
-  'cta1': 'ابدأ الآن',
-  'cta2': 'شاهد كيف يعمل',
-  'trust': 'يثق به نوادٍ في المنطقة',
-  'featHead': 'كل ما يحتاجه ناديك في مكان واحد',
-  'featSub': 'أدوات متكاملة للإدارة والفروع والأعضاء.',
-  'f1t': 'دخول سريع عبر QR',
-  'f1d': 'سجّل حضور الأعضاء في ثوانٍ عبر مسح رمز QR.',
-  'f2t': 'متابعة الاشتراكات',
-  'f2d': 'تجديد وتجميد وإيقاف مع تنبيهات قبل الانتهاء.',
-  'f3t': 'إدارة متعددة الفروع',
-  'f3d': 'لوحة منفصلة لكل فرع ومقارنات فورية.',
-  'f4t': 'تقارير مالية دقيقة',
-  'f4d': 'إيرادات ومصروفات وإقفال يومي بضغطة واحدة.',
-  'f5t': 'تنبيهات ذكية',
-  'f5d': 'تنبيهات فورية للاشتراكات المنتهية والخلل التشغيلي.',
-  'f6t': 'إدارة الموظفين',
-  'f6d': 'صلاحيات لكل دور وتتبّع أداء الفريق.',
-  'howHead': 'كيف يعمل',
-  's1t': 'سجّل ناديك وفروعك',
-  's1d': 'أنشئ حسابك وأضف فروعك في دقائق.',
-  's2t': 'أضف الأعضاء والموظفين',
-  's2d': 'استورد أعضاءك ومنح كل موظف دوره.',
-  's3t': 'تابع كل شيء لحظياً',
-  's3d': 'راقب الحضور والإيرادات من لوحة واحدة.',
-  'shotHead': 'مصمّم لكل شاشة',
-  'shotSub': 'كونسول الموظفين وتطبيق الأعضاء بلغة تصميم واحدة.',
-  'shotDash': 'لوحة المالك',
-  'kRevenue': 'الإيرادات',
-  'kMembers': 'الأعضاء',
-  'kToday': 'دخول اليوم',
-  'phGreet': 'مرحباً بعودتك',
-  'phName': 'أحمد',
-  'phPlan': 'اشتراكك',
-  'phActive': 'نشط',
-  'phDays': 'يوم',
-  'phLeft': 'متبقٍ على انتهاء الاشتراك',
-  'phScan': 'امسح للدخول',
-  'testHead': 'يحبّه أصحاب النوادي',
-  'q1': 'باور فِت استبدل ثلاث أدوات كنا نتنقل بينها. الدخول صار فورياً.',
-  'q2': 'إدارة خمسة فروع من شاشة واحدة غيّرت طريقة عملنا.',
-  'q3': 'التقارير المالية توفّر عليّ ساعات كل أسبوع.',
+      'يسجّل باور فِت كل دفعة اشتراك وكل مصروف في جميع فروعك، ويحوّلها إلى لوحات متابعة حيّة — الإيرادات والمصروفات وصافي الربح أمامك لتتصرف في اليوم نفسه، لا بعد فوات الأوان.',
+  'cta1': 'شاهد أرقامك خلال 5 دقائق',
+  'cta2': 'استكشف لوحات المتابعة',
+  'heroNote': 'ابدأ مجاناً · بدون بطاقة ائتمان',
+
+  // Hero dashboard mock
+  'mockTitle': 'لوحة المالك',
+  'mockLive': 'مباشر',
+  'mockRevLabel': 'الإيرادات — هذا الشهر',
+  'mockDeltaVal': '+12.4%',
+  'mockDeltaSuffix': 'عن الشهر الماضي',
+  'mockExpLabel': 'المصروفات',
+  'legSalaries': 'رواتب',
+  'legRent': 'إيجار',
+  'legEquip': 'معدات',
+  'legOther': 'أخرى',
+  'mockProfitLabel': 'صافي الربح',
+  'mockMargin': 'هامش 27%',
+  'mockLedgerLabel': 'دفتر الحركات — الآن',
+  'lr1d': 'تجديد اشتراك',
+  'lr2d': 'تذكرة يومية',
+  'lr3d': 'فاتورة معدات',
+
+  'capStrip':
+      'الفواتير · المصروفات · صافي الربح · الإقفال اليومي · لوحات المتابعة · التنبيهات',
+
+  // Problem framing
+  'probHead': 'إدارة النادي بجداول إكسل تعني التخمين.',
+  'probSub': 'معظم المالكين يعرفون نتيجة الشهر بعد انتهائه — حين يفوت أوان التصحيح.',
+  'prob1t': 'الربح مفاجأة نهاية الشهر',
+  'prob1d':
+      'الإيراد في الدرج والمصروفات في ملف، ولا أحد يعرف الهامش الحقيقي حتى يُعاد بناء الجدول يدوياً.',
+  'prob2t': 'المصروفات تتسرّب',
+  'prob2d':
+      'مشتريات صغيرة بلا موافقة، وفواتير مسجّلة مرتين، وإيصالات لا تصل إلى الملف أبداً.',
+  'prob3t': 'كل فرع يروي قصة مختلفة',
+  'prob3d':
+      'ثلاثة فروع، ثلاثة دفاتر، ثلاث نسخ من الحقيقة — ولا طريقة لمقارنتها على شاشة واحدة.',
+
+  // Pillar 1 — accounting
+  'p1Eyebrow': '01 · المحاسبة والإدارة المالية',
+  'p1Head': 'كل قرش، مسجَّل تلقائياً.',
+  'p1Sub':
+      'باور فِت هو دفتر الحسابات الذي يكتبه ناديك بنفسه — الداخل والخارج، لحظة حدوثه، في كل فرع.',
+  'p1c1t': 'فوترة الأعضاء مدمجة',
+  'p1c1d':
+      'كل تجديد وتذكرة ودفعة تتحول إلى قيد محاسبي لحظة تحصيلها — دون إعادة إدخال في نهاية الشهر.',
+  'p1c2t': 'تسجيل المصروفات مع الموافقات',
+  'p1c2d':
+      'يسجّل الموظفون الإيجار والمعدات والخدمات في ثوانٍ، ولا يدخل شيء إلى الدفاتر قبل موافقتك.',
+  'p1c3t': 'صافي الربح، لا الإيراد فقط',
+  'p1c3d':
+      'الدخل ناقص المصروفات، شهرياً ولكل فرع — الرقم الذي تُدار به الأعمال فعلاً.',
+  'p1c4t': 'الإقفال اليومي',
+  'p1c4d':
+      'طابق إيرادات اليوم مع الدفتر كل ليلة بضغطة واحدة — لا مرة واحدة في الشهر.',
+  'p1c5t': 'تقارير يفهمها محاسبك',
+  'p1c5d': 'تقارير شهرية للإيرادات والمصروفات، مصنّفة وجاهزة للتسليم.',
+
+  // Ledger panel
+  'lpTitle': 'اليوم — الإقفال اليومي',
+  'lp1': 'دفعات الاشتراكات',
+  'lp2': 'مصروفات — معتمدة',
+  'lp3': 'مصروفات — قيد الموافقة',
+  'lpPending': 'بانتظار الموافقة',
+  'lpNet': 'صافي اليوم',
+  'lpChip': 'مُطابَق مع الصندوق',
+
+  // Pillar 2 — BI
+  'p2Eyebrow': '02 · ذكاء الأعمال والتحليلات',
+  'p2Head': 'شاهد نشاطك التجاري، لا جدول بياناتك.',
+  'p2Sub':
+      'كل قيد في الدفتر يغذّي لوحات متابعة حيّة — الأسئلة التي كانت تكلّفك عطلة نهاية أسبوع صارت تُجاب بنظرة.',
+  'p2c1t': 'لوحة مالك حيّة',
+  'p2c1d':
+      'الإيرادات والدخول وصافي الربح تتحدّث مع مجريات اليوم — من هاتفك أو من مكتب الاستقبال.',
+  'p2c2t': 'فرع مقابل فرع',
+  'p2c2d': 'المقاييس نفسها على الشاشة نفسها. اعرف أي فرع يحمل البقية — ولماذا.',
+  'p2c3t': 'الاحتفاظ ومؤشرات الموظفين',
+  'p2c3d':
+      'نسبة احتفاظ وإيراد لكل موظف، مرتّبة — لتبدأ نقاشات الأداء من الأرقام لا الانطباعات.',
+  'p2c4t': 'تنبيهات قبل أن تخسر',
+  'p2c4d':
+      'انخفاض الإيراد أو موجة اشتراكات على وشك الانتهاء تصلك تلقائياً — لا تكتشفها في تقرير بعد ثلاثة أسابيع.',
+
+  // BI panel
+  'biChartTitle': 'الإيرادات — آخر 6 أشهر',
+  'biBranchTitle': 'الإيرادات حسب الفرع — هذا الشهر',
+  'bn1': 'وسط المدينة',
+  'bn2': 'الفرع الغربي',
+  'bn3': 'المارينا',
+  'biTop': 'الأعلى',
+  'biAlert': 'انخفاض الإيراد 4.1% في فرع المارينا — تنبيه تلقائي',
+
+  // Supporting features
+  'supHead': 'وبقية النادي يعمل هنا أيضاً.',
+  'supSub':
+      'الدخول والتجديدات ومناوبات الموظفين تغذّي الدفاتر تلقائياً — التشغيل والمحاسبة نظام واحد، فلا يُدخَل شيء مرتين.',
+  's1t': 'دخول عبر QR',
+  's1d': 'يمسح العضو الرمز عند الباب، فيتحدّث الحضور والإيراد تلقائياً.',
+  's2t': 'إدارة الاشتراكات',
+  's2d': 'تجديد وتجميد وإيقاف، مع تنبيهات قبل الانتهاء.',
+  's3t': 'تعدد الفروع',
+  's3d': 'وحدة تحكم واحدة، ودفتر ولوحة متابعة لكل فرع.',
+  's4t': 'الموظفون والصلاحيات',
+  's4d': 'صلاحيات حسب الدور، وكل إجراء منسوب لصاحبه.',
+  's5t': 'تطبيق الأعضاء',
+  's5d': 'تطبيق بهوية ناديك للاشتراكات والدفعات والدخول عبر QR.',
+  's6t': 'تنبيهات ذكية',
+  's6d': 'الاشتراكات المنتهية والأرقام الشاذة تُرفع إليك قبل أن تكلّفك.',
+
+  // Proof
+  'proofHead': 'ماذا يقول المالكون',
+  'q1':
+      'أفتح باور فِت قبل بريدي الإلكتروني. الإيرادات والدخول والمصروفات — شاشة واحدة لفروعي الثلاثة.',
+  'q2': 'كان إقفال الشهر يستهلك عطلة كاملة. الآن الإقفال اليومي ينجزه أولاً بأول.',
+  'q3':
+      'مقارنة الفروع كشفت أن فرعاً واحداً يلتهم ربح الفرعين الآخرين. أعدنا التفاوض على الإيجار خلال شهر.',
   'n1': 'اسم تجريبي',
   'g1': 'نادي آيرون هاوس',
   'n2': 'اسم تجريبي',
   'g2': 'بيك فِتنس',
   'n3': 'اسم تجريبي',
   'g3': 'نادي تيتان',
-  'placeholderNote': 'أسماء وشهادات تجريبية — استبدلها بعملائك.',
+  'placeholderNote': 'اقتباسات تجريبية — استبدلها بنتائج عملاء حقيقيين قبل الإطلاق.',
+
+  // Pricing
   'pricingHead': 'أسعار بسيطة تنمو معك',
   'mostPopular': 'الأكثر شيوعاً',
   'perMo': '/شهرياً',
+  'ctaPlan': 'ابدأ الآن',
   'contactSales': 'تواصل معنا',
   'billingMonthly': 'شهري',
   'billingAnnual': 'سنوي',
@@ -2094,80 +3063,170 @@ const Map<String, String> _arText = {
   'p4f2': 'مدير حساب مخصص',
   'p4f3': 'وصول عبر API',
   'p4f4': 'خصم على الحجم',
+
+  // FAQ
   'faqHead': 'الأسئلة الشائعة',
-  'faq0q': 'كيف يعمل الدخول عبر QR؟',
+  'faq0q': 'من أين تأتي أرقام لوحات المتابعة؟',
   'faq0a':
-      'يمسح العضو رمز QR عند الباب فيسجّل النظام الحضور فوراً دون أي انتظار.',
-  'faq1q': 'كم فرعاً يمكنني إدارته؟',
-  'faq1a': 'أي عدد تحتاجه — لكل فرع لوحته الخاصة مع مقارنات فورية بين الفروع.',
-  'faq2q': 'هل بياناتي آمنة؟',
-  'faq2a': 'نعم، البيانات مشفّرة والوصول محكوم بصلاحيات حسب دور كل موظف.',
-  'faq3q': 'هل يوجد تطبيق للأعضاء؟',
-  'faq3a': 'نعم، للأعضاء تطبيق خاص للاشتراكات والدخول عبر QR وسجل الزيارات.',
+      'من عملياتك نفسها. كل دخول وتجديد ومصروف يسجّله موظفوك يتحول فوراً إلى قيد في الدفتر — واللوحات تقرأ من الدفتر ذاته، فهناك نسخة واحدة من الحقيقة.',
+  'faq1q': 'هل أتحكم بمن يصرف المال؟',
+  'faq1a':
+      'نعم. تدخل المصروفات بحالة «قيد الموافقة» ولا تُحتسب قبل اعتماد المالك أو المحاسب، وكل إجراء منسوب لدور موظف محدد.',
+  'faq2q': 'كم فرعاً يمكنني إدارته؟',
+  'faq2a': 'أي عدد تحتاجه — لكل فرع لوحته الخاصة مع مقارنات فورية بين الفروع.',
+  'faq3q': 'هل بياناتي آمنة؟',
+  'faq3a': 'نعم، البيانات مشفّرة والوصول محكوم بصلاحيات حسب دور كل موظف.',
   'faq4q': 'هل يمكنني التجربة أولاً؟',
   'faq4a': 'ابدأ مجاناً وارتقِ بالخطة متى شئت دون التزام.',
-  'finalHead': 'جاهز لإدارة ناديك بذكاء؟',
-  'finalSub': 'سجّل الدخول إلى حسابك للمتابعة.',
+
+  // Final CTA
+  'finalHead': 'توقف عن تخمين هوامشك.',
+  'finalSub': 'سجّل الدخول وشاهد إيرادات هذا الشهر ومصروفاته وصافي ربحه — مباشرة.',
+  'finalStrip': 'الإيرادات · المصروفات · صافي الربح — تحديث مباشر',
+
+  // Footer
+  'footerTagline':
+      'المحرك المالي خلف ناديك — الفواتير والمصروفات وصافي الربح ولوحات متابعة حيّة لكل فرع.',
+  'footerLinksHead': 'روابط سريعة',
+  'contactUsHead': 'تواصل معنا',
+  'contactUsDesc':
+      'لديك سؤال أو تريد طلب عرض توضيحي؟ راسلنا مباشرة وسنرد عليك في أقرب وقت.',
+  'copyEmail': 'نسخ البريد الإلكتروني',
+  'emailCopied': 'تم نسخ البريد الإلكتروني',
 };
 
 const Map<String, String> _enText = {
-  'navFeatures': 'Features',
-  'navHow': 'How it works',
+  'navP1': 'Accounting',
+  'navP2': 'Dashboards',
   'navPricing': 'Pricing',
   'navFaq': 'FAQ',
   'login': 'Log in',
-  'footerTagline': 'The all-in-one platform for running your gym — subscriptions, branches, and members in one place.',
-  'footerLinksHead': 'Quick links',
-  'contactUsHead': 'Contact us',
-  'contactUsDesc': 'Have a question or want a demo? Reach out directly and we\'ll get back to you soon.',
-  'copyEmail': 'Copy email',
-  'emailCopied': 'Email copied to clipboard',
-  'heroBadge': 'Gym management system',
-  'heroHead': 'Run your entire gym from one place',
+
+  // Hero
+  'heroEyebrow': 'GYM FINANCE & BUSINESS INTELLIGENCE',
+  'heroHead': 'Know exactly what your gym makes — and where it goes.',
   'heroSub':
-      'Complete control of subscriptions, branches, and QR entry — for members, staff, and owners, all in one place.',
-  'cta1': 'Get started',
-  'cta2': 'See how it works',
-  'trust': 'Trusted by gyms across the region',
-  'featHead': 'Everything your gym needs, in one place.',
-  'featSub': 'Integrated tools for management, branches, and members.',
-  'f1t': 'Instant QR check-in',
-  'f1d': 'Check members in within seconds by scanning a QR code.',
-  'f2t': 'Subscription control',
-  'f2d': 'Renew, freeze, stop — with alerts before expiry.',
-  'f3t': 'Multi-branch',
-  'f3d': 'A dashboard per branch, instant comparisons.',
-  'f4t': 'Financial reports',
-  'f4d': 'Revenue, expenses, daily close-out in one click.',
-  'f5t': 'Smart alerts',
-  'f5d': 'Real-time alerts for expiries and operational issues.',
-  'f6t': 'Staff management',
-  'f6d': 'Role-based permissions and team performance.',
-  'howHead': 'How it works',
-  's1t': 'Set up your gym & branches',
-  's1d': 'Create your account and add branches in minutes.',
-  's2t': 'Add members and staff',
-  's2d': 'Import members and give each employee a role.',
-  's3t': 'Track everything in real time',
-  's3d': 'Monitor attendance and revenue from one dashboard.',
-  'shotHead': 'Built for every screen',
-  'shotSub': 'Staff console and member app, one design language.',
-  'shotDash': 'Owner dashboard',
-  'kRevenue': 'Revenue',
-  'kMembers': 'Members',
-  'kToday': 'Today’s entries',
-  'phGreet': 'Welcome back',
-  'phName': 'Ahmed',
-  'phPlan': 'Your plan',
-  'phActive': 'Active',
-  'phDays': 'days',
-  'phLeft': 'left until renewal',
-  'phScan': 'Scan to enter',
-  'testHead': 'Loved by gym owners',
+      'PowerFit records every membership payment and every expense across all your branches, and turns them into live dashboards — revenue, costs, and net profit you can act on the same day.',
+  'cta1': 'See your numbers in 5 minutes',
+  'cta2': 'Explore the dashboards',
+  'heroNote': 'Free to start · No credit card required',
+
+  // Hero dashboard mock
+  'mockTitle': 'Owner console',
+  'mockLive': 'LIVE',
+  'mockRevLabel': 'REVENUE — THIS MONTH',
+  'mockDeltaVal': '+12.4%',
+  'mockDeltaSuffix': 'vs last month',
+  'mockExpLabel': 'EXPENSES',
+  'legSalaries': 'Salaries',
+  'legRent': 'Rent',
+  'legEquip': 'Equipment',
+  'legOther': 'Other',
+  'mockProfitLabel': 'NET PROFIT',
+  'mockMargin': 'margin 27%',
+  'mockLedgerLabel': 'LEDGER — JUST NOW',
+  'lr1d': 'Membership renewal',
+  'lr2d': 'Day pass',
+  'lr3d': 'Equipment invoice',
+
+  'capStrip': 'BILLING · EXPENSES · NET PROFIT · CLOSE-OUT · DASHBOARDS · ALERTS',
+
+  // Problem framing
+  'probHead': 'Running a gym on spreadsheets means guessing.',
+  'probSub':
+      "Most owners learn how the month went after it's over — when it's too late to fix anything.",
+  'prob1t': 'Profit is a month-end surprise',
+  'prob1d':
+      'Revenue sits in the till, expenses in a drawer. Nobody knows the real margin until someone rebuilds the spreadsheet.',
+  'prob2t': 'Expenses leak',
+  'prob2d':
+      'Small purchases nobody approved, invoices logged twice, receipts that never make it to the file.',
+  'prob3t': 'Every branch tells a different story',
+  'prob3d':
+      'Three locations, three notebooks, three versions of the truth — and no way to compare them on one screen.',
+
+  // Pillar 1 — accounting
+  'p1Eyebrow': '01 · ACCOUNTING & FINANCIAL CONTROL',
+  'p1Head': 'Every dollar, tracked automatically.',
+  'p1Sub':
+      'PowerFit is the ledger your gym writes by itself. Money in, money out — recorded the moment it happens, at every branch.',
+  'p1c1t': 'Member billing, built in',
+  'p1c1d':
+      "Every renewal, day pass, and payment becomes a ledger entry the second it's taken — no re-typing at month end.",
+  'p1c2t': 'Expense capture with approval',
+  'p1c2d':
+      'Staff log rent, equipment, and utilities in seconds. Nothing hits the books until you approve it.',
+  'p1c3t': 'Net profit, not just revenue',
+  'p1c3d':
+      'Income minus expenses, per month and per branch — the number you actually run the business on.',
+  'p1c4t': 'Daily close-out',
+  'p1c4d':
+      "Reconcile the day's takings against the ledger every night in one click — not once a month.",
+  'p1c5t': 'Reports your accountant can use',
+  'p1c5d':
+      'Monthly revenue and expense reports, categorized and ready to hand over.',
+
+  // Ledger panel
+  'lpTitle': "TODAY — CLOSE-OUT",
+  'lp1': 'Membership payments',
+  'lp2': 'Expenses — approved',
+  'lp3': 'Expenses — pending',
+  'lpPending': 'AWAITING APPROVAL',
+  'lpNet': 'Net today',
+  'lpChip': 'Reconciled with till',
+
+  // Pillar 2 — BI
+  'p2Eyebrow': '02 · BUSINESS INTELLIGENCE',
+  'p2Head': 'See your business, not just your spreadsheet.',
+  'p2Sub':
+      'Every ledger entry feeds live dashboards. Questions that used to cost you a weekend now take a glance.',
+  'p2c1t': 'A live owner dashboard',
+  'p2c1d':
+      'Revenue, entries, and net profit updating as the day happens — from your phone or the front desk.',
+  'p2c2t': 'Branch vs branch',
+  'p2c2d':
+      'Same metrics, same screen. See which location carries the others — and why.',
+  'p2c3t': 'Retention & staff KPIs',
+  'p2c3d':
+      'Retention rate and revenue per staff member, ranked — so coaching conversations start from numbers, not impressions.',
+  'p2c4t': 'Alerts before it hurts',
+  'p2c4d':
+      'A revenue dip or a wave of expiring subscriptions gets flagged to you automatically — not discovered in a report three weeks later.',
+
+  // BI panel
+  'biChartTitle': 'REVENUE — LAST 6 MONTHS',
+  'biBranchTitle': 'REVENUE BY BRANCH — THIS MONTH',
+  'bn1': 'Downtown',
+  'bn2': 'Westside',
+  'bn3': 'Marina',
+  'biTop': 'TOP',
+  'biAlert': 'Revenue down 4.1% at Marina — flagged automatically',
+
+  // Supporting features
+  'supHead': 'The rest of your gym runs here too.',
+  'supSub':
+      'Check-ins, renewals, and staff shifts feed the books on their own — operations and accounting are one system, so nothing is entered twice.',
+  's1t': 'QR check-in',
+  's1d': 'Members scan at the door; attendance and revenue update themselves.',
+  's2t': 'Subscription control',
+  's2d': 'Renew, freeze, stop — with alerts before expiry.',
+  's3t': 'Multi-branch',
+  's3d': 'One console, with a ledger and dashboard per branch.',
+  's4t': 'Staff & roles',
+  's4d': 'Role-based permissions; every action attributed to a person.',
+  's5t': 'Member app',
+  's5d': 'A branded app for plans, payments, and QR entry.',
+  's6t': 'Smart alerts',
+  's6d': 'Expiring plans and odd numbers flagged before they cost you.',
+
+  // Proof
+  'proofHead': 'What owners say',
   'q1':
-      'PowerFit replaced three tools we used to juggle. Check-in is instant now.',
-  'q2': 'Managing five branches from one screen changed how we operate.',
-  'q3': 'The financial reports save me hours every week.',
+      'I open PowerFit before my inbox. Revenue, entries, expenses — one screen for all three branches.',
+  'q2':
+      'Month-end used to take a weekend. Now the daily close-out does it as we go.',
+  'q3':
+      'The branch comparison showed one location was eating the profit of the other two. We renegotiated that rent within a month.',
   'n1': 'Placeholder name',
   'g1': 'Iron House Gym',
   'n2': 'Placeholder name',
@@ -2175,10 +3234,13 @@ const Map<String, String> _enText = {
   'n3': 'Placeholder name',
   'g3': 'Titan Club',
   'placeholderNote':
-      'Placeholder names & quotes — replace with your customers.',
+      'Placeholder quotes — replace with real customer results before launch.',
+
+  // Pricing
   'pricingHead': 'Simple pricing that scales',
   'mostPopular': 'Most popular',
   'perMo': '/mo',
+  'ctaPlan': 'Get started',
   'contactSales': 'Contact sales',
   'billingMonthly': 'Monthly',
   'billingAnnual': 'Annual',
@@ -2214,21 +3276,37 @@ const Map<String, String> _enText = {
   'p4f2': 'Dedicated account manager',
   'p4f3': 'API access',
   'p4f4': 'Volume discount',
+
+  // FAQ
   'faqHead': 'Frequently asked questions',
-  'faq0q': 'How does QR check-in work?',
+  'faq0q': 'Where do the dashboard numbers come from?',
   'faq0a':
-      'Members scan a QR code at the door and the system logs attendance instantly, with no waiting.',
-  'faq1q': 'How many branches can I manage?',
+      "From your own operations. Every check-in, renewal, and expense your staff records becomes a ledger entry instantly — the dashboards read from that same ledger, so there's one version of the truth.",
+  'faq1q': 'Can I control who spends money?',
   'faq1a':
-      'As many as you need — each branch gets its own dashboard with instant cross-branch comparisons.',
-  'faq2q': 'Is my data secure?',
+      'Yes. Expenses enter as pending and only count after an owner or accountant approves them, and every action is tied to a named staff role.',
+  'faq2q': 'How many branches can I manage?',
   'faq2a':
-      'Yes. Data is encrypted and access is controlled by role-based permissions per employee.',
-  'faq3q': 'Is there a member app?',
+      'As many as you need — each branch gets its own dashboard with instant cross-branch comparisons.',
+  'faq3q': 'Is my data secure?',
   'faq3a':
-      'Yes — members get their own app for subscriptions, QR entry, and visit history.',
+      'Yes. Data is encrypted and access is controlled by role-based permissions per employee.',
   'faq4q': 'Can I try it first?',
   'faq4a': 'Start free and upgrade whenever you are ready, no commitment.',
-  'finalHead': 'Ready to run your gym the smart way?',
-  'finalSub': 'Sign in to your account to continue.',
+
+  // Final CTA
+  'finalHead': 'Stop guessing your margins.',
+  'finalSub':
+      "Log in and see this month's revenue, expenses, and net profit — live.",
+  'finalStrip': 'REVENUE · EXPENSES · NET PROFIT — UPDATED LIVE',
+
+  // Footer
+  'footerTagline':
+      'The financial engine behind your gym — billing, expenses, net profit, and live dashboards for every branch.',
+  'footerLinksHead': 'Quick links',
+  'contactUsHead': 'Contact us',
+  'contactUsDesc':
+      "Have a question or want a demo? Reach out directly and we'll get back to you soon.",
+  'copyEmail': 'Copy email',
+  'emailCopied': 'Email copied to clipboard',
 };

@@ -142,6 +142,14 @@ flutter:
           weight: 700
         - asset: assets/fonts/Cairo-Regular.ttf
           weight: 900
+    # IBM Plex Mono — worn by every number, metric, and data label on the
+    # public landing page so figures read as instrument-panel output.
+    - family: IBMPlexMono
+      fonts:
+        - asset: assets/fonts/IBMPlexMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexMono-SemiBold.ttf
+          weight: 600
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
