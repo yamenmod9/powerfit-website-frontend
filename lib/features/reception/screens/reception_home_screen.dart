@@ -225,10 +225,10 @@ class _ReceptionHomeScreenState extends State<ReceptionHomeScreen> {
                                           DateHelper.getRelativeTime(customer.createdAt!),
                                           style: Theme.of(context).textTheme.bodySmall,
                                         ),
-                                        Icon(Icons.chevron_right, color: Colors.grey),
+                                        Icon(Icons.chevron_right, color: Color(0xFF9AA3B8)),
                                       ],
                                     )
-                                  : Icon(Icons.chevron_right, color: Colors.grey),
+                                  : Icon(Icons.chevron_right, color: Color(0xFF9AA3B8)),
                             ),
                           );
                         }),

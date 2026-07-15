@@ -55,7 +55,7 @@ class SuperAdminSettingsScreen extends StatelessWidget {
                         Text(
                           S.platformAdministrator,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[500],
+                                color: Color(0xFF9AA3B8),
                               ),
                         ),
                       ],

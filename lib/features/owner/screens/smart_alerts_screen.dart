@@ -57,7 +57,7 @@ class SmartAlertsScreen extends StatelessWidget {
                   Text(
                     S.allSystemsNormal,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: Color(0xFF6B7590),
                         ),
                   ),
                 ],
@@ -219,12 +219,12 @@ class SmartAlertsScreen extends StatelessWidget {
           children: [
             if (message != title) ...[
               const SizedBox(height: 4),
-              Text(message, style: TextStyle(color: Colors.grey[700])),
+              Text(message, style: TextStyle(color: Color(0xFF243050))),
             ],
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                Icon(Icons.location_on, size: 14, color: Color(0xFF6B7590)),
                 const SizedBox(width: 4),
                 Text(branchName),
               ],
@@ -233,7 +233,7 @@ class SmartAlertsScreen extends StatelessWidget {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                  Icon(Icons.access_time, size: 14, color: Color(0xFF6B7590)),
                   const SizedBox(width: 4),
                   Text(DateHelper.getRelativeTime(DateHelper.parseDate(timestamp) ?? DateTime.now())),
                 ],

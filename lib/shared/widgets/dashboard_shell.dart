@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 
 /// Shared design tokens for the PowerFit staff console (desktop-sidebar layout).
+/// Neutrals follow the charcoal-navy instrument-panel system introduced on the
+/// landing page; role/gym accent colors arrive via [DashboardShell.accent] and
+/// are untouched by these platform surfaces.
 class DashColors {
-  static const bg = Color(0xFF121212);
-  static const sidebar = Color(0xFF1A1A1A);
-  static const topbar = Color(0xFF1E1E1E);
-  static const card = Color(0xFF2A2A2A);
-  static const inner = Color(0xFF1E1E1E);
-  static const muted = Color(0xFFB0B0B0);
-  static const subtle = Color(0xFF808080);
+  static const bg = Color(0xFF0E1425);
+  static const sidebar = Color(0xFF0A0F1D);
+  static const topbar = Color(0xFF131C33);
+  static const card = Color(0xFF16203A);
+  static const inner = Color(0xFF111B33);
+  static const muted = Color(0xFF9AA3B8);
+  static const subtle = Color(0xFF6B7590);
   static const emerald = Color(0xFF10B981);
   static const amber = Color(0xFFF59E0B);
-  static const blue = Color(0xFF3B82F6);
-  static const line = Color(0x12FFFFFF);
+  static const blue = Color(0xFF4C6FFF);
+  static const line = Color(0xFF243050);
 }
 
 class DashNavItem {

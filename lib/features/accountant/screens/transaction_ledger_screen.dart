@@ -170,7 +170,7 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
                 if (!_isLoading && _error == null)
                   Text(
                     S.transactionsCountLabel(_filteredTransactions.length),
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    style: TextStyle(color: Color(0xFF6B7590), fontSize: 13),
                   ),
               ],
             ),
@@ -251,10 +251,10 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.receipt_long, size: 64, color: Colors.grey[300]),
+                                Icon(Icons.receipt_long, size: 64, color: Color(0xFF9AA3B8)),
                                 const SizedBox(height: 16),
                                 Text(S.noTransactionsForDate,
-                                  style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+                                  style: TextStyle(fontSize: 16, color: Color(0xFF9AA3B8))),
                                 const SizedBox(height: 8),
                                 TextButton.icon(
                                   onPressed: _pickDate,
@@ -291,7 +291,7 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
       ),
       child: Column(
         children: [
-          Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+          Text(label, style: TextStyle(fontSize: 10, color: Color(0xFF6B7590))),
           const SizedBox(height: 2),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -358,9 +358,9 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
             ),
             if (time.isNotEmpty) ...[
               const SizedBox(width: 8),
-              Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
+              Icon(Icons.access_time, size: 12, color: Color(0xFF9AA3B8)),
               const SizedBox(width: 2),
-              Text(time, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+              Text(time, style: TextStyle(fontSize: 11, color: Color(0xFF9AA3B8))),
             ],
           ],
         ),
@@ -401,7 +401,7 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        Text(label, style: TextStyle(color: Color(0xFF6B7590), fontSize: 13)),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
       ],
     );

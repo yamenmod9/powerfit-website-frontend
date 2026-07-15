@@ -123,7 +123,7 @@ class _CreateBranchScreenState extends State<CreateBranchScreen> {
                       child: Text(
                         S.createFirstBranchDesc,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[400],
+                              color: Color(0xFF9AA3B8),
                             ),
                       ),
                     ),

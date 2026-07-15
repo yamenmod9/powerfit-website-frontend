@@ -62,13 +62,13 @@ class _NotificationSettingsSectionState
                   : Icons.notifications_off_outlined,
               color: _enabled
                   ? Theme.of(context).colorScheme.primary
-                  : Colors.grey,
+                  : Color(0xFF9AA3B8),
             ),
             title: Text(S.enableNotifications),
             subtitle: Text(
               _enabled ? S.notificationsEnabled : S.notificationsDisabled,
               style: TextStyle(
-                color: _enabled ? Colors.green : Colors.grey,
+                color: _enabled ? Colors.green : Color(0xFF9AA3B8),
                 fontSize: 12,
               ),
             ),

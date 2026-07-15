@@ -155,7 +155,7 @@ class GymDetailScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.palette, size: 20, color: Colors.grey),
+                        const Icon(Icons.palette, size: 20, color: Color(0xFF9AA3B8)),
                         const SizedBox(width: 12),
                         Text(S.primaryColor),
                         const Spacer(),
@@ -175,7 +175,7 @@ class GymDetailScreen extends StatelessWidget {
                     const Divider(height: 24),
                     Row(
                       children: [
-                        const Icon(Icons.palette_outlined, size: 20, color: Colors.grey),
+                        const Icon(Icons.palette_outlined, size: 20, color: Color(0xFF9AA3B8)),
                         const SizedBox(width: 12),
                         Text(S.secondaryColor),
                         const Spacer(),
@@ -195,7 +195,7 @@ class GymDetailScreen extends StatelessWidget {
                     const Divider(height: 24),
                     Row(
                       children: [
-                        const Icon(Icons.email, size: 20, color: Colors.grey),
+                        const Icon(Icons.email, size: 20, color: Color(0xFF9AA3B8)),
                         const SizedBox(width: 12),
                         Text(S.emailDomain),
                         const Spacer(),
@@ -263,7 +263,7 @@ class GymDetailScreen extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[500],
+                  color: Color(0xFF9AA3B8),
                 ),
           ),
         ],
@@ -274,7 +274,7 @@ class GymDetailScreen extends StatelessWidget {
   Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.grey),
+        Icon(icon, size: 20, color: Color(0xFF9AA3B8)),
         const SizedBox(width: 12),
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
         const Spacer(),

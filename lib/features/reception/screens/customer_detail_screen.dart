@@ -105,7 +105,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                     Text(
                       S.customerId(widget.customer.id!),
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Colors.grey[400],
+                            color: Color(0xFF9AA3B8),
                           ),
                     ),
                     const SizedBox(height: 24),
@@ -129,14 +129,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                       _qrData,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'monospace',
-                            color: Colors.grey[400],
+                            color: Color(0xFF9AA3B8),
                           ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       S.scanQRToCheckIn,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[500],
+                            color: Color(0xFF9AA3B8),
                             fontStyle: FontStyle.italic,
                           ),
                       textAlign: TextAlign.center,
@@ -240,7 +240,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                                   ? S.passwordChanged
                                   : S.firstTimeLoginPassword,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey[600],
+                                    color: Color(0xFF6B7590),
                                     fontStyle: FontStyle.italic,
                                   ),
                             ),
@@ -402,7 +402,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
   Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.grey[400]),
+        Icon(icon, size: 20, color: Color(0xFF9AA3B8)),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -411,7 +411,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               Text(
                 label,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[500],
+                      color: Color(0xFF9AA3B8),
                     ),
               ),
               const SizedBox(height: 2),
@@ -457,7 +457,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[400],
+                        color: Color(0xFF9AA3B8),
                       ),
                 ),
               ),
@@ -475,7 +475,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[500],
+                    color: Color(0xFF9AA3B8),
                     fontSize: 10,
                   ),
             ),

@@ -189,9 +189,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.people_outlined, size: 64, color: Colors.grey),
+            Icon(Icons.people_outlined, size: 64, color: Color(0xFF9AA3B8)),
             SizedBox(height: 16),
-            Text(S.noStaffFound, style: TextStyle(fontSize: 16, color: Colors.grey)),
+            Text(S.noStaffFound, style: TextStyle(fontSize: 16, color: Color(0xFF9AA3B8))),
           ],
         ),
       );
@@ -223,7 +223,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
               roleColor = Colors.teal;
               break;
             default:
-              roleColor = Colors.grey;
+              roleColor = Color(0xFF9AA3B8);
           }
 
           return Card(
@@ -276,10 +276,10 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.email, size: 13, color: Colors.grey[500]),
+                              Icon(Icons.email, size: 13, color: Color(0xFF9AA3B8)),
                               const SizedBox(width: 4),
                               Flexible(
-                                child: Text(email, style: TextStyle(fontSize: 12, color: Colors.grey[600]), overflow: TextOverflow.ellipsis),
+                                child: Text(email, style: TextStyle(fontSize: 12, color: Color(0xFF6B7590)), overflow: TextOverflow.ellipsis),
                               ),
                             ],
                           ),
@@ -288,9 +288,9 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              Icon(Icons.phone, size: 13, color: Colors.grey[500]),
+                              Icon(Icons.phone, size: 13, color: Color(0xFF9AA3B8)),
                               const SizedBox(width: 4),
-                              Text(phone, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                              Text(phone, style: TextStyle(fontSize: 12, color: Color(0xFF6B7590))),
                             ],
                           ),
                         ],

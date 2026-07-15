@@ -260,7 +260,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                 Text(
                   S.spotsLeft(maxCapacity - currentOccupancy),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
+                        color: Color(0xFF6B7590),
                       ),
                 ),
               ],
@@ -271,7 +271,7 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
               child: LinearProgressIndicator(
                 value: currentOccupancy / maxCapacity,
                 minHeight: 12,
-                backgroundColor: Colors.grey[200],
+                backgroundColor: Color(0xFF1B2748),
                 valueColor: AlwaysStoppedAnimation(_getCapacityColor(percentFull)),
               ),
             ),
@@ -350,14 +350,14 @@ class _OperationalMonitorScreenState extends State<OperationalMonitorScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.access_time, size: 14, color: Color(0xFF6B7590)),
                     const SizedBox(width: 4),
                     Text(classInfo['time'] as String),
                   ],
                 ),
                 Row(
                   children: [
-                    Icon(Icons.person, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.person, size: 14, color: Color(0xFF6B7590)),
                     const SizedBox(width: 4),
                     Text(classInfo['instructor'] as String),
                   ],

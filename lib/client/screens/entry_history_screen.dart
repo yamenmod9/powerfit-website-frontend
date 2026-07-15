@@ -137,7 +137,7 @@ class _EntryHistoryScreenState extends State<EntryHistoryScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 const SizedBox(height: 120),
-                Icon(Icons.history, size: 64, color: Colors.grey[700]),
+                Icon(Icons.history, size: 64, color: Color(0xFF243050)),
                 const SizedBox(height: 16),
                 Center(
                   child: Text(S.noEntryHistory,

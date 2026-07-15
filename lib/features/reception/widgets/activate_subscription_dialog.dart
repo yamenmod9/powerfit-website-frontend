@@ -297,7 +297,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: const Color(0xFF1B2748),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -546,7 +546,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Colors.grey[800]!),
+                  top: BorderSide(color: Color(0xFF243050)),
                 ),
               ),
               child: Row(

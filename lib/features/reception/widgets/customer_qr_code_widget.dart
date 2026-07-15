@@ -46,7 +46,7 @@ class CustomerQRCodeWidget extends StatelessWidget {
                       Text(
                         customerName,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[400],
+                              color: Color(0xFF9AA3B8),
                             ),
                       ),
                     ],
@@ -129,7 +129,7 @@ class CustomerQRCodeWidget extends StatelessWidget {
             Text(
               'Scan this QR code at the entrance to check in',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[400],
+                    color: Color(0xFF9AA3B8),
                   ),
               textAlign: TextAlign.center,
             ),

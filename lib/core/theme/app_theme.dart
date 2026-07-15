@@ -8,12 +8,17 @@ class AppTheme {
   static const Color successColor = Color(0xFF10B981); // Emerald
   static const Color warningColor = Color(0xFFF59E0B); // Amber
   static const Color errorColor = Color(0xFFDC2626); // Red
-  static const Color infoColor = Color(0xFF3B82F6); // Blue
+  static const Color infoColor = Color(0xFF4C6FFF); // Data blue
 
-  // Dark grey backgrounds - Deep black and grey theme
-  static const Color darkBackground = Color(0xFF121212); // Almost black
-  static const Color darkSurface = Color(0xFF1E1E1E); // Very dark grey
-  static const Color darkCard = Color(0xFF2A2A2A); // Card dark grey
+  // Charcoal-navy neutrals — the instrument-panel system from the landing
+  // page. These are platform surfaces: gym-branded themes keep the owner's
+  // chosen accent colors and only inherit these neutrals.
+  static const Color darkBackground = Color(0xFF0E1425); // Navy base
+  static const Color darkSurface = Color(0xFF131C33); // App bars / nav
+  static const Color darkCard = Color(0xFF16203A); // Cards & panels
+  static const Color edge = Color(0xFF243050); // Hairline borders
+  static const Color mutedText = Color(0xFF9AA3B8); // Secondary text
+  static const Color subtleText = Color(0xFF6B7590); // Captions / hints
 
   // Super Admin theme color - Gold
   static const Color superAdminColor = Color(0xFFF59E0B); // Amber/Gold
@@ -71,11 +76,11 @@ class AppTheme {
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[700]!),
+        borderSide: const BorderSide(color: edge),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[700]!),
+        borderSide: const BorderSide(color: edge),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -84,8 +89,8 @@ class AppTheme {
       filled: true,
       fillColor: darkSurface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      labelStyle: TextStyle(color: Colors.grey[400]),
-      hintStyle: TextStyle(color: Colors.grey[600]),
+      labelStyle: const TextStyle(color: mutedText),
+      hintStyle: const TextStyle(color: subtleText),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -119,7 +124,7 @@ class AppTheme {
       elevation: 0, // Remove elevation, we'll add custom shadow
       backgroundColor: darkSurface.withValues(alpha: 0.9), // Translucent
       selectedItemColor: primaryColor,
-      unselectedItemColor: Colors.grey[500],
+      unselectedItemColor: subtleText,
       selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
       unselectedLabelStyle: const TextStyle(fontSize: 12),
       showUnselectedLabels: true,
@@ -134,7 +139,7 @@ class AppTheme {
         borderRadius: BorderRadius.circular(16),
       ),
     ),
-    dividerColor: Colors.grey[800],
+    dividerColor: edge,
   );
 
   // Get theme by role with dark mode design
@@ -204,11 +209,11 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[700]!),
+          borderSide: const BorderSide(color: edge),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[700]!),
+          borderSide: const BorderSide(color: edge),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -217,8 +222,8 @@ class AppTheme {
         filled: true,
         fillColor: darkSurface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        labelStyle: TextStyle(color: Colors.grey[400]),
-        hintStyle: TextStyle(color: Colors.grey[600]),
+        labelStyle: const TextStyle(color: mutedText),
+        hintStyle: const TextStyle(color: subtleText),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -252,7 +257,7 @@ class AppTheme {
         elevation: 0, // Remove elevation, we'll add custom shadow
         backgroundColor: darkSurface.withValues(alpha: 0.9), // Translucent
         selectedItemColor: seedColor,
-        unselectedItemColor: Colors.grey[500],
+        unselectedItemColor: subtleText,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         showUnselectedLabels: true,
@@ -267,7 +272,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
-      dividerColor: Colors.grey[800],
+      dividerColor: edge,
     );
   }
 
@@ -321,11 +326,11 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[700]!),
+          borderSide: const BorderSide(color: edge),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[700]!),
+          borderSide: const BorderSide(color: edge),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -334,8 +339,8 @@ class AppTheme {
         filled: true,
         fillColor: darkSurface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        labelStyle: TextStyle(color: Colors.grey[400]),
-        hintStyle: TextStyle(color: Colors.grey[600]),
+        labelStyle: const TextStyle(color: mutedText),
+        hintStyle: const TextStyle(color: subtleText),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -360,7 +365,7 @@ class AppTheme {
         elevation: 0,
         backgroundColor: darkSurface.withValues(alpha: 0.9),
         selectedItemColor: seedColor,
-        unselectedItemColor: Colors.grey[500],
+        unselectedItemColor: subtleText,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         showUnselectedLabels: true,
@@ -371,7 +376,7 @@ class AppTheme {
         backgroundColor: darkCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-      dividerColor: Colors.grey[800],
+      dividerColor: edge,
     );
   }
 }

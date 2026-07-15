@@ -247,7 +247,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(S.paymentBreakdown,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey[700])),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF243050))),
             const SizedBox(height: 12),
             _buildPaymentRow(S.cash, cash, total, Colors.green),
             const SizedBox(height: 8),
@@ -277,7 +277,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
           width: 48,
           child: Text('${percent.toStringAsFixed(0)}%',
             textAlign: TextAlign.end,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            style: TextStyle(fontSize: 12, color: Color(0xFF6B7590))),
         ),
       ],
     );
@@ -311,7 +311,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(S.monthOverMonth,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                    style: TextStyle(fontSize: 12, color: Color(0xFF6B7590))),
                   const SizedBox(height: 4),
                   Text(
                     '${isPositive ? '+' : ''}${NumberHelper.formatCurrency(changeAmount)}',
@@ -385,7 +385,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                       Text(S.salesAndTransactions,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                       Text(S.transactionsToday(transactions.length),
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                        style: TextStyle(color: Color(0xFF6B7590), fontSize: 13)),
                     ],
                   ),
                 ),
@@ -429,9 +429,9 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.receipt_long, size: 64, color: Colors.grey[300]),
+                        Icon(Icons.receipt_long, size: 64, color: Color(0xFF9AA3B8)),
                         const SizedBox(height: 16),
-                        Text(S.noTransactionsToday, style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+                        Text(S.noTransactionsToday, style: TextStyle(fontSize: 16, color: Color(0xFF9AA3B8))),
                         const SizedBox(height: 8),
                         TextButton.icon(
                           onPressed: () {
@@ -495,7 +495,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                                     if (serviceName.isNotEmpty)
                                       Text(serviceName,
-                                        style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                                        style: TextStyle(fontSize: 12, color: Color(0xFF6B7590))),
                                     Row(
                                       children: [
                                         Container(
@@ -510,7 +510,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                                         if (date.isNotEmpty) ...[
                                           const SizedBox(width: 8),
                                           Text(_formatTime(date),
-                                            style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                                            style: TextStyle(fontSize: 11, color: Color(0xFF9AA3B8))),
                                         ],
                                       ],
                                     ),
@@ -541,7 +541,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
       ),
       child: Column(
         children: [
-          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+          Text(label, style: TextStyle(fontSize: 11, color: Color(0xFF6B7590))),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -602,9 +602,9 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.money_off, size: 64, color: Colors.grey[300]),
+                        Icon(Icons.money_off, size: 64, color: Color(0xFF9AA3B8)),
                         const SizedBox(height: 16),
-                        Text(S.noExpensesFound, style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+                        Text(S.noExpensesFound, style: TextStyle(fontSize: 16, color: Color(0xFF9AA3B8))),
                       ],
                     ),
                   )
@@ -663,19 +663,19 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
-                                                color: Colors.grey.withOpacity(0.1),
+                                                color: Color(0xFF9AA3B8).withOpacity(0.1),
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
                                               child: Text(category,
-                                                style: TextStyle(fontSize: 10, color: Colors.grey[700])),
+                                                style: TextStyle(fontSize: 10, color: Color(0xFF243050))),
                                             ),
                                             if (branchName.isNotEmpty) ...[
                                               const SizedBox(width: 6),
-                                              Icon(Icons.store, size: 12, color: Colors.grey[500]),
+                                              Icon(Icons.store, size: 12, color: Color(0xFF9AA3B8)),
                                               const SizedBox(width: 2),
                                               Flexible(
                                                 child: Text(branchName,
-                                                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                                                  style: TextStyle(fontSize: 11, color: Color(0xFF6B7590)),
                                                   overflow: TextOverflow.ellipsis),
                                               ),
                                             ],
@@ -712,7 +712,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                               ),
                               if (date.isNotEmpty) ...[
                                 const SizedBox(height: 6),
-                                Text(date, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                                Text(date, style: TextStyle(fontSize: 11, color: Color(0xFF9AA3B8))),
                               ],
                             ],
                           ),
@@ -736,9 +736,9 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.store_outlined, size: 64, color: Colors.grey[300]),
+            Icon(Icons.store_outlined, size: 64, color: Color(0xFF9AA3B8)),
             const SizedBox(height: 16),
-            Text(S.noBranchData, style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+            Text(S.noBranchData, style: TextStyle(fontSize: 16, color: Color(0xFF9AA3B8))),
           ],
         ),
       );
@@ -788,7 +788,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                             if (city.isNotEmpty || address.isNotEmpty)
                               Text(address.isNotEmpty ? address : city,
-                                style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                style: TextStyle(color: Color(0xFF6B7590), fontSize: 13),
                                 maxLines: 1, overflow: TextOverflow.ellipsis),
                           ],
                         ),
@@ -805,7 +805,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                               color: score >= 70 ? Colors.green : score >= 40 ? Colors.orange : Colors.red)),
                         ),
                       if (!isActive)
-                        Chip(label: Text(S.inactive), backgroundColor: Colors.grey),
+                        Chip(label: Text(S.inactive), backgroundColor: Color(0xFF9AA3B8)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -844,14 +844,14 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
   Widget _buildBranchStat(IconData icon, String value, String label, {Color? color}) {
     return Column(
       children: [
-        Icon(icon, size: 20, color: color ?? Colors.grey[600]),
+        Icon(icon, size: 20, color: color ?? Color(0xFF6B7590)),
         const SizedBox(height: 4),
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(value,
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: color)),
         ),
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+        Text(label, style: TextStyle(fontSize: 11, color: Color(0xFF6B7590))),
       ],
     );
   }
@@ -910,11 +910,11 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                 child: Column(
                   children: [
                     const SizedBox(height: 60),
-                    Icon(Icons.assessment_outlined, size: 64, color: Colors.grey[300]),
+                    Icon(Icons.assessment_outlined, size: 64, color: Color(0xFF9AA3B8)),
                     const SizedBox(height: 16),
-                    Text(S.noReportData, style: TextStyle(fontSize: 16, color: Colors.grey[500])),
+                    Text(S.noReportData, style: TextStyle(fontSize: 16, color: Color(0xFF9AA3B8))),
                     const SizedBox(height: 8),
-                    Text(S.tryAdjustingDateRange, style: TextStyle(fontSize: 13, color: Colors.grey[400])),
+                    Text(S.tryAdjustingDateRange, style: TextStyle(fontSize: 13, color: Color(0xFF9AA3B8))),
                   ],
                 ),
               ),
@@ -967,7 +967,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
         const SizedBox(height: 12),
 
         if (byBranch is List && byBranch.isNotEmpty) ...[
-          Text(S.byBranch, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey[700])),
+          Text(S.byBranch, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF243050))),
           const SizedBox(height: 8),
           ...byBranch.map((b) => _buildReportDataRow(
             b['branch_name'] ?? b['name'] ?? S.unknown,
@@ -979,7 +979,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
         ],
 
         if (byService is List && byService.isNotEmpty) ...[
-          Text(S.byService, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey[700])),
+          Text(S.byService, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF243050))),
           const SizedBox(height: 8),
           ...byService.map((s) => _buildReportDataRow(
             s['service_name'] ?? s['name'] ?? S.unknown,
@@ -991,7 +991,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
         ],
 
         if (byPayment is List && byPayment.isNotEmpty) ...[
-          Text(S.byPaymentMethod, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey[700])),
+          Text(S.byPaymentMethod, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF243050))),
           const SizedBox(height: 8),
           ...byPayment.map((p) => _buildReportDataRow(
             p['payment_method'] ?? p['method'] ?? S.unknown,
@@ -1022,7 +1022,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                 width: 42,
                 child: Text('${percent.toStringAsFixed(0)}%',
                   textAlign: TextAlign.end,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6B7590))),
               ),
             ],
           ),
@@ -1031,7 +1031,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: total > 0 ? value / total : 0,
-              backgroundColor: Colors.grey[200],
+              backgroundColor: Color(0xFF1B2748),
               valueColor: AlwaysStoppedAnimation<Color>(color),
               minHeight: 4,
             ),
@@ -1058,7 +1058,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
         ),
         if (dailyBreakdown is List && dailyBreakdown.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Text(S.dailyBreakdown, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey[700])),
+          Text(S.dailyBreakdown, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF243050))),
           const SizedBox(height: 8),
           ...dailyBreakdown.map((day) {
             final dayName = day['day'] ?? day['date'] ?? '—';
@@ -1146,7 +1146,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (branch.isNotEmpty) Text(branch, style: const TextStyle(fontSize: 13)),
-                        if (date.isNotEmpty) Text(date, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                        if (date.isNotEmpty) Text(date, style: TextStyle(fontSize: 11, color: Color(0xFF9AA3B8))),
                       ],
                     ),
                   ),

@@ -140,7 +140,7 @@ class _SubmitComplaintDialogState extends State<SubmitComplaintDialog> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Colors.grey[300]!),
+                  top: BorderSide(color: Color(0xFF243050)),
                 ),
               ),
               child: Row(

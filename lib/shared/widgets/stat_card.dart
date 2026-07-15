@@ -75,7 +75,7 @@ class StatCard extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
+                            color: Color(0xFF6B7590),
                             fontSize: 9,
                             fontWeight: FontWeight.w500,
                             height: 1.1,
@@ -102,7 +102,7 @@ class StatCard extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[500],
+                              color: Color(0xFF9AA3B8),
                               fontSize: 7,
                               height: 1.0,
                             ),
@@ -143,7 +143,7 @@ class SimpleStatCard extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
+                    color: Color(0xFF6B7590),
                   ),
             ),
             const SizedBox(height: 8),

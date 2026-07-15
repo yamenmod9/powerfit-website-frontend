@@ -123,7 +123,7 @@ class _CreateGymScreenState extends State<CreateGymScreen> {
                           Text(
                             S.ownerAccountDescription,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[400],
+                                  color: Color(0xFF9AA3B8),
                                 ),
                           ),
                         ],

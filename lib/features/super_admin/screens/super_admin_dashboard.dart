@@ -157,7 +157,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         style: Theme.of(context)
                             .textTheme
                             .bodyMedium
-                            ?.copyWith(color: Colors.grey[400]),
+                            ?.copyWith(color: Color(0xFF9AA3B8)),
                       ),
                     ],
                   ),
@@ -221,14 +221,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 child: Column(
                   children: [
                     Icon(Icons.manage_accounts_outlined,
-                        size: 64, color: Colors.grey[600]),
+                        size: 64, color: Color(0xFF6B7590)),
                     const SizedBox(height: 16),
                     Text(
                       S.noOwnersYet,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
-                          ?.copyWith(color: Colors.grey[500]),
+                          ?.copyWith(color: Color(0xFF9AA3B8)),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -236,7 +236,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium
-                          ?.copyWith(color: Colors.grey[600]),
+                          ?.copyWith(color: Color(0xFF6B7590)),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -260,14 +260,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.manage_accounts_outlined,
-                size: 80, color: Colors.grey[600]),
+                size: 80, color: Color(0xFF6B7590)),
             const SizedBox(height: 24),
             Text(
               S.noOwnersYetTab,
               style: Theme.of(context)
                   .textTheme
                   .titleLarge
-                  ?.copyWith(color: Colors.grey[400]),
+                  ?.copyWith(color: Color(0xFF9AA3B8)),
             ),
             const SizedBox(height: 8),
             Text(
@@ -275,7 +275,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
-                  ?.copyWith(color: Colors.grey[600]),
+                  ?.copyWith(color: Color(0xFF6B7590)),
             ),
           ],
         ),
@@ -358,14 +358,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   Text(
                     '@${owner.username}',
                     style: TextStyle(
-                        fontSize: 13, color: Colors.grey[500]),
+                        fontSize: 13, color: Color(0xFF9AA3B8)),
                   ),
                   if (owner.email != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       owner.email!,
                       style: TextStyle(
-                          fontSize: 12, color: Colors.grey[600]),
+                          fontSize: 12, color: Color(0xFF6B7590)),
                     ),
                   ],
                   if (owner.lastLogin != null) ...[
@@ -373,12 +373,12 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     Row(
                       children: [
                         Icon(Icons.access_time,
-                            size: 12, color: Colors.grey[500]),
+                            size: 12, color: Color(0xFF9AA3B8)),
                         const SizedBox(width: 4),
                         Text(
                           S.lastLogin(_formatDate(owner.lastLogin!)),
                           style: TextStyle(
-                              fontSize: 11, color: Colors.grey[500]),
+                              fontSize: 11, color: Color(0xFF9AA3B8)),
                         ),
                       ],
                     ),

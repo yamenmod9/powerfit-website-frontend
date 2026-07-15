@@ -5,11 +5,11 @@ import '../../../core/localization/app_strings.dart';
 /// Shared palette for every login screen in the app (native staff/admin,
 /// native member, and the unified web login) — kept in one place so the
 /// three screens stay visually identical without copy-pasting hex values.
-const kLoginBg = Color(0xFF121212);
-const kLoginCardBg = Color(0xFF1E1E1E);
-const kLoginFieldBg = Color(0xFF2A2A2A);
+const kLoginBg = Color(0xFF0E1425);
+const kLoginCardBg = Color(0xFF16203A);
+const kLoginFieldBg = Color(0xFF0E1425);
 const kLoginRed = Color(0xFFDC2626);
-const kLoginMuted = Color(0xFFB0B0B0);
+const kLoginMuted = Color(0xFF9AA3B8);
 
 /// Shared dark PowerFit-styled chrome for every login screen: header,
 /// gradient background, card, logo, title/subtitle, and error box. Each
@@ -50,7 +50,7 @@ class LoginShell extends StatelessWidget {
                 gradient: RadialGradient(
                   center: Alignment(0, -1.1),
                   radius: 1.2,
-                  colors: [Color(0xFF1E1E1E), kLoginBg],
+                  colors: [Color(0xFF17223E), kLoginBg],
                   stops: [0.0, 0.65],
                 ),
               ),
@@ -88,7 +88,7 @@ class LoginShell extends StatelessWidget {
     );
     return Container(
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0x12FFFFFF))),
+        border: Border(bottom: BorderSide(color: Color(0xFF243050))),
       ),
       child: SafeArea(
         bottom: false,
@@ -116,7 +116,7 @@ class LoginShell extends StatelessWidget {
       padding: const EdgeInsets.all(36),
       decoration: BoxDecoration(
         color: kLoginCardBg,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(color: const Color(0xFF243050)),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -156,7 +156,7 @@ class LoginShell extends StatelessWidget {
           Text(
             'Version ${AppConstants.appVersion}',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF5A5A5A), fontSize: 12),
+            style: const TextStyle(color: Color(0xFF6B7590), fontSize: 12),
           ),
         ],
       ),
@@ -236,7 +236,7 @@ InputDecoration loginFieldDecoration(
   );
   return InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(color: Color(0xFF6A6A6A)),
+    hintStyle: const TextStyle(color: Color(0xFF6B7590)),
     helperText: helperText,
     helperMaxLines: 2,
     prefixIcon: Icon(icon, color: kLoginMuted, size: 20),
@@ -244,7 +244,7 @@ InputDecoration loginFieldDecoration(
     filled: true,
     fillColor: kLoginFieldBg,
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    enabledBorder: border(Colors.white.withValues(alpha: 0.12)),
+    enabledBorder: border(const Color(0xFF243050)),
     focusedBorder: border(kLoginRed, 1.5),
     errorBorder: border(const Color(0xFFEF4444)),
     focusedErrorBorder: border(const Color(0xFFEF4444), 1.5),

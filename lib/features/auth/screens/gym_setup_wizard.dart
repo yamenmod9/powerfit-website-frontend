@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/api/api_service.dart';
 import '../../../core/localization/app_strings.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/gym_branding_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../shared/models/gym_model.dart';
@@ -198,7 +199,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                   Text(
                     S.stepOf(_currentStep + 1),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[500],
+                          color: AppTheme.mutedText,
                         ),
                   ),
                   const SizedBox(height: 16),
@@ -214,7 +215,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                           decoration: BoxDecoration(
                             color: isActive
                                 ? Theme.of(context).colorScheme.primary
-                                : Colors.grey[700],
+                                : AppTheme.edge,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -317,7 +318,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
             Text(
               S.gymNameAppears,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[500],
+                    color: AppTheme.mutedText,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -351,17 +352,17 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[900],
+                  color: AppTheme.darkCard,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[700]!),
+                  border: Border.all(color: AppTheme.edge),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.email, size: 16, color: Colors.grey),
+                    const Icon(Icons.email, size: 16, color: AppTheme.mutedText),
                     const SizedBox(width: 8),
                     Text(
                       'Customer emails: name@${_gymNameController.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}.com',
-                      style: TextStyle(color: Colors.grey[400], fontSize: 13),
+                      style: TextStyle(color: AppTheme.mutedText, fontSize: 13),
                     ),
                   ],
                 ),
@@ -510,7 +511,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
           Text(
             S.logoShownOn,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[500],
+                  color: AppTheme.mutedText,
                 ),
             textAlign: TextAlign.center,
           ),
@@ -523,7 +524,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
               width: 180,
               height: 180,
               decoration: BoxDecoration(
-                color: Colors.grey[900],
+                color: AppTheme.darkCard,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
@@ -574,17 +575,17 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey[900],
+              color: AppTheme.darkCard,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.grey[500]),
+                Icon(Icons.info_outline, size: 16, color: AppTheme.mutedText),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     S.skipLogoHint,
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    style: TextStyle(color: AppTheme.mutedText, fontSize: 12),
                   ),
                 ),
               ],
@@ -608,7 +609,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
         Text(
           S.tapToUpload,
           style: TextStyle(
-            color: Colors.grey[500],
+            color: AppTheme.mutedText,
             fontSize: 13,
           ),
         ),
@@ -638,7 +639,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
           Text(
             S.colorsUsedThroughout,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[500],
+                  color: AppTheme.mutedText,
                 ),
             textAlign: TextAlign.center,
           ),
@@ -654,7 +655,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
           const SizedBox(height: 4),
           Text(
             S.usedForButtons,
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            style: TextStyle(color: AppTheme.mutedText, fontSize: 13),
           ),
           const SizedBox(height: 16),
           _buildColorGrid(
@@ -674,7 +675,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
           const SizedBox(height: 4),
           Text(
             S.usedForSecondary,
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            style: TextStyle(color: AppTheme.mutedText, fontSize: 13),
           ),
           const SizedBox(height: 16),
           _buildColorGrid(
@@ -705,7 +706,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
                 Text(
                   S.preview,
                   style: TextStyle(
-                    color: Colors.grey[500],
+                    color: AppTheme.mutedText,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -788,7 +789,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
           Text(
             S.languageUsedThroughout,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[500],
+                  color: AppTheme.mutedText,
                 ),
             textAlign: TextAlign.center,
           ),
@@ -823,10 +824,10 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : Colors.grey[900],
+          color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : AppTheme.darkCard,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[700]!,
+            color: isSelected ? Theme.of(context).colorScheme.primary : AppTheme.edge,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -834,7 +835,7 @@ class _GymSetupWizardState extends State<GymSetupWizard> {
           children: [
             Icon(
               icon,
-              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[500],
+              color: isSelected ? Theme.of(context).colorScheme.primary : AppTheme.mutedText,
             ),
             const SizedBox(width: 16),
             Expanded(

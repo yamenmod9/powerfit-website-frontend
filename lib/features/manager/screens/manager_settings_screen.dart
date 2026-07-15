@@ -54,7 +54,7 @@ class ManagerSettingsScreen extends StatelessWidget {
                     Text(
                       S.branchIdLabel(authProvider.branchId ?? ''),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey,
+                        color: Color(0xFF9AA3B8),
                       ),
                     ),
                 ],

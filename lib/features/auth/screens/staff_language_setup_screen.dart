@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/localization/app_strings.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 
@@ -72,16 +73,16 @@ class _StaffLanguageSetupScreenState extends State<StaffLanguageSetupScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          color: isSelected ? primary.withOpacity(0.12) : Colors.grey[900],
+          color: isSelected ? primary.withOpacity(0.12) : AppTheme.darkCard,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? primary : Colors.grey[700]!,
+            color: isSelected ? primary : AppTheme.edge,
             width: isSelected ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
-            Icon(Icons.translate, color: isSelected ? primary : Colors.grey[500]),
+            Icon(Icons.translate, color: isSelected ? primary : AppTheme.mutedText),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
@@ -135,7 +136,7 @@ class _StaffLanguageSetupScreenState extends State<StaffLanguageSetupScreen> {
                 const SizedBox(height: 8),
                 Text(
                   S.languageUsedThroughout,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.mutedText),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),

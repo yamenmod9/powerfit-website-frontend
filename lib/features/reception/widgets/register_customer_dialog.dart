@@ -380,7 +380,7 @@ class _RegisterCustomerDialogState extends State<RegisterCustomerDialog> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Colors.grey[800]!),
+                  top: BorderSide(color: Color(0xFF243050)),
                 ),
               ),
               child: Row(

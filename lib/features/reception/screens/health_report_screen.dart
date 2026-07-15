@@ -62,25 +62,25 @@ class HealthReportScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.calendar_today, size: 16, color: Color(0xFF6B7590)),
                         const SizedBox(width: 4),
                         Text(
                           S.yearsOld(customer.age?.toString() ?? S.na),
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
+                                color: Color(0xFF6B7590),
                               ),
                         ),
                         const SizedBox(width: 16),
                         Icon(
                           customer.gender == 'male' ? Icons.male : Icons.female,
                           size: 16,
-                          color: Colors.grey[600],
+                          color: Color(0xFF6B7590),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           customer.gender?.toUpperCase() ?? S.na,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
+                                color: Color(0xFF6B7590),
                               ),
                         ),
                       ],
@@ -108,7 +108,7 @@ class HealthReportScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300, width: 2),
+                          border: Border.all(color: const Color(0xFFE2E5EC), width: 2),
                         ),
                         child: QrImageView(
                           data: 'CUSTOMER-${customer.id}',
@@ -123,7 +123,7 @@ class HealthReportScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: const Color(0xFFF6F7F9),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -160,7 +160,7 @@ class HealthReportScreen extends StatelessWidget {
                       Text(
                         S.scanQRForIdentification,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
+                              color: Color(0xFF6B7590),
                               fontStyle: FontStyle.italic,
                             ),
                         textAlign: TextAlign.center,
@@ -341,7 +341,7 @@ class HealthReportScreen extends StatelessWidget {
               child: Text(
                 S.generatedOn(DateHelper.formatDate(DateTime.now())),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
+                      color: Color(0xFF6B7590),
                     ),
               ),
             ),
@@ -414,7 +414,7 @@ class HealthReportScreen extends StatelessWidget {
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
+                        color: Color(0xFF6B7590),
                       ),
                 ),
               ],
@@ -483,7 +483,7 @@ class HealthReportScreen extends StatelessWidget {
       case 'obese':
         return Colors.red;
       default:
-        return Colors.grey;
+        return Color(0xFF9AA3B8);
     }
   }
 

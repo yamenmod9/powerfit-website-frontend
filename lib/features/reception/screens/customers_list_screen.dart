@@ -335,7 +335,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.grey),
+          Icon(icon, size: 20, color: Color(0xFF9AA3B8)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -345,7 +345,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: const Color(0xFF6B7590),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -360,7 +360,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
             ),
           ),
           if (onTap != null)
-            Icon(Icons.copy, size: 16, color: Colors.grey.shade400),
+            Icon(Icons.copy, size: 16, color: const Color(0xFF9AA3B8)),
         ],
       ),
     );

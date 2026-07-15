@@ -113,7 +113,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
         medalIcon = Icons.looks_one;
         break;
       case 2:
-        medalColor = Colors.grey[400]!;
+        medalColor = Color(0xFF9AA3B8);
         medalIcon = Icons.looks_two;
         break;
       case 3:
@@ -121,7 +121,7 @@ class StaffLeaderboardScreen extends StatelessWidget {
         medalIcon = Icons.looks_3;
         break;
       default:
-        medalColor = Colors.grey;
+        medalColor = Color(0xFF9AA3B8);
         medalIcon = Icons.star;
     }
 
@@ -205,11 +205,11 @@ class StaffLeaderboardScreen extends StatelessWidget {
         ),
         subtitle: Row(
           children: [
-            Icon(Icons.work, size: 12, color: Colors.grey[600]),
+            Icon(Icons.work, size: 12, color: Color(0xFF6B7590)),
             const SizedBox(width: 4),
             Text(role),
             const SizedBox(width: 12),
-            Icon(Icons.location_on, size: 12, color: Colors.grey[600]),
+            Icon(Icons.location_on, size: 12, color: Color(0xFF6B7590)),
             const SizedBox(width: 4),
             Expanded(child: Text(branch, overflow: TextOverflow.ellipsis)),
           ],

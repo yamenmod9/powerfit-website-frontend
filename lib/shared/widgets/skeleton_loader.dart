@@ -18,8 +18,8 @@ class _ShimmerState extends State<Shimmer> with SingleTickerProviderStateMixin {
     duration: const Duration(milliseconds: 1400),
   )..repeat();
 
-  static const _baseColor = Color(0xFF2A2A2A);
-  static const _highlightColor = Color(0xFF3D3D3D);
+  static const _baseColor = Color(0xFF1B2748);
+  static const _highlightColor = Color(0xFF29396B);
 
   @override
   void dispose() {
@@ -82,7 +82,7 @@ class SkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2A2A),
+        color: const Color(0xFF1B2748),
         borderRadius: borderRadius,
       ),
     );

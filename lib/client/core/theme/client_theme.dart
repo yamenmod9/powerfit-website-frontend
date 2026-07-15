@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
 class ClientTheme {
-  // Colors — aligned to the PowerFit Member App design canvas.
+  // Colors — charcoal-navy neutrals shared with the PowerFit landing page.
+  // The names keep their historical "grey" identifiers so call sites don't
+  // churn; the crimson brand accent applies only to the unbranded default —
+  // gyms with custom branding get their own colors via buildBrandedTheme.
   static const Color primaryRed = Color(0xFFDC143C); // Crimson brand
-  static const Color darkGrey = Color(0xFF121212);   // Scaffold / background
-  static const Color mediumGrey = Color(0xFF1A1A1A); // Nav / app bar surface
-  static const Color cardGrey = Color(0xFF2A2A2A);   // Cards & rows
-  static const Color lightGrey = Color(0xFF2A2A2A);  // Filled inputs
+  static const Color darkGrey = Color(0xFF0E1425);   // Scaffold / background
+  static const Color mediumGrey = Color(0xFF131C33); // Nav / app bar surface
+  static const Color cardGrey = Color(0xFF16203A);   // Cards & rows
+  static const Color lightGrey = Color(0xFF1B2748);  // Filled inputs
   static const Color textWhite = Color(0xFFFFFFFF);
-  static const Color textGrey = Color(0xFFB0B0B0);
-  static const Color subtleGrey = Color(0xFF808080); // Captions / hints
+  static const Color textGrey = Color(0xFF9AA3B8);
+  static const Color subtleGrey = Color(0xFF6B7590); // Captions / hints
 
   static ThemeData get darkTheme {
     return ThemeData(

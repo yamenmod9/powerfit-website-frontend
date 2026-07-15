@@ -368,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color = Colors.red;
         break;
       default:
-        color = Colors.grey;
+        color = Color(0xFF9AA3B8);
     }
 
     String statusText;

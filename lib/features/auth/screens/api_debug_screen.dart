@@ -171,7 +171,7 @@ class _ApiDebugScreenState extends State<ApiDebugScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[900],
+                  color: Color(0xFF16203A),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: SelectableText(

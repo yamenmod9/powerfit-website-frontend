@@ -82,7 +82,7 @@ class _FreezeSubscriptionDialogState extends State<FreezeSubscriptionDialog> {
                 Text(
                   'Temporarily pause a subscription without losing remaining days',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
+                        color: Color(0xFF6B7590),
                       ),
                 ),
                 const SizedBox(height: 24),
