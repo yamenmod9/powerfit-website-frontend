@@ -1,0 +1,24 @@
+===============================================================================
+  HOW TO RUN TESTS ON PYTHONANYWHERE
+===============================================================================
+
+The test script is having trouble auto-detecting the URL on PythonAnywhere.
+Use this command instead:
+
+cd ~/gym-management-system/backend
+python test_all_fixes.py https://yamenmod91.pythonanywhere.com
+
+This bypasses auto-detection and uses the correct URL directly.
+
+===============================================================================
+
+ALTERNATIVE: Pull latest code and try auto-detect again
+
+cd ~/gym-management-system
+git pull origin main
+cd backend
+python test_all_fixes.py
+
+The latest version has improved detection that should work correctly.
+
+===============================================================================

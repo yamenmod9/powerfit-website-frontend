@@ -1,0 +1,93 @@
+═══════════════════════════════════════════════════════════════════════════
+📋 COPY THIS PROMPT TO CLAUDE SONNET 4.5 FOR YOUR FLUTTER APP
+═══════════════════════════════════════════════════════════════════════════
+
+I have a Flutter gym management app connected to a Flask backend API. Some users (reception and accountants) can't log in - they enter credentials, click login, but nothing happens (no error, no navigation). Also, data isn't showing up after successful login.
+
+BACKEND API ROLE VALUES (confirmed working):
+The backend returns these EXACT role strings in the login response:
+
+1. 'owner' - system owner (no branch_id)
+2. 'branch_manager' - branch manager (has branch_id)
+3. 'front_desk' - reception/front desk staff (has branch_id)
+4. 'central_accountant' - central accountant (no branch_id, sees all branches)
+5. 'branch_accountant' - branch accountant (has branch_id)
+
+LOGIN API RESPONSE FORMAT:
+```json
+{
+  "status": "success",
+  "data": {
+    "access_token": "...",
+    "refresh_token": "...",
+    "user": {
+      "id": 5,
+      "username": "reception1",
+      "email": "reception1@gymchain.com",
+      "full_name": "Sara Mohamed",
+      "phone": "0202220001",
+      "role": "front_desk",
+      "branch_id": 1,
+      "branch_name": "Dragon Club",
+      "is_active": true,
+      "created_at": "2026-02-08T21:09:47.596924",
+      "last_login": null
+    }
+  },
+  "message": "Login successful"
+}
+```
+
+TEST ACCOUNTS:
+- Username: reception1 | Password: reception123 | Role: "front_desk" | Branch: Dragon Club
+- Username: reception3 | Password: reception123 | Role: "front_desk" | Branch: Phoenix Club
+- Username: accountant1 | Password: accountant123 | Role: "central_accountant" | No branch
+- Username: baccountant1 | Password: accountant123 | Role: "branch_accountant" | Branch: Dragon Club
+- Username: manager1 | Password: manager123 | Role: "branch_manager" | Branch: Dragon Club
+- Username: owner | Password: owner123 | Role: "owner" | No branch
+
+ISSUES TO FIX:
+
+1. CHECK USER/AUTH MODEL:
+   - Does the UserRole enum match these exact strings?
+   - Is there a fromString() or fromJson() method that handles all 5 roles?
+   - Is branch_id nullable (int?) for owner and central_accountant?
+
+2. CHECK LOGIN NAVIGATION:
+   - After successful login, does the app check the role value correctly?
+   - Are there navigation routes for all 5 roles?
+   - Is the switch/if statement handling 'front_desk', 'central_accountant', and 'branch_accountant' specifically?
+
+3. CHECK API CALLS:
+   - Are API calls manually adding branch_id as a query parameter?
+   - The backend AUTOMATICALLY filters by branch for branch-specific roles, so Flutter should NOT add "?branch_id=X"
+
+4. CHECK DATA PARSING:
+   - When parsing the user object, is branch_id being treated as nullable?
+   - Are null checks in place before accessing branch_id or branch_name?
+
+WHAT I NEED YOU TO DO:
+
+1. Review my Flutter app code (I'll share the relevant files)
+2. Identify any role string mismatches (e.g., using 'reception' instead of 'front_desk')
+3. Show me exactly what to fix in:
+   - User/Auth models
+   - Login navigation logic
+   - Role enum definitions
+   - API service calls
+4. Provide the corrected code with clear comments on what changed
+
+EXPECTED BEHAVIOR:
+- reception1 logs in → sees ~60 customers from Dragon Club branch only
+- accountant1 logs in → sees ALL 150 customers from all 3 branches
+- baccountant1 logs in → sees ~60 customers from Dragon Club branch only
+- All roles should navigate to their respective dashboard after login
+
+Please analyze my Flutter code and fix the role handling and navigation issues.
+
+[PASTE YOUR FLUTTER CODE FILES HERE - especially:
+- User model class
+- Auth service/repository
+- Login page/screen
+- Navigation/routing logic
+- Any role-based access control]

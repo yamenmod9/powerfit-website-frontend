@@ -1,0 +1,263 @@
+═══════════════════════════════════════════════════════════════════════════
+📋 COPY THIS PROMPT TO CLAUDE SONNET 4.5 - CUSTOMER REGISTRATION FIX
+═══════════════════════════════════════════════════════════════════════════
+
+I have a Flutter gym management app with a FLASK/PYTHON backend API. Customer registration is failing with "Resource not found" error. I need help debugging and fixing this issue.
+
+══════════════════════════════════════════════════════════════════════════
+🔧 BACKEND TECH STACK (Flask/Python - NOT Laravel!)
+══════════════════════════════════════════════════════════════════════════
+- Framework: Flask 3.0.0 with Flask-JWT-Extended
+- Database: SQLAlchemy ORM with SQLite/PostgreSQL
+- Authentication: JWT tokens (Bearer token in headers)
+- API Base URL: https://[username].pythonanywhere.com
+
+══════════════════════════════════════════════════════════════════════════
+🚨 CURRENT ERROR
+══════════════════════════════════════════════════════════════════════════
+- Error Message: "Resource not found"
+- Operation: Customer registration from Flutter app
+- Status Code: Likely 404 (Not Found) or 401 (Unauthorized)
+
+══════════════════════════════════════════════════════════════════════════
+📋 BACKEND CUSTOMER REGISTRATION ENDPOINT (CONFIRMED)
+══════════════════════════════════════════════════════════════════════════
+
+✅ CORRECT ENDPOINT:
+POST /api/customers
+
+⚠️ IMPORTANT: This endpoint REQUIRES:
+1. JWT Authentication (Bearer token in Authorization header)
+2. User must be logged in with one of these roles:
+   - 'owner'
+   - 'branch_manager'
+   - 'front_desk'
+
+❌ Customers CANNOT self-register. Registration must be done by staff!
+
+REQUEST FORMAT:
+POST /api/customers
+Headers:
+  Authorization: Bearer [JWT_TOKEN]
+  Content-Type: application/json
+
+Body:
+{
+  "full_name": "Ahmed Mohamed",
+  "phone": "01234567890",
+  "address": "123 Main St, Cairo",
+  "branch_id": 1,
+  "gender": "male",
+  "date_of_birth": "1990-01-15",
+  "height": 175,
+  "weight": 80,
+  "notes": "Optional notes"
+}
+
+RESPONSE (201 Created):
+{
+  "status": "success",
+  "data": {
+    "id": 151,
+    "full_name": "Ahmed Mohamed",
+    "phone": "01234567890",
+    "address": "123 Main St, Cairo",
+    "branch_id": 1,
+    "branch_name": "Dragon Club",
+    "gender": "male",
+    "age": 36,
+    "bmi": 26.1,
+    "health_status": "healthy",
+    "created_at": "2026-02-09T10:30:00"
+  }
+}
+
+══════════════════════════════════════════════════════════════════════════
+🔍 COMMON ISSUES TO CHECK IN FLUTTER APP
+══════════════════════════════════════════════════════════════════════════
+
+1. WRONG ENDPOINT URL
+   ❌ Calling: /api/register or /api/customers/register
+   ✅ Should be: /api/customers (POST)
+
+2. MISSING AUTHENTICATION
+   ❌ Not sending Authorization header
+   ✅ Must send: "Authorization: Bearer [token]"
+
+3. WRONG USER ROLE
+   ❌ Trying to register as a logged-in customer
+   ✅ Must be logged in as: owner, branch_manager, or front_desk
+
+4. MISSING JWT TOKEN
+   ❌ Token not stored after login
+   ❌ Token not retrieved from storage before API call
+   ✅ Token must be retrieved and sent with EVERY request
+
+5. WRONG HTTP METHOD
+   ❌ Using GET or PUT
+   ✅ Must use POST
+
+6. WRONG REQUEST BODY STRUCTURE
+   ❌ Using "username" and "password" fields (wrong!)
+   ✅ Using "full_name", "phone", "branch_id", etc.
+
+══════════════════════════════════════════════════════════════════════════
+📝 FLUTTER APP FIXES NEEDED
+══════════════════════════════════════════════════════════════════════════
+
+1. CHECK API SERVICE CONFIGURATION
+Location: lib/core/services/api_service.dart
+
+Verify:
+- Base URL is correct (https://[username].pythonanywhere.com)
+- Authorization header is being added to ALL requests
+- Token is retrieved from secure storage before each API call
+
+Example correct implementation:
+```dart
+Future<Map<String, String>> _getHeaders() async {
+  final token = await _storage.read(key: 'access_token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+}
+
+Future<Customer> createCustomer(CustomerRequest customer) async {
+  final headers = await _getHeaders();
+  final response = await http.post(
+    Uri.parse('$baseUrl/api/customers'),  // ← Correct endpoint
+    headers: headers,
+    body: jsonEncode(customer.toJson()),
+  );
+  
+  if (response.statusCode == 201) {
+    final data = jsonDecode(response.body)['data'];
+    return Customer.fromJson(data);
+  } else if (response.statusCode == 404) {
+    throw Exception('Endpoint not found - check API URL');
+  } else if (response.statusCode == 401) {
+    throw Exception('Not authenticated - user must login first');
+  } else if (response.statusCode == 403) {
+    throw Exception('Access denied - user role not authorized');
+  } else {
+    throw Exception('Failed to create customer: ${response.body}');
+  }
+}
+```
+
+2. CHECK USER AUTHENTICATION STATE
+Before calling customer registration:
+```dart
+// Verify user is logged in
+final token = await _storage.read(key: 'access_token');
+if (token == null) {
+  // User not logged in - redirect to login
+  return;
+}
+
+// Verify user has correct role
+final userRole = await _storage.read(key: 'user_role');
+if (!['owner', 'branch_manager', 'front_desk'].contains(userRole)) {
+  // User doesn't have permission
+  showError('Only staff can register customers');
+  return;
+}
+```
+
+3. CHECK REQUEST BODY FORMAT
+Ensure CustomerRequest model matches backend:
+```dart
+class CustomerRequest {
+  final String fullName;      // ← "full_name" not "username"!
+  final String phone;
+  final String address;
+  final int branchId;
+  final String gender;        // "male" or "female"
+  final String? dateOfBirth;  // Optional: "YYYY-MM-DD"
+  final double? height;       // Optional: in cm
+  final double? weight;       // Optional: in kg
+  final String? notes;        // Optional
+
+  Map<String, dynamic> toJson() => {
+    'full_name': fullName,    // ← Backend expects "full_name"
+    'phone': phone,
+    'address': address,
+    'branch_id': branchId,
+    'gender': gender,
+    'date_of_birth': dateOfBirth,
+    'height': height,
+    'weight': weight,
+    'notes': notes,
+  };
+}
+```
+
+══════════════════════════════════════════════════════════════════════════
+🧪 TESTING STEPS
+══════════════════════════════════════════════════════════════════════════
+
+Step 1: Test Login First
+```bash
+curl -X POST https://[username].pythonanywhere.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "reception1",
+    "password": "reception123"
+  }'
+```
+
+Expected: Should return access_token
+
+Step 2: Test Customer Registration
+```bash
+curl -X POST https://[username].pythonanywhere.com/api/customers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer [TOKEN_FROM_STEP_1]" \
+  -d '{
+    "full_name": "Test Customer",
+    "phone": "01111111111",
+    "address": "Test Address",
+    "branch_id": 1,
+    "gender": "male"
+  }'
+```
+
+Expected: Should return 201 Created with customer data
+
+══════════════════════════════════════════════════════════════════════════
+✅ WHAT I NEED YOU TO DO
+══════════════════════════════════════════════════════════════════════════
+
+1. Review my Flutter API service code (I'll paste below)
+2. Identify why it's getting "Resource not found"
+3. Check if:
+   - Endpoint URL is correct
+   - Authorization header is being sent
+   - Token is being retrieved from storage
+   - Request body format matches backend expectations
+4. Provide corrected code with explanations
+
+══════════════════════════════════════════════════════════════════════════
+📁 FLUTTER CODE TO REVIEW
+══════════════════════════════════════════════════════════════════════════
+
+[PASTE YOUR FLUTTER CODE HERE - specifically:
+- lib/core/services/api_service.dart
+- lib/features/customers/data/repositories/customer_repository.dart
+- lib/features/customers/data/models/customer_model.dart
+- lib/features/customers/presentation/screens/add_customer_screen.dart
+- Any authentication/token storage code]
+
+══════════════════════════════════════════════════════════════════════════
+🎯 SUCCESS CRITERIA
+══════════════════════════════════════════════════════════════════════════
+
+✅ Staff user can log in successfully
+✅ After login, staff can register new customers
+✅ API call sends correct Authorization header
+✅ Request body matches backend expectations (full_name, phone, branch_id, etc.)
+✅ New customer appears in database
+✅ No more "Resource not found" error
+
+══════════════════════════════════════════════════════════════════════════

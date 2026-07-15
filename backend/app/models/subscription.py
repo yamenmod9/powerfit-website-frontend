@@ -58,6 +58,9 @@ class Subscription(db.Model):
     total_coins = db.Column(db.Integer, nullable=True)  # Original coin count
     remaining_sessions = db.Column(db.Integer, nullable=True)  # For session/training subscriptions
     total_sessions = db.Column(db.Integer, nullable=True)  # Original session count
+
+    # Who created this subscription (staff member)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
     
     # Who created this subscription (staff member)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)

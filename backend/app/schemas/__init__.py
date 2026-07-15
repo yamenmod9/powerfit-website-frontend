@@ -130,6 +130,7 @@ class StopSubscriptionSchema(Schema):
 class TransactionSchema(Schema):
     id = fields.Int(dump_only=True)
     amount = fields.Decimal(required=True, as_string=True, validate=validate.Range(min=0))
+    discount = fields.Decimal(as_string=True, load_default=0, dump_default=0)
     payment_method = fields.Str(required=True, validate=validate.OneOf([p.value for p in PaymentMethod]))
     transaction_type = fields.Str(required=True, validate=validate.OneOf([t.value for t in TransactionType]))
     branch_id = fields.Int(required=True)

@@ -43,7 +43,7 @@ def get_expenses():
     query = Expense.query
     
     # Role-based filtering
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT]:
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT]:
         query = query.filter(Expense.branch_id == current_user.branch_id)
     elif branch_id:
         query = query.filter(Expense.branch_id == branch_id)
@@ -114,7 +114,7 @@ def get_cash_differences():
     # Role-based filtering
     if current_user.role in [UserRole.BRANCH_ACCOUNTANT]:
         query = query.filter(DailyClosing.branch_id == current_user.branch_id)
-    elif current_user.role in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT]:
+    elif current_user.role in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT]:
         if branch_id:
             query = query.filter(DailyClosing.branch_id == branch_id)
     else:

@@ -303,7 +303,7 @@ def create_users(branches):
     )
     super_admin.set_password(SUPER_ADMIN['password'])
     users.append(super_admin)
-    
+
     # ========== OWNER (exactly 1 — the default/test owner) ==========
     owner = User(
         username='owner',
@@ -789,6 +789,7 @@ def create_subscriptions(customers, services, branches, users):
                 classes_attended=random.randint(0, service.class_limit) if service.class_limit else 0,
                 stop_reason=random.choice(stop_reasons) if status == SubscriptionStatus.STOPPED else None,
                 stopped_at=datetime.now() - timedelta(days=random.randint(1, 10)) if status == SubscriptionStatus.STOPPED else None,
+                created_by=reception.id
             )
             
             # Assign subscription type and remaining values based on service type

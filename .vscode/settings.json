@@ -1,0 +1,80 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym\\\\backend\" ; python --version$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd C:\\\\Programming\\\\Flutter\\\\Gym\\\\backend; git push -u origin main$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd C:\\\\Programming\\\\Flutter\\\\Gym\\\\backend; git push origin main$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd C:\\\\Programming\\\\Flutter\\\\Gym\\\\backend; git add PYTHONANYWHERE_SETUP\\.sh PYTHONANYWHERE_COMMANDS\\.md; git commit -m \"Add automated PythonAnywhere setup script and quick commands guide\"; git push origin main$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd C:\\\\Programming\\\\Flutter\\\\Gym\\\\backend; git add BACKEND_SPECIFICATION_FOR_FLUTTER\\.md; git commit -m \"Add comprehensive backend specification for Flutter frontend development\"; git push origin main$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; c:/Programming/Flutter/Gym_backend/\\.venv/Scripts/python\\.exe seed\\.py$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; git add seed\\.py ; git commit -m \"Add enhanced test accounts with all roles and improved documentation\n\n- Added comprehensive test accounts for all user roles\n- Enhanced seed\\.py output with detailed account information\n- Includes: Owner, Branch Managers, Front Desk/Reception, and Accountants\n- Test database created with all roles and sample data\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; git push origin main$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; Add-Content -Path \"app/routes/dashboards_routes\\.py\" -Value @\"\n\n\n@dashboards_bp\\.route\\('/staff-performance', methods=\\['GET'\\]\\)\n@jwt_required\\(\\)\n@role_required\\(UserRole\\.OWNER, UserRole\\.BRANCH_MANAGER\\)\ndef get_staff_performance\\(\\):\n    ```\"\"\"Get staff performance metrics```\"\"\"\n    start_date = request\\.args\\.get\\('start_date', type=str\\)\n    end_date = request\\.args\\.get\\('end_date', type=str\\)\n    branch_id = request\\.args\\.get\\('branch_id', type=int\\)\n    \n    if not start_date or not end_date:\n        # Default to last 30 days\n        end_date_obj = date\\.today\\(\\)\n        start_date_obj = end_date_obj - timedelta\\(days=30\\)\n    else:\n        try:\n            start_date_obj = datetime\\.strptime\\(start_date, '%Y-%m-%d'\\)\\.date\\(\\)\n            end_date_obj = datetime\\.strptime\\(end_date, '%Y-%m-%d'\\)\\.date\\(\\)\n        except ValueError:\n            return error_response\\('Invalid date format\\. Use YYYY-MM-DD', 400\\)\n    \n    user = get_current_user\\(\\)\n    \n    # Branch managers can only see their branch\n    if user\\.role == UserRole\\.BRANCH_MANAGER:\n        branch_id = user\\.branch_id\n    \n    from app\\.models import User, Transaction, Subscription\n    from sqlalchemy import func\n    \n    # Staff revenue generation\n    query = db\\.session\\.query\\(\n        User\\.id,\n        User\\.full_name,\n        User\\.role,\n        func\\.count\\(Transaction\\.id\\)\\.label\\('transaction_count'\\),\n        func\\.sum\\(Transaction\\.amount\\)\\.label\\('total_revenue'\\)\n    \\)\\.join\\(Transaction, Transaction\\.created_by == User\\.id\\)\\.filter\\(\n        Transaction\\.transaction_date >= start_date_obj,\n        Transaction\\.transaction_date <= end_date_obj\n    \\)\n    \n    if branch_id:\n        query = query\\.filter\\(User\\.branch_id == branch_id\\)\n    \n    staff_data = query\\.group_by\\(User\\.id, User\\.full_name, User\\.role\\)\\.order_by\\(\n        func\\.sum\\(Transaction\\.amount\\)\\.desc\\(\\)\n    \\)\\.all\\(\\)\n    \n    # Customer retention \\(subscriptions created\\)\n    retention_query = db\\.session\\.query\\(\n        User\\.id,\n        func\\.count\\(Subscription\\.id\\)\\.label\\('subscriptions_created'\\)\n    \\)\\.join\\(Subscription, Subscription\\.created_by == User\\.id\\)\\.filter\\(\n        Subscription\\.start_date >= start_date_obj,\n        Subscription\\.start_date <= end_date_obj\n    \\)\n    \n    if branch_id:\n        retention_query = retention_query\\.filter\\(User\\.branch_id == branch_id\\)\n    \n    retention_data = \\{r\\[0\\]: r\\[1\\] for r in retention_query\\.group_by\\(User\\.id\\)\\.all\\(\\)\\}\n    \n    # Combine data\n    performance = \\[\\]\n    for staff in staff_data:\n        performance\\.append\\(\\{\n            'user_id': staff\\[0\\],\n            'full_name': staff\\[1\\],\n            'role': staff\\[2\\]\\.value,\n            'transaction_count': staff\\[3\\],\n            'total_revenue': float\\(staff\\[4\\] or 0\\),\n            'subscriptions_created': retention_data\\.get\\(staff\\[0\\], 0\\)\n        \\}\\)\n    \n    return success_response\\(\\{\n        'start_date': start_date_obj\\.isoformat\\(\\),\n        'end_date': end_date_obj\\.isoformat\\(\\),\n        'branch_id': branch_id,\n        'staff': performance\n    \\}\\)\n\n\n@dashboards_bp\\.route\\('/alerts', methods=\\['GET'\\]\\)\n@jwt_required\\(\\)\ndef get_all_alerts\\(\\):\n    ```\"\"\"Get all smart alerts for the user```\"\"\"\n    user = get_current_user\\(\\)\n    branch_id = user\\.branch_id if user\\.role not in \\[UserRole\\.OWNER, UserRole\\.CENTRAL_ACCOUNTANT\\] else None\n    \n    from app\\.models import Complaint, Expense, Subscription\n    \n    # Expiring subscriptions \\(within 48 hours\\)\n    expiring_soon = get_expiring_subscriptions\\(days=2, branch_id=branch_id\\)\n    \n    # Expiring within week\n    expiring_week = get_expiring_subscriptions\\(days=7, branch_id=branch_id\\)\n    \n    # Open complaints\n    complaints_query = Complaint\\.query\\.filter_by\\(status=ComplaintStatus\\.OPEN\\)\n    if branch_id:\n        complaints_query = complaints_query\\.filter_by\\(branch_id=branch_id\\)\n    open_complaints = complaints_query\\.count\\(\\)\n    \n    # Pending expenses\n    expenses_query = Expense\\.query\\.filter_by\\(status=ExpenseStatus\\.PENDING\\)\n    if branch_id:\n        expenses_query = expenses_query\\.filter_by\\(branch_id=branch_id\\)\n    pending_expenses = expenses_query\\.count\\(\\)\n    \n    # Blocked members \\(stopped subscriptions\\)\n    blocked_query = Subscription\\.query\\.filter_by\\(status=SubscriptionStatus\\.STOPPED\\)\n    if branch_id:\n        blocked_query = blocked_query\\.filter_by\\(branch_id=branch_id\\)\n    blocked_members = blocked_query\\.count\\(\\)\n    \n    return success_response\\(\\{\n        'alerts': \\{\n            'expiring_48h': \\{\n                'count': len\\(expiring_soon\\),\n                'priority': 'high',\n                'message': f'\\{len\\(expiring_soon\\)\\} subscription\\(s\\) expiring in 48 hours'\n            \\},\n            'expiring_7d': \\{\n                'count': len\\(expiring_week\\),\n                'priority': 'medium',\n                'message': f'\\{len\\(expiring_week\\)\\} subscription\\(s\\) expiring in 7 days'\n            \\},\n            'open_complaints': \\{\n                'count': open_complaints,\n                'priority': 'high' if open_complaints > 5 else 'medium',\n                'message': f'\\{open_complaints\\} open complaint\\(s\\)'\n            \\},\n            'pending_expenses': \\{\n                'count': pending_expenses,\n                'priority': 'medium',\n                'message': f'\\{pending_expenses\\} pending expense\\(s\\) need approval'\n            \\},\n            'blocked_members': \\{\n                'count': blocked_members,\n                'priority': 'low',\n                'message': f'\\{blocked_members\\} blocked member\\(s\\)'\n            \\}\n        \\},\n        'branch_id': branch_id,\n        'timestamp': datetime\\.utcnow\\(\\)\\.isoformat\\(\\)\n    \\}\\)\n\"@$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; c:/Programming/Flutter/Gym_backend/\\.venv/Scripts/python\\.exe run\\.py$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; git add \\. ; git status$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; git add \\. ; git commit -m \"Add missing backend features for Flutter frontend\n\n- Added daily closing routes for shift reconciliation\n- Implemented staff performance tracking endpoint\n- Added comprehensive alerts/notifications endpoint\n- Registered daily_closing blueprint\n- Enhanced dashboard routes with staff metrics\n- All role-based access control implemented\n- Ready for Flutter frontend development\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; git add FLUTTER_READINESS_REPORT\\.md ; git commit -m \"Add comprehensive Flutter readiness report\n\n- Complete feature checklist by role\n- All API endpoints documented\n- Test account credentials\n- Implementation guidance for Flutter\n- Backend 100% ready for frontend development\" ; git push origin main$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; git add seed\\.py ; git commit -m \"Enhance seed\\.py with larger realistic database\n\n- Increased customers from 10 to 150 with realistic Egyptian names\n- Created 120 active subscriptions with varied statuses\n- Generated 233\\+ transactions with realistic payment distribution \\(40% cash, 40% network, 20% transfer\\)\n- Added subscription renewals, freeze payments, and misc transactions\n- Enhanced expenses: 50-70 expenses across branches with realistic categories\n- Improved complaints: 30-50 complaints with realistic scenarios and status progression\n- Added 135 fingerprints for 90% of customers\n- Created daily closing records for last 30 days\n- All data has realistic time distribution and variance\n- Database now suitable for realistic Flutter frontend testing\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; c:/Programming/Flutter/Gym_backend/\\.venv/Scripts/python\\.exe test_users_login\\.py$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; c:/Programming/Flutter/Gym_backend/\\.venv/Scripts/python\\.exe test_users_login\\.py 2>&1$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; c:/Programming/Flutter/Gym_backend/\\.venv/Scripts/python\\.exe reset_passwords\\.py$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend\" ; git add reset_passwords\\.py test_users_login\\.py ; git commit -m \"Add password reset and user verification scripts\n\n- reset_passwords\\.py: Reset all user passwords without clearing database\n- test_users_login\\.py: Verify all user accounts and branch data distribution\n- Useful for fixing login issues on production\" ; git push origin main$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd c:\\\\Programming\\\\Flutter\\\\Gym_backend\\\\backend; c:/Programming/Flutter/Gym_backend/\\.venv/Scripts/python\\.exe seed\\.py$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

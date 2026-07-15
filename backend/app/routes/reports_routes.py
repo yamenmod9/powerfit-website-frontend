@@ -20,7 +20,7 @@ reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
 
 @reports_bp.route('/revenue', methods=['GET'])
 @jwt_required()
-@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT])
+@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT])
 def get_revenue_report():
     """
     Revenue report with breakdown by branch, service, and payment method
@@ -486,9 +486,9 @@ def get_employee_performance():
     # Branch managers can only see their branch
     if current_user.role == UserRole.BRANCH_MANAGER:
         branch_id = current_user.branch_id
-    
+
     gym_id = get_current_gym_id(current_user)
-    
+
     if not branch_id and current_user.role not in [UserRole.OWNER, UserRole.SUPER_ADMIN, UserRole.CENTRAL_ACCOUNTANT]:
         return error_response('branch_id is required', 400)
     

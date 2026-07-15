@@ -1,0 +1,27 @@
+# PythonAnywhere Deployment Commands
+# Copy and paste these commands in your PythonAnywhere Bash console
+
+# Option 1: Reset local repo to match GitHub (RECOMMENDED - discards local changes)
+cd ~/gym-management-system
+git fetch origin
+git reset --hard origin/main
+cd backend
+source ~/.virtualenvs/gym-env/bin/activate
+pip install -r requirements.txt
+python migrate_client_features.py
+
+# Then reload your web app from the Web tab
+
+---
+
+# Option 2: If you want to keep local changes
+cd ~/gym-management-system
+git fetch origin
+git merge origin/main --allow-unrelated-histories
+# If merge editor opens, press ESC, type :wq, press ENTER
+cd backend
+source ~/.virtualenvs/gym-env/bin/activate
+pip install -r requirements.txt
+python migrate_client_features.py
+
+# Then reload your web app from the Web tab
