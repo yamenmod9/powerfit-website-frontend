@@ -48,9 +48,13 @@ class DateHelper {
 }
 
 class NumberHelper {
-  static String formatCurrency(double amount, {String symbol = '\$'}) {
+  /// The gym operates in Egypt, so money is Egyptian pounds: the local
+  /// abbreviation in Arabic, the ISO code in English.
+  static String get currencySymbol => S.isArabic ? 'ج.م' : 'EGP';
+
+  static String formatCurrency(double amount, {String? symbol}) {
     final formatter = NumberFormat('#,##0.00');
-    return '$symbol${formatter.format(amount)}';
+    return '${symbol ?? currencySymbol} ${formatter.format(amount)}';
   }
 
   static String formatNumber(num number) {

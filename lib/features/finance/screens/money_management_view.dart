@@ -13,12 +13,19 @@ import '../widgets/record_expense_dialog.dart';
 /// It renders whatever its host already loaded — [earnings] and [expenses]
 /// come from the role's own provider — and owns only the write actions, so
 /// both roles behave identically without sharing a read path.
-class MoneyManagementView extends StatelessWidget {
+class MoneyManagementView extends StatefulWidget {
   /// Money in for the period.
   final double earnings;
 
   /// Raw expense records (as returned by /api/finance/expenses).
   final List<dynamic> expenses;
+
+  /// Approved spend per category for the period, as returned by
+  /// /api/reports/expenses-by-category.
+  ///
+  /// Deliberately not summed from [expenses]: that list is one page, so its
+  /// totals go quietly wrong past 100 records. These are aggregated in SQL.
+  final List<dynamic> categoryTotals;
 
   /// Branches this user may file an expense against.
   final List<Map<String, dynamic>> branches;
@@ -37,9 +44,18 @@ class MoneyManagementView extends StatelessWidget {
     required this.expenses,
     required this.branches,
     required this.onRefresh,
+    this.categoryTotals = const [],
     this.defaultBranchId,
     this.canReview = false,
   });
+
+  @override
+  State<MoneyManagementView> createState() => _MoneyManagementViewState();
+}
+
+class _MoneyManagementViewState extends State<MoneyManagementView> {
+  /// Null means "all categories".
+  String? _selectedCategory;
 
   static double _amountOf(dynamic expense) =>
       ((expense['amount'] ?? 0) as num).toDouble();
@@ -47,34 +63,52 @@ class MoneyManagementView extends StatelessWidget {
   static String _statusOf(dynamic expense) =>
       (expense['status'] ?? 'pending').toString().toLowerCase();
 
+  static String _categoryOf(dynamic expense) =>
+      (expense['category'] ?? 'uncategorized').toString();
+
+  /// The expense rows in view. The category chips scope the list; the KPI strip
+  /// above deliberately keeps reporting the whole period.
+  List<dynamic> get _visible => _selectedCategory == null
+      ? widget.expenses
+      : widget.expenses
+          .where((e) => _categoryOf(e) == _selectedCategory)
+          .toList();
+
   List<dynamic> get _pending =>
-      expenses.where((e) => _statusOf(e) == 'pending').toList();
+      _visible.where((e) => _statusOf(e) == 'pending').toList();
 
   List<dynamic> get _approved =>
-      expenses.where((e) => _statusOf(e) == 'approved').toList();
+      widget.expenses.where((e) => _statusOf(e) == 'approved').toList();
 
   double get _approvedTotal =>
       _approved.fold(0.0, (sum, e) => sum + _amountOf(e));
 
-  double get _pendingTotal =>
-      _pending.fold(0.0, (sum, e) => sum + _amountOf(e));
+  double get _pendingTotal => widget.expenses
+      .where((e) => _statusOf(e) == 'pending')
+      .fold(0.0, (sum, e) => sum + _amountOf(e));
+
+  static double _totalOf(dynamic category) =>
+      ((category['total'] ?? 0) as num).toDouble();
+
+  static String _nameOf(dynamic category) =>
+      (category['category'] ?? '').toString();
 
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
-    final net = earnings - _approvedTotal;
+    final net = widget.earnings - _approvedTotal;
 
     return Stack(
       children: [
         DashBody(
-          onRefresh: onRefresh,
+          onRefresh: widget.onRefresh,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DashKpiGrid(cards: [
                 DashKpiCard(
                   label: S.moneyIn,
-                  value: NumberHelper.formatCurrency(earnings),
+                  value: NumberHelper.formatCurrency(widget.earnings),
                   icon: Icons.trending_up,
                   iconColor: DashColors.emerald,
                   valueColor: DashColors.emerald,
@@ -124,8 +158,15 @@ class MoneyManagementView extends StatelessWidget {
                 accent: accent,
                 actionLabel: S.addExpense,
                 onAction: () => _openRecordDialog(context),
-                child: expenses.isEmpty
-                    ? Padding(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.categoryTotals.isNotEmpty) ...[
+                      _categoryFilter(accent),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_visible.isEmpty)
+                      Padding(
                         padding: const EdgeInsets.symmetric(vertical: 26),
                         child: Center(
                           child: Column(
@@ -134,7 +175,9 @@ class MoneyManagementView extends StatelessWidget {
                                   size: 40, color: DashColors.subtle),
                               const SizedBox(height: 10),
                               Text(
-                                S.noExpensesFound,
+                                _selectedCategory == null
+                                    ? S.noExpensesFound
+                                    : S.noExpensesInCategory,
                                 style: const TextStyle(
                                     color: DashColors.subtle, fontSize: 13),
                               ),
@@ -142,15 +185,18 @@ class MoneyManagementView extends StatelessWidget {
                           ),
                         ),
                       )
-                    : Column(
+                    else
+                      Column(
                         children: [
-                          for (var i = 0; i < expenses.length; i++) ...[
-                            _expenseTile(context, expenses[i]),
-                            if (i < expenses.length - 1)
+                          for (var i = 0; i < _visible.length; i++) ...[
+                            _expenseTile(context, _visible[i]),
+                            if (i < _visible.length - 1)
                               const SizedBox(height: 10),
                           ],
                         ],
                       ),
+                  ],
+                ),
               ),
               const SizedBox(height: 80),
             ],
@@ -170,15 +216,91 @@ class MoneyManagementView extends StatelessWidget {
     );
   }
 
+  /// Category chips, richest first, each carrying its period total.
+  ///
+  /// The totals come from the server's aggregate rather than the visible rows,
+  /// so a chip reports the true spend for its category even when the expense
+  /// list below is only the first page.
+  Widget _categoryFilter(Color accent) {
+    final sorted = [...widget.categoryTotals]
+      ..sort((a, b) => _totalOf(b).compareTo(_totalOf(a)));
+    final total = sorted.fold<double>(0, (sum, c) => sum + _totalOf(c));
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _categoryChip(
+          label: S.allCategories,
+          amount: total,
+          selected: _selectedCategory == null,
+          accent: accent,
+          onTap: () => setState(() => _selectedCategory = null),
+        ),
+        for (final category in sorted)
+          _categoryChip(
+            label: S.expenseCategoryLabel(_nameOf(category)),
+            amount: _totalOf(category),
+            selected: _selectedCategory == _nameOf(category),
+            accent: accent,
+            onTap: () => setState(() => _selectedCategory = _nameOf(category)),
+          ),
+      ],
+    );
+  }
+
+  Widget _categoryChip({
+    required String label,
+    required double amount,
+    required bool selected,
+    required Color accent,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.16) : DashColors.inner,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: selected ? accent : DashColors.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : DashColors.muted,
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              NumberHelper.formatCurrency(amount),
+              style: const TextStyle(
+                color: DashColors.subtle,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _openRecordDialog(BuildContext context) async {
     final recorded = await showDialog<bool>(
       context: context,
       builder: (_) => RecordExpenseDialog(
-        branches: branches,
-        defaultBranchId: defaultBranchId,
+        branches: widget.branches,
+        defaultBranchId: widget.defaultBranchId,
       ),
     );
-    if (recorded == true) await onRefresh();
+    if (recorded == true) await widget.onRefresh();
   }
 
   Widget _expenseTile(BuildContext context, dynamic expense) {
@@ -204,7 +326,7 @@ class MoneyManagementView extends StatelessWidget {
       if (createdBy.isNotEmpty) createdBy,
     ].join(' · ');
 
-    final showReview = canReview && status == 'pending';
+    final showReview = widget.canReview && status == 'pending';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -315,7 +437,7 @@ class MoneyManagementView extends StatelessWidget {
     );
 
     if (result['success'] == true) {
-      await onRefresh();
+      await widget.onRefresh();
       messenger.showSnackBar(
         SnackBar(
           content: Text(approve ? S.expenseApproved : S.expenseRejected),

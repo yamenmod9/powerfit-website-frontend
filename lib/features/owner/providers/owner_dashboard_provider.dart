@@ -20,6 +20,9 @@ class OwnerDashboardProvider extends ChangeNotifier {
   List<dynamic> _employeePerformance = [];
   List<dynamic> _complaints = [];
   List<dynamic> _expenses = [];
+  List<dynamic> _revenueTrend = [];
+  List<dynamic> _expensesByCategory = [];
+  String _trendPeriod = 'daily';
 
   OwnerDashboardProvider(this._apiService);
 
@@ -36,6 +39,19 @@ class OwnerDashboardProvider extends ChangeNotifier {
   List<dynamic> get employeePerformance => _employeePerformance;
   List<dynamic> get complaints => _complaints;
   List<dynamic> get expenses => _expenses;
+  List<dynamic> get revenueTrend => _revenueTrend;
+  List<dynamic> get expensesByCategory => _expensesByCategory;
+  String get trendPeriod => _trendPeriod;
+
+  /// Switches the revenue trend between daily/weekly/monthly buckets. Only the
+  /// trend refetches — the rest of the dashboard is unaffected by this filter.
+  Future<void> setTrendPeriod(String period) async {
+    if (period == _trendPeriod) return;
+    _trendPeriod = period;
+    notifyListeners();
+    await _loadRevenueTrend();
+    notifyListeners();
+  }
 
   void setSelectedBranch(int? branchId) {
     _selectedBranchId = branchId;
@@ -62,6 +78,8 @@ class OwnerDashboardProvider extends ChangeNotifier {
         _loadEmployeePerformance(),
         _loadComplaints(),
         _loadExpenses(),
+        _loadRevenueTrend(),
+        _loadExpensesByCategory(),
       ]);
       _error = null;
     } catch (e) {
@@ -99,6 +117,54 @@ class OwnerDashboardProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('⚠️ Owner expenses failed: $e');
       _expenses = [];
+    }
+  }
+
+  /// Revenue as a time series for the trend chart. The other report endpoints
+  /// each answer for a single window, so this is the only one that can carry a
+  /// line.
+  Future<void> _loadRevenueTrend() async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.reportsRevenueTrend,
+        queryParameters: {
+          'period': _trendPeriod,
+          if (_selectedBranchId != null) 'branch_id': _selectedBranchId,
+        },
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data['data'] ?? response.data;
+        _revenueTrend = List<dynamic>.from(data['points'] ?? []);
+        debugPrint('✅ Revenue trend loaded: ${_revenueTrend.length} points');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Revenue trend failed: $e');
+      _revenueTrend = [];
+    }
+  }
+
+  /// Expense totals grouped by category. Aggregated server-side rather than
+  /// summed from [expenses], which is only the first page.
+  Future<void> _loadExpensesByCategory() async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.reportsExpensesByCategory,
+        queryParameters: {
+          if (_selectedBranchId != null) 'branch_id': _selectedBranchId,
+          'date_from': _startDate.toIso8601String().split('T')[0],
+          'date_to': _endDate.toIso8601String().split('T')[0],
+        },
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data['data'] ?? response.data;
+        _expensesByCategory = List<dynamic>.from(data['categories'] ?? []);
+        debugPrint('✅ Expense categories loaded: ${_expensesByCategory.length}');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Expense categories failed: $e');
+      _expensesByCategory = [];
     }
   }
 

@@ -30,6 +30,10 @@ class ApiEndpoints {
   static const String payments = '/api/payments';
   static const String recordPayment = '/api/payments/record';
   static const String dailyClosing = '/api/payments/daily-closing';
+
+  // Transaction Endpoints
+  static const String transactions = '/api/transactions';
+  static String transactionById(int id) => '/api/transactions/$id';
   
   // Branch Endpoints
   static const String branches = '/api/branches';
@@ -51,6 +55,8 @@ class ApiEndpoints {
   static const String reportsMonthly = '/api/reports/monthly';
   static const String reportsBranchComparison = '/api/reports/branch-comparison';
   static const String reportsEmployeePerformance = '/api/reports/employee-performance';
+  static const String reportsRevenueTrend = '/api/reports/revenue-trend';
+  static const String reportsExpensesByCategory = '/api/reports/expenses-by-category';
   
   // Expense Endpoints (write side; /api/finance/expenses is the read side)
   static const String expenses = '/api/expenses';

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../../../core/localization/app_strings.dart';
+import '../../../core/providers/gym_branding_provider.dart';
+import '../../finance/services/receipt_pdf.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
 import '../../../core/utils/helpers.dart';
@@ -26,6 +29,10 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedPaymentMethod;
   String _searchQuery = '';
+
+  /// The transaction whose receipt is currently being fetched/rendered, so only
+  /// that row shows a spinner.
+  int? _receiptBusyId;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -384,15 +391,80 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
                 const SizedBox(height: 6),
                 _buildDetailRow(S.netAmount, NumberHelper.formatCurrency(netAmount)),
                 const SizedBox(height: 6),
-                _buildDetailRow(S.payment, paymentMethod.toUpperCase()),
+                _buildDetailRow(S.payment, S.paymentMethodLabel(paymentMethod)),
                 if (time.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   _buildDetailRow(S.time, time),
                 ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _receiptBusyId == id ? null : () => _printReceipt(tx),
+                    icon: _receiptBusyId == id
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.receipt_long, size: 18),
+                    label: Text(S.printReceipt),
+                  ),
+                ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Fetches the full transaction, renders the receipt, and hands it to the
+  /// platform's print/share sheet.
+  ///
+  /// The ledger rows come from /reports/daily, which carries only a summary —
+  /// the receipt needs the branch header and member name, so the record is
+  /// fetched on demand rather than bloating every row.
+  Future<void> _printReceipt(dynamic tx) async {
+    final id = (tx['id'] as num?)?.toInt();
+    if (id == null) return;
+
+    final apiService = context.read<ApiService>();
+    final gymName = context.read<GymBrandingProvider>().gymName;
+
+    setState(() => _receiptBusyId = id);
+    try {
+      final response = await apiService.get(ApiEndpoints.transactionById(id));
+      if (!mounted) return;
+
+      if (response.statusCode != 200 || response.data == null) {
+        _showReceiptError();
+        return;
+      }
+
+      final data = Map<String, dynamic>.from(
+        (response.data['data'] ?? response.data) as Map,
+      );
+      final bytes = await ReceiptPdf.build(transaction: data, gymName: gymName);
+      if (!mounted) return;
+
+      await Printing.layoutPdf(
+        onLayout: (_) => bytes,
+        name: ReceiptPdf.receiptNumber(data),
+      );
+    } catch (e) {
+      debugPrint('❌ Receipt failed: $e');
+      if (mounted) _showReceiptError();
+    } finally {
+      if (mounted) setState(() => _receiptBusyId = null);
+    }
+  }
+
+  void _showReceiptError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(S.receiptFailed),
+        backgroundColor: Colors.redAccent,
       ),
     );
   }

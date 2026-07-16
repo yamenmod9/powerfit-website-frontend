@@ -17,6 +17,14 @@ class DashColors {
   static const amber = Color(0xFFF59E0B);
   static const blue = Color(0xFF4C6FFF);
   static const line = Color(0xFF243050);
+
+  /// Chart mark colors — a step darker than [emerald] and the red used for
+  /// money-out above. Those are tuned for text and icons; a plotted mark has to
+  /// sit inside the dark-mode lightness band against the [card] surface it is
+  /// drawn on, which the text tokens deliberately exceed. Same meanings
+  /// (money in / money out), different legibility job.
+  static const chartRevenue = Color(0xFF059669);
+  static const chartExpense = Color(0xFFEF4444);
 }
 
 class DashNavItem {
@@ -831,14 +839,22 @@ class DashProgressRow extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+            // The label yields and ellipsizes; the amount never does. A long
+            // branch or category name beside a full-width currency string
+            // (e.g. "EGP 51,477.00") overflows a phone-width card otherwise.
+            Expanded(
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
+            const SizedBox(width: 10),
             Text(
               trailing,
               style: TextStyle(color: trailingColor, fontSize: 13),

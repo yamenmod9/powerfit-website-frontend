@@ -3,27 +3,45 @@ import 'package:flutter/material.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/api/api_service.dart';
 
-/// Expense categories offered when recording money going out. `value` is what
-/// the backend stores; the label is resolved at the call site so it can be
-/// localized.
+/// Expense categories offered when recording money going out — the spending
+/// side of the chart of accounts.
+///
+/// These mirror the backend's ExpenseCategory enum, which is the source of
+/// truth and rejects anything outside it. Keep the two in step: this list was
+/// short of `services`, `safety`, `insurance` and `training` while the column
+/// was free text, so spending that already existed could not be re-filed under
+/// the category it was actually recorded as.
+///
+/// `value` is what the backend stores; the label is resolved at the call site
+/// so it can be localized.
 class ExpenseCategories {
-  static const maintenance = 'maintenance';
-  static const utilities = 'utilities';
-  static const salaries = 'salaries';
-  static const equipment = 'equipment';
-  static const supplies = 'supplies';
   static const rent = 'rent';
+  static const salaries = 'salaries';
+  static const utilities = 'utilities';
+  static const equipment = 'equipment';
+  static const maintenance = 'maintenance';
+  static const supplies = 'supplies';
   static const marketing = 'marketing';
+  static const insurance = 'insurance';
+  static const training = 'training';
+  static const services = 'services';
+  static const safety = 'safety';
+  static const software = 'software';
   static const other = 'other';
 
   static const all = [
-    maintenance,
-    utilities,
-    salaries,
-    equipment,
-    supplies,
     rent,
+    salaries,
+    utilities,
+    equipment,
+    maintenance,
+    supplies,
     marketing,
+    insurance,
+    training,
+    services,
+    safety,
+    software,
     other,
   ];
 }

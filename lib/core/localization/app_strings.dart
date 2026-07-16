@@ -230,10 +230,14 @@ class S {
   static String get allStaffMembers => _t('جميع الموظفين', 'All staff');
   static String get transactions => _t('العمليات', 'Transactions');
   static String get retention => _t('الاحتفاظ', 'Retention');
-  static String get filterOptions => _t('خيارات التصفية', 'Filter options');
+  static String get renewal => _t('التجديد', 'Renewal');
+  static String get avgRetention => _t('متوسط الاحتفاظ', 'Avg retention');
+  static String membersSignedCount(int count) => _t('$count عضو مسجل', '$count members signed');
+  static String get sortBy => _t('ترتيب حسب', 'Sort by');
   static String get sortByRevenue => _t('ترتيب حسب الإيرادات', 'Sort by revenue');
-  static String get sortByCustomers => _t('ترتيب حسب العملاء', 'Sort by members');
+  static String get sortByTransactions => _t('ترتيب حسب العمليات', 'Sort by transactions');
   static String get sortByRetention => _t('ترتيب حسب معدل الاحتفاظ', 'Sort by retention rate');
+  static String get sortByRenewal => _t('ترتيب حسب معدل التجديد', 'Sort by renewal rate');
 
   // ─── BRANCH DETAIL ─────────────────────────────────────────
   static String get operations => _t('العمليات', 'Operations');
@@ -652,8 +656,94 @@ class S {
         return _t('إيجار', 'Rent');
       case 'marketing':
         return _t('تسويق', 'Marketing');
+      case 'services':
+        return _t('خدمات', 'Services');
+      case 'safety':
+        return _t('السلامة', 'Safety');
+      case 'insurance':
+        return _t('تأمين', 'Insurance');
+      case 'training':
+        return _t('تدريب', 'Training');
+      case 'software':
+        return _t('برمجيات', 'Software');
+      case 'uncategorized':
+        return _t('غير مصنف', 'Uncategorized');
+      case 'other':
+        // Explicit: the default below echoes the raw value, which would print
+        // this real category as a lowercase 'other'.
+        return _t('أخرى', 'Other');
+      default:
+        // Expense.category is free text, so an unmapped value can always
+        // arrive. Echo it rather than folding it into 'Other' — several
+        // distinct categories sharing one label reads as a rendering bug,
+        // especially as breakdown rows sitting next to each other.
+        return value.isEmpty ? _t('أخرى', 'Other') : value;
+    }
+  }
+
+  /// The folded tail of a breakdown — distinct from an unmapped category label.
+  static String otherCategories(int count) => _t('أخرى ($count)', 'Other ($count)');
+
+  static String get allCategories => _t('كل الفئات', 'All categories');
+  static String get noExpensesInCategory =>
+      _t('لا توجد مصروفات في هذه الفئة', 'No expenses in this category');
+
+  // ─── RECEIPTS ──────────────────────────────────────────────
+  /// Deliberately "receipt", never "invoice": nothing in the schema carries a
+  /// VAT rate, amount, or registration number, so the document must not imply
+  /// it is a tax invoice.
+  static String get paymentReceipt => _t('إيصال دفع', 'Payment receipt');
+  static String get receiptNumberLabel => _t('رقم الإيصال', 'Receipt no.');
+  static String get referenceNumberLabel => _t('الرقم المرجعي', 'Reference no.');
+  static String get issuedBy => _t('صدر بواسطة', 'Issued by');
+  static String get member => _t('العميل', 'Member');
+  static String get item => _t('البند', 'Item');
+  static String get amount => _t('المبلغ', 'Amount');
+  static String get date => _t('التاريخ', 'Date');
+  static String get printReceipt => _t('طباعة الإيصال', 'Print receipt');
+  static String get receiptFailed =>
+      _t('تعذر إنشاء الإيصال', 'Could not generate the receipt');
+
+  /// Shared by the member payments list and the printed receipt.
+  static String paymentMethodLabel(String method) {
+    switch (method.toLowerCase()) {
+      case 'network':
+      case 'card':
+        return card;
+      case 'transfer':
+        return transfer;
+      case 'cash':
+        return cash;
+      default:
+        return method;
+    }
+  }
+
+  static String transactionTypeLabel(String type) {
+    switch (type.toLowerCase()) {
+      case 'subscription':
+        return _t('اشتراك', 'Subscription');
+      case 'renewal':
+        return _t('تجديد', 'Renewal');
+      case 'freeze':
+        return _t('تجميد', 'Freeze');
       default:
         return _t('أخرى', 'Other');
+    }
+  }
+
+  // ─── CHARTS ────────────────────────────────────────────────
+  static String get revenueTrend => _t('اتجاه الإيرادات', 'Revenue trend');
+  static String get expensesByCategory => _t('المصروفات حسب الفئة', 'Expenses by category');
+
+  static String trendPeriodLabel(String period) {
+    switch (period) {
+      case 'weekly':
+        return _t('أسبوعي', 'Weekly');
+      case 'monthly':
+        return _t('شهري', 'Monthly');
+      default:
+        return _t('يومي', 'Daily');
     }
   }
   static String get noBranchData => _t('لا توجد بيانات فروع', 'No branch data');

@@ -4,6 +4,7 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/providers/gym_branding_provider.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
+import '../../../shared/widgets/dash_charts.dart';
 import '../../../shared/widgets/dashboard_shell.dart';
 import '../../../shared/widgets/date_range_picker.dart';
 import '../../../core/utils/helpers.dart';
@@ -195,6 +196,13 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                 iconColor: DashColors.amber),
           ]),
           const SizedBox(height: 20),
+          DashRevenueTrendCard(
+            points: provider.revenueTrend,
+            period: provider.trendPeriod,
+            onPeriodChanged: provider.setTrendPeriod,
+            accent: accent,
+          ),
+          const SizedBox(height: 20),
           if (wide)
             IntrinsicHeight(
               child: Row(
@@ -211,6 +219,11 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
             const SizedBox(height: 18),
             alerts,
           ],
+          const SizedBox(height: 20),
+          DashExpenseCategoryCard(
+            categories: provider.expensesByCategory,
+            accent: accent,
+          ),
           const SizedBox(height: 20),
           _branchComparisonCard(context, provider, accent),
         ],
@@ -779,6 +792,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     return MoneyManagementView(
       earnings: totalRevenue,
       expenses: provider.expenses,
+      categoryTotals: provider.expensesByCategory,
       branches: [
         for (final branch in provider.branchComparison)
           Map<String, dynamic>.from(branch as Map),
