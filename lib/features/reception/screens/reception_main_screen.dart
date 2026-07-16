@@ -43,6 +43,7 @@ class _ReceptionMainScreenState extends State<ReceptionMainScreen> {
       selectedIndex: _selectedIndex,
       onSelect: (i) => setState(() => _selectedIndex = i),
       pageTitle: _titles[_selectedIndex],
+      onLogout: auth.logout,
       showTopbar: false,
       navItems: [
         DashNavItem(Icons.home_outlined, S.home),

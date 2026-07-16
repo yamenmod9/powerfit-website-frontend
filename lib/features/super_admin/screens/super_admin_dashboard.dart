@@ -65,9 +65,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           onTap: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const SuperAdminSettingsScreen())),
         ),
-        DashIconAction(
-            icon: Icons.logout, tooltip: S.logout, onTap: authProvider.logout),
       ],
+      onLogout: authProvider.logout,
       floatingActionButton: _selectedIndex == 1
           ? FloatingActionButton.extended(
               onPressed: () {

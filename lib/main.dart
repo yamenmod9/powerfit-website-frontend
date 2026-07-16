@@ -20,6 +20,7 @@ import 'features/owner/providers/owner_dashboard_provider.dart';
 import 'features/branch_manager/providers/branch_manager_provider.dart';
 import 'features/reception/providers/reception_provider.dart';
 import 'features/accountant/providers/accountant_provider.dart';
+import 'features/finance/providers/finance_provider.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -101,6 +102,11 @@ class MyApp extends StatelessWidget {
 
         ChangeNotifierProvider(
           create: (_) => AccountantProvider(apiService),
+        ),
+
+        // Expense entry / review — shared by the owner and accountant money pages
+        ChangeNotifierProvider(
+          create: (_) => FinanceProvider(apiService),
         ),
 
         // Gym Branding Provider — drives dynamic theming per gym

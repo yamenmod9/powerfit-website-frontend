@@ -76,9 +76,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
               MaterialPageRoute(
                   builder: (_) => const BranchManagerSettingsScreen())),
         ),
-        DashIconAction(
-            icon: Icons.logout, tooltip: S.logout, onTap: authProvider.logout),
       ],
+      onLogout: authProvider.logout,
       body: body,
     );
   }

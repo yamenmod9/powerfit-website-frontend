@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../shared/models/customer_model.dart';
 import '../../../shared/widgets/loading_indicator.dart';
 import '../providers/reception_provider.dart';
+import '../widgets/customer_search_field.dart';
 import '../../../core/localization/app_strings.dart';
 
 class ActivateSubscriptionDialog extends StatefulWidget {
@@ -13,8 +15,9 @@ class ActivateSubscriptionDialog extends StatefulWidget {
 
 class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _customerIdController = TextEditingController();
   final _amountController = TextEditingController();
+
+  CustomerModel? _customer;
 
   String _paymentMethod = 'cash';
   String? _subscriptionType;
@@ -74,13 +77,20 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
 
   @override
   void dispose() {
-    _customerIdController.dispose();
     _amountController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final customer = _customer;
+    if (customer?.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(S.pleaseSelectCustomer)),
+      );
+      return;
+    }
 
     if (_subscriptionType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -134,7 +144,7 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
     }
 
     final result = await provider.activateSubscription(
-      customerId: int.parse(_customerIdController.text),
+      customerId: customer!.id!,
       serviceId: 1, // Default service ID (automatic)
       amount: double.parse(_amountController.text),
       paymentMethod: _paymentMethod,
@@ -400,14 +410,9 @@ class _ActivateSubscriptionDialogState extends State<ActivateSubscriptionDialog>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TextFormField(
-                        controller: _customerIdController,
-                        decoration: InputDecoration(
-                          labelText: S.customerIdRequired,
-                          prefixIcon: Icon(Icons.person),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (v) => v?.isEmpty ?? true ? S.required : null,
+                      CustomerSearchField(
+                        selected: _customer,
+                        onSelected: (customer) => setState(() => _customer = customer),
                       ),
                       const SizedBox(height: 12),
 

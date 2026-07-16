@@ -195,6 +195,17 @@ class ClientApiService {
     }
   }
 
+  /// Every subscription the member has taken, each with the payments made
+  /// against it, plus the grand total paid.
+  Future<Map<String, dynamic>> getPayments() async {
+    try {
+      final response = await _dio.get('/client/payments');
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> getEntryHistory() async {
     try {
       final response = await _dio.get('/client/entry-history');

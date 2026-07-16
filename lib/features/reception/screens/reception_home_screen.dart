@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
+import '../../../shared/widgets/dashboard_shell.dart';
 import '../../../core/providers/gym_branding_provider.dart';
 import '../../../core/utils/helpers.dart';
 import '../providers/reception_provider.dart';
@@ -67,44 +68,33 @@ class _ReceptionHomeScreenState extends State<ReceptionHomeScreen> {
                       const SizedBox(height: 16),
 
                       // Statistics Grid
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1.8, // Increased for more vertical space
-                        children: [
-                          _buildStatCard(
-                            context,
-                            title: S.totalCustomers,
-                            value: '${provider.recentCustomers.length}',
-                            icon: Icons.people,
-                            color: Colors.blue,
-                          ),
-                          _buildStatCard(
-                            context,
-                            title: S.activeSubscriptions,
-                            value: '${provider.activeSubscriptionsCount}',
-                            icon: Icons.card_membership,
-                            color: Colors.green,
-                          ),
-                          _buildStatCard(
-                            context,
-                            title: S.newToday,
-                            value: '${_getNewTodayCount(provider)}',
-                            icon: Icons.person_add,
-                            color: Colors.orange,
-                          ),
-                          _buildStatCard(
-                            context,
-                            title: S.complaints,
-                            value: '${provider.complaintsCount}',
-                            icon: Icons.report_problem,
-                            color: Colors.red,
-                          ),
-                        ],
-                      ),
+                      DashKpiGrid(cards: [
+                        DashKpiCard(
+                          label: S.totalCustomers,
+                          value: '${provider.recentCustomers.length}',
+                          icon: Icons.people,
+                          iconColor: DashColors.blue,
+                        ),
+                        DashKpiCard(
+                          label: S.activeSubscriptions,
+                          value: '${provider.activeSubscriptionsCount}',
+                          icon: Icons.card_membership,
+                          iconColor: DashColors.emerald,
+                          valueColor: DashColors.emerald,
+                        ),
+                        DashKpiCard(
+                          label: S.newToday,
+                          value: '${_getNewTodayCount(provider)}',
+                          icon: Icons.person_add,
+                          iconColor: DashColors.amber,
+                        ),
+                        DashKpiCard(
+                          label: S.complaints,
+                          value: '${provider.complaintsCount}',
+                          icon: Icons.report_problem,
+                          iconColor: Colors.redAccent,
+                        ),
+                      ]),
                       const SizedBox(height: 24),
 
                       // Quick Access Buttons
@@ -235,53 +225,6 @@ class _ReceptionHomeScreenState extends State<ReceptionHomeScreen> {
                     ],
                   ),
                 ),
-    );
-  }
-
-  Widget _buildStatCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  fontSize: 15,
-                ),
-                maxLines: 1,
-              ),
-            ),
-            const SizedBox(height: 1),
-            Flexible(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 8.5,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

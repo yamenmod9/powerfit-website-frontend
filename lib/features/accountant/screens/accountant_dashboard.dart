@@ -9,6 +9,7 @@ import '../../../shared/widgets/stat_card.dart';
 import '../../../shared/widgets/dashboard_shell.dart';
 import '../../../shared/widgets/date_range_picker.dart';
 import '../../../core/utils/helpers.dart';
+import '../../finance/screens/money_management_view.dart';
 import '../providers/accountant_provider.dart';
 import 'accountant_settings_screen.dart';
 import 'transaction_ledger_screen.dart';
@@ -66,7 +67,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
       navItems: [
         DashNavItem(Icons.dashboard_outlined, S.overview),
         DashNavItem(Icons.point_of_sale_outlined, S.sales),
-        DashNavItem(Icons.money_off_outlined, S.expenses),
+        DashNavItem(Icons.account_balance_wallet_outlined, S.moneyManagement),
         DashNavItem(Icons.store_outlined, S.branches),
         DashNavItem(Icons.assessment_outlined, S.reports),
       ],
@@ -90,9 +91,8 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
           onTap: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const AccountantSettingsScreen())),
         ),
-        DashIconAction(
-            icon: Icons.logout, tooltip: S.logout, onTap: authProvider.logout),
       ],
+      onLogout: authProvider.logout,
       body: body,
     );
   }
@@ -100,7 +100,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
   static List<String> get _titles => [
     S.overview,
     S.sales,
-    S.expenses,
+    S.moneyManagement,
     S.branches,
     S.reports,
   ];
@@ -562,167 +562,23 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
     }
   }
 
-  // ─── EXPENSES TAB ─────────────────────────────────────────────────────
+  // ─── EXPENSES / MONEY TAB ─────────────────────────────────────────────
 
   Widget _buildExpensesTab(BuildContext context, AccountantProvider provider) {
-    final expenses = provider.expenses;
-    final ds = provider.dailySales;
-    final totalExpenses = provider.approvedExpenseTotal > 0
-        ? provider.approvedExpenseTotal + provider.pendingExpenseTotal
-        : (ds['monthly_expenses'] ?? 0).toDouble();
-    final pendingCount = expenses.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'pending').length;
-    final approvedCount = expenses.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'approved').length;
+    final role = context.read<AuthProvider>().userRole;
+    // The backend lets central accountants clear expenses but not branch ones.
+    final canReview = role == 'central_accountant' || role == 'accountant';
 
-    return RefreshIndicator(
+    return MoneyManagementView(
+      earnings: (provider.dailySales['monthly_revenue'] ?? 0).toDouble(),
+      expenses: provider.expenses,
+      branches: [
+        for (final branch in provider.branchComparison)
+          Map<String, dynamic>.from(branch as Map),
+      ],
+      defaultBranchId: provider.selectedBranchId,
+      canReview: canReview,
       onRefresh: () => provider.refresh(),
-      child: Column(
-        children: [
-          // Summary Cards
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              children: [
-                Expanded(child: _buildMiniStat(S.totalExpenses,
-                  NumberHelper.formatCurrency(totalExpenses), Colors.red)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildMiniStat(S.pending,
-                  '$pendingCount', Colors.orange)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildMiniStat(S.approved,
-                  '$approvedCount', Colors.green)),
-              ],
-            ),
-          ),
-          const Divider(),
-
-          // Expense list
-          Expanded(
-            child: expenses.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.money_off, size: 64, color: Color(0xFF9AA3B8)),
-                        const SizedBox(height: 16),
-                        Text(S.noExpensesFound, style: TextStyle(fontSize: 16, color: Color(0xFF9AA3B8))),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-                    itemCount: expenses.length,
-                    itemBuilder: (context, index) {
-                      final expense = expenses[index];
-                      final amount = (expense['amount'] ?? 0).toDouble();
-                      final status = (expense['status'] ?? 'pending').toString();
-                      final category = expense['category'] ?? 'General';
-                      final title = expense['title'] ?? expense['description'] ?? 'Expense';
-                      final branchName = expense['branch_name'] ?? '';
-                      final date = expense['date'] ?? expense['created_at'] ?? '';
-
-                      Color statusColor;
-                      IconData statusIcon;
-                      switch (status.toLowerCase()) {
-                        case 'approved':
-                          statusColor = Colors.green;
-                          statusIcon = Icons.check_circle;
-                          break;
-                        case 'rejected':
-                          statusColor = Colors.red;
-                          statusIcon = Icons.cancel;
-                          break;
-                        default:
-                          statusColor = Colors.orange;
-                          statusIcon = Icons.hourglass_top;
-                      }
-
-                      return Card(
-                        elevation: 2,
-                        margin: const EdgeInsets.only(bottom: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor: Colors.red.withOpacity(0.1),
-                                    child: const Icon(Icons.money_off, color: Colors.red, size: 20),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(title,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Color(0xFF9AA3B8).withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(category,
-                                                style: TextStyle(fontSize: 10, color: Color(0xFF243050))),
-                                            ),
-                                            if (branchName.isNotEmpty) ...[
-                                              const SizedBox(width: 6),
-                                              Icon(Icons.store, size: 12, color: Color(0xFF9AA3B8)),
-                                              const SizedBox(width: 2),
-                                              Flexible(
-                                                child: Text(branchName,
-                                                  style: TextStyle(fontSize: 11, color: Color(0xFF6B7590)),
-                                                  overflow: TextOverflow.ellipsis),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(NumberHelper.formatCurrency(amount),
-                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 15)),
-                                      const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(statusIcon, size: 12, color: statusColor),
-                                            const SizedBox(width: 4),
-                                            Text(status,
-                                              style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w500)),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              if (date.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                Text(date, style: TextStyle(fontSize: 11, color: Color(0xFF9AA3B8))),
-                              ],
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
     );
   }
 

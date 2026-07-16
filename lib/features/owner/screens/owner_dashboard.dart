@@ -4,10 +4,10 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/providers/gym_branding_provider.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
-import '../../../shared/widgets/stat_card.dart';
 import '../../../shared/widgets/dashboard_shell.dart';
 import '../../../shared/widgets/date_range_picker.dart';
 import '../../../core/utils/helpers.dart';
+import '../../finance/screens/money_management_view.dart';
 import '../providers/owner_dashboard_provider.dart';
 import '../widgets/add_staff_dialog.dart';
 import 'smart_alerts_screen.dart';
@@ -99,9 +99,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           onTap: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const OwnerSettingsScreen())),
         ),
-        DashIconAction(
-            icon: Icons.logout, tooltip: S.logout, onTap: authProvider.logout),
       ],
+      onLogout: authProvider.logout,
       floatingActionButton: _buildFab(context, dashboardProvider),
       body: body,
     );
@@ -774,47 +773,19 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   Widget _buildFinanceTab(BuildContext context, OwnerDashboardProvider provider) {
     final revenueData = provider.revenueData ?? {};
     final totalRevenue = (revenueData['total_revenue'] as num?)?.toDouble() ?? 0.0;
-    final totalExpenses = (revenueData['total_expenses'] as num?)?.toDouble() ?? 0.0;
-    final netProfit = (revenueData['net_profit'] as num?)?.toDouble() ?? (totalRevenue - totalExpenses);
-    final activeSubscriptions = revenueData['active_subscriptions'] ?? 0;
-    final totalCustomers = revenueData['total_customers'] ?? 0;
 
-    return RefreshIndicator(
+    // The owner spans every branch, so they pick one when filing an expense
+    // and may clear whatever the branches recorded.
+    return MoneyManagementView(
+      earnings: totalRevenue,
+      expenses: provider.expenses,
+      branches: [
+        for (final branch in provider.branchComparison)
+          Map<String, dynamic>.from(branch as Map),
+      ],
+      defaultBranchId: provider.selectedBranchId,
+      canReview: true,
       onRefresh: () => provider.refresh(),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        children: [
-          SimpleStatCard(
-            label: S.totalRevenue,
-            value: NumberHelper.formatCurrency(totalRevenue),
-            color: Colors.green,
-          ),
-          const SizedBox(height: 12),
-          SimpleStatCard(
-            label: S.totalExpenses,
-            value: NumberHelper.formatCurrency(totalExpenses),
-            color: Colors.red,
-          ),
-          const SizedBox(height: 12),
-          SimpleStatCard(
-            label: S.netProfit,
-            value: NumberHelper.formatCurrency(netProfit),
-            color: netProfit >= 0 ? Colors.blue : Colors.red,
-          ),
-          const SizedBox(height: 12),
-          SimpleStatCard(
-            label: S.activeSubscriptions,
-            value: NumberHelper.formatNumber(activeSubscriptions),
-            color: Colors.teal,
-          ),
-          const SizedBox(height: 12),
-          SimpleStatCard(
-            label: S.totalCustomers,
-            value: NumberHelper.formatNumber(totalCustomers),
-            color: Colors.orange,
-          ),
-        ],
-      ),
     );
   }
 

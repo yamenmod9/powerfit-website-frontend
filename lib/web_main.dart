@@ -19,6 +19,7 @@ import 'features/owner/providers/owner_dashboard_provider.dart';
 import 'features/branch_manager/providers/branch_manager_provider.dart';
 import 'features/reception/providers/reception_provider.dart';
 import 'features/accountant/providers/accountant_provider.dart';
+import 'features/finance/providers/finance_provider.dart';
 import 'features/super_admin/providers/super_admin_provider.dart';
 
 import 'features/auth/screens/landing_screen.dart';
@@ -38,6 +39,7 @@ import 'client/screens/activation_screen.dart';
 import 'client/screens/client_main_screen.dart';
 import 'client/screens/qr_screen.dart';
 import 'client/screens/subscription_screen.dart';
+import 'client/screens/payments_screen.dart';
 import 'client/screens/entry_history_screen.dart';
 import 'client/screens/change_password_screen.dart';
 import 'client/screens/settings_screen.dart';
@@ -303,6 +305,11 @@ class _WebAppState extends State<WebApp> {
               builder: (context, state) => const SubscriptionScreen(),
             ),
             GoRoute(
+              path: '/client/payments',
+              name: 'payments',
+              builder: (context, state) => const PaymentsScreen(),
+            ),
+            GoRoute(
               path: '/client/history',
               name: 'history',
               builder: (context, state) => const EntryHistoryScreen(),
@@ -380,6 +387,7 @@ class _WebAppState extends State<WebApp> {
           },
         ),
         ChangeNotifierProvider(create: (_) => AccountantProvider(_apiService)),
+        ChangeNotifierProvider(create: (_) => FinanceProvider(_apiService)),
         ChangeNotifierProvider(create: (_) => SuperAdminProvider(_apiService)),
         ChangeNotifierProvider<GymBrandingProvider>.value(value: _brandingProvider),
         ChangeNotifierProvider<LocaleProvider>.value(value: _localeProvider),

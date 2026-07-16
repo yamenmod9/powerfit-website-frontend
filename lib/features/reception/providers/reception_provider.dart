@@ -206,6 +206,75 @@ class ReceptionProvider extends ChangeNotifier {
     }
   }
 
+  /// Reads a query as a customer ID, or null if it can't be one.
+  ///
+  /// Phone numbers parse as integers too, so they'd otherwise fire an ID
+  /// lookup that always 404s. IDs are row keys: never zero-led, never long.
+  static int? _asCustomerId(String query) {
+    if (query.startsWith('0') || query.length > 7) return null;
+    final id = int.tryParse(query);
+    return (id == null || id <= 0) ? null : id;
+  }
+
+  /// Look customers up by anything the front desk is likely to have on hand:
+  /// name, phone, email, national ID or QR code (all matched server-side), plus
+  /// the customer ID — which `/search` does not cover, so a numeric query also
+  /// hits the by-ID endpoint and that exact match is surfaced first.
+  Future<List<CustomerModel>> searchCustomers(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return [];
+
+    final byId = <CustomerModel>[];
+    final matches = <CustomerModel>[];
+
+    final futures = <Future<void>>[
+      () async {
+        try {
+          final response = await _apiService.get(
+            ApiEndpoints.customerSearch,
+            queryParameters: {'q': q, 'branch_id': branchId, 'limit': 10},
+          );
+          if (response.statusCode == 200 && response.data != null) {
+            final data = response.data['data'] ?? response.data;
+            final items = data is Map
+                ? (data['items'] ?? data['customers'] ?? [])
+                : (data is List ? data : []);
+            for (final item in items as List) {
+              matches.add(CustomerModel.fromJson(Map<String, dynamic>.from(item as Map)));
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ Customer search failed for "$q": $e');
+        }
+      }(),
+      () async {
+        final id = _asCustomerId(q);
+        if (id == null) return;
+        try {
+          final response = await _apiService.get(ApiEndpoints.customerById(id));
+          if (response.statusCode == 200 && response.data != null) {
+            final data = response.data['data'] ?? response.data;
+            if (data is Map) {
+              byId.add(CustomerModel.fromJson(Map<String, dynamic>.from(data)));
+            }
+          }
+        } catch (e) {
+          // A miss here is normal — the query just isn't a customer ID.
+          debugPrint('ℹ️ No customer with id $q');
+        }
+      }(),
+    ];
+
+    await Future.wait(futures);
+
+    final seen = <int>{};
+    final results = <CustomerModel>[];
+    for (final customer in [...byId, ...matches]) {
+      if (customer.id == null || seen.add(customer.id!)) results.add(customer);
+    }
+    return results;
+  }
+
   Future<Map<String, dynamic>> registerCustomer(CustomerModel customer) async {
     try {
       // Prepare data with branch_id

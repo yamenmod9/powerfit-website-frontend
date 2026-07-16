@@ -11,6 +11,7 @@ class ApiEndpoints {
   
   // Customer Endpoints
   static const String customers = '/api/customers';
+  static const String customerSearch = '/api/customers/search'; // ?q= matches name/phone/email/national id/QR
   static String customerById(int id) => '/api/customers/$id';
   static const String registerCustomer = '/api/customers/register'; // POST to create new customer
   static String regenerateQRCode(int customerId) => '/api/customers/$customerId/regenerate-qr';
@@ -51,6 +52,11 @@ class ApiEndpoints {
   static const String reportsBranchComparison = '/api/reports/branch-comparison';
   static const String reportsEmployeePerformance = '/api/reports/employee-performance';
   
+  // Expense Endpoints (write side; /api/finance/expenses is the read side)
+  static const String expenses = '/api/expenses';
+  static String expenseById(int id) => '/api/expenses/$id';
+  static String reviewExpense(int id) => '/api/expenses/$id/review';
+
   // Finance Endpoints
   static const String financeExpenses = '/api/finance/expenses';
   static const String financeCashDifferences = '/api/finance/cash-differences';

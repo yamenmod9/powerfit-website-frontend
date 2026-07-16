@@ -19,6 +19,7 @@ class OwnerDashboardProvider extends ChangeNotifier {
   List<dynamic> _branchComparison = [];
   List<dynamic> _employeePerformance = [];
   List<dynamic> _complaints = [];
+  List<dynamic> _expenses = [];
 
   OwnerDashboardProvider(this._apiService);
 
@@ -34,6 +35,7 @@ class OwnerDashboardProvider extends ChangeNotifier {
   List<dynamic> get branchComparison => _branchComparison;
   List<dynamic> get employeePerformance => _employeePerformance;
   List<dynamic> get complaints => _complaints;
+  List<dynamic> get expenses => _expenses;
 
   void setSelectedBranch(int? branchId) {
     _selectedBranchId = branchId;
@@ -59,6 +61,7 @@ class OwnerDashboardProvider extends ChangeNotifier {
         _loadBranchComparison(),
         _loadEmployeePerformance(),
         _loadComplaints(),
+        _loadExpenses(),
       ]);
       _error = null;
     } catch (e) {
@@ -66,6 +69,36 @@ class OwnerDashboardProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Expense records for the money page. The dashboard endpoints only carry a
+  /// total, so the individual rows (and their approval state) come from
+  /// /api/finance/expenses.
+  Future<void> _loadExpenses() async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.financeExpenses,
+        queryParameters: {
+          if (_selectedBranchId != null) 'branch_id': _selectedBranchId,
+          'date_from': _startDate.toIso8601String().split('T')[0],
+          'date_to': _endDate.toIso8601String().split('T')[0],
+          'limit': 100,
+        },
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data['data'] ?? response.data;
+        if (data is Map) {
+          _expenses = List<dynamic>.from(data['items'] ?? data['expenses'] ?? []);
+        } else if (data is List) {
+          _expenses = List<dynamic>.from(data);
+        }
+        debugPrint('✅ Owner expenses loaded: ${_expenses.length}');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Owner expenses failed: $e');
+      _expenses = [];
     }
   }
 

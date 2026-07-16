@@ -5,6 +5,7 @@ import '../screens/activation_screen.dart';
 import '../screens/client_main_screen.dart';
 import '../screens/qr_screen.dart';
 import '../screens/subscription_screen.dart';
+import '../screens/payments_screen.dart';
 import '../screens/entry_history_screen.dart';
 import '../screens/change_password_screen.dart';
 import '../screens/settings_screen.dart';
@@ -76,6 +77,11 @@ class ClientRouter {
         path: '/subscription',
         name: 'subscription',
         builder: (context, state) => const SubscriptionScreen(),
+      ),
+      GoRoute(
+        path: '/payments',
+        name: 'payments',
+        builder: (context, state) => const PaymentsScreen(),
       ),
       GoRoute(
         path: '/history',

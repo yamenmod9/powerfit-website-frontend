@@ -3,7 +3,7 @@ Client routes - Mobile app endpoints for clients
 """
 from flask import Blueprint, request
 from datetime import datetime, timedelta
-from app.models import Customer, Subscription, SubscriptionStatus, EntryLog, EntryType
+from app.models import Customer, Subscription, SubscriptionStatus, EntryLog, EntryType, Transaction
 from app.services.qr_service import QRService
 from app.utils import success_response, error_response, paginate, format_pagination_response
 from app.utils.client_auth import client_token_required, get_current_client
@@ -341,6 +341,92 @@ def get_subscription_history():
             'current_page': current_page,
             'per_page': per_page
         }
+    })
+
+
+@client_bp.route('/payments', methods=['GET'])
+@client_token_required
+def get_client_payments():
+    """
+    Get every subscription the client has taken, with what they paid for it.
+
+    Amounts live on transactions, not subscriptions, so each subscription is
+    returned with its own transactions and their sum. Transactions that are not
+    tied to a subscription (ad-hoc payments) are grouped under 'other_payments'
+    so the grand total still reconciles with what the member actually paid.
+
+    Returns:
+        subscriptions: list of subscriptions, each with payments[] + total_paid
+        other_payments: payments not linked to any subscription
+        total_paid: grand total across everything
+        currency_amounts are net of discount
+    """
+    customer = get_current_client()
+
+    if not customer:
+        return error_response('Customer not found', 404)
+
+    subscriptions = Subscription.query.filter_by(
+        customer_id=customer.id
+    ).order_by(Subscription.created_at.desc()).all()
+
+    transactions = Transaction.query.filter_by(
+        customer_id=customer.id
+    ).order_by(Transaction.transaction_date.desc()).all()
+
+    def _payment_dict(txn):
+        return {
+            'id': txn.id,
+            'amount': float(txn.amount) - float(txn.discount or 0),
+            'gross_amount': float(txn.amount),
+            'discount': float(txn.discount or 0),
+            'payment_method': txn.payment_method.value if txn.payment_method else None,
+            'transaction_type': txn.transaction_type.value if txn.transaction_type else None,
+            'branch_name': txn.branch.name if txn.branch else None,
+            'description': txn.description,
+            'reference_number': txn.reference_number,
+            'date': txn.transaction_date.isoformat() if txn.transaction_date else None,
+        }
+
+    payments_by_subscription = {}
+    other_payments = []
+    for txn in transactions:
+        payment = _payment_dict(txn)
+        if txn.subscription_id:
+            payments_by_subscription.setdefault(txn.subscription_id, []).append(payment)
+        else:
+            other_payments.append(payment)
+
+    subscription_items = []
+    for sub in subscriptions:
+        payments = payments_by_subscription.get(sub.id, [])
+        subscription_items.append({
+            'id': sub.id,
+            'service_name': sub.service.name if sub.service else None,
+            'service_type': sub.service.service_type.value if sub.service else None,
+            'subscription_type': sub.subscription_type,
+            'branch_name': sub.branch.name if sub.branch else None,
+            'status': sub.status.value,
+            'start_date': sub.start_date.isoformat() if sub.start_date else None,
+            'end_date': sub.end_date.isoformat() if sub.end_date else None,
+            'created_at': sub.created_at.isoformat() if sub.created_at else None,
+            'display_label': sub.display_label,
+            'display_value': sub.display_value,
+            'payments': payments,
+            'payment_count': len(payments),
+            'total_paid': sum(p['amount'] for p in payments),
+        })
+
+    subscriptions_total = sum(item['total_paid'] for item in subscription_items)
+    other_total = sum(p['amount'] for p in other_payments)
+
+    return success_response({
+        'subscriptions': subscription_items,
+        'other_payments': other_payments,
+        'subscriptions_total': subscriptions_total,
+        'other_total': other_total,
+        'total_paid': subscriptions_total + other_total,
+        'subscription_count': len(subscription_items),
     })
 
 
