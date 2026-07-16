@@ -152,7 +152,13 @@ class ExpenseSchema(Schema):
     title = fields.Str(required=True, validate=validate.Length(min=3, max=200))
     description = fields.Str(allow_none=True)
     amount = fields.Float(required=True, validate=validate.Range(min=0))
-    category = fields.Str(allow_none=True)
+    # An enum column: dump the value the clients label, load the raw string for
+    # the route to parse. Plain fields.Str would serialise 'ExpenseCategory.RENT'.
+    category = fields.Function(
+        lambda obj: obj.category.value if getattr(obj.category, 'value', None) else None,
+        deserialize=lambda v: v,
+        allow_none=True,
+    )
     branch_id = fields.Int(required=True)
     branch_name = fields.Str(dump_only=True)
     status = fields.Function(

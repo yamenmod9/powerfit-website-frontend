@@ -116,8 +116,9 @@ class SubscriptionService:
             total_sessions=total_sessions,
             remaining_visits=remaining_visits,
             remaining_classes=remaining_classes,
+            created_by=created_by_user_id,
         )
-        
+
         db.session.add(subscription)
         db.session.flush()  # Get subscription ID
         

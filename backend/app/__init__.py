@@ -127,6 +127,74 @@ def _ensure_db_schema(app):
                     ))
                     db.session.commit()
                     app.logger.info('Auto-migration: added preferred_language column to customers table')
+
+            # Add created_by to subscriptions if missing.
+            #
+            # The model has declared it for a while but no migration ever added
+            # it, so databases older than that commit raise
+            # "no such column: subscriptions.created_by" on every Subscription
+            # read. Backfill attributes each subscription to whoever created its
+            # earliest transaction — the signup that opened it — which is what
+            # lets /reports/employee-performance report a retention rate.
+            if 'subscriptions' in existing_tables:
+                columns = [col['name'] for col in inspector.get_columns('subscriptions')]
+                if 'created_by' not in columns:
+                    db.session.execute(text(
+                        'ALTER TABLE subscriptions ADD COLUMN created_by INTEGER REFERENCES users(id)'
+                    ))
+                    db.session.commit()
+                    app.logger.info('Auto-migration: added created_by column to subscriptions table')
+
+                    if 'transactions' in existing_tables:
+                        db.session.execute(text('''
+                            UPDATE subscriptions
+                            SET created_by = (
+                                SELECT t.created_by FROM transactions t
+                                WHERE t.subscription_id = subscriptions.id
+                                  AND t.created_by IS NOT NULL
+                                ORDER BY t.created_at ASC, t.id ASC
+                                LIMIT 1
+                            )
+                            WHERE created_by IS NULL
+                        '''))
+                        db.session.commit()
+                        app.logger.info('Auto-migration: backfilled subscriptions.created_by from transactions')
+
+            # Normalise expenses.category to the ExpenseCategory value form.
+            #
+            # It used to be free text. SQLAlchemy only validates enum strings on
+            # read, so any stray value already on disk would raise LookupError
+            # and take the money page down — for a column whose whole job is to
+            # be grouped and filtered. Anything unrecognised is parked in OTHER:
+            # the money is real and still has to land somewhere in the P&L.
+            if 'expenses' in existing_tables:
+                from app.models.expense import ExpenseCategory
+                valid = {c.value for c in ExpenseCategory}
+                by_name = {c.name: c.value for c in ExpenseCategory}
+
+                stray = [
+                    row[0] for row in db.session.execute(text(
+                        'SELECT DISTINCT category FROM expenses WHERE category IS NOT NULL'
+                    )).fetchall()
+                    if row[0] not in valid
+                ]
+
+                for value in stray:
+                    text_value = str(value).strip()
+                    target = (
+                        text_value.lower() if text_value.lower() in valid
+                        else by_name.get(text_value.upper(), ExpenseCategory.OTHER.value)
+                    )
+                    db.session.execute(
+                        text('UPDATE expenses SET category = :target WHERE category = :old'),
+                        {'target': target, 'old': value},
+                    )
+
+                if stray:
+                    db.session.commit()
+                    app.logger.info(
+                        f'Auto-migration: normalised {len(stray)} expense category value(s): {stray}'
+                    )
         except Exception as e:
             app.logger.warning(f'Schema migration check: {e}')
 

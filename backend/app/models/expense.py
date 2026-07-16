@@ -13,6 +13,52 @@ class ExpenseStatus(enum.Enum):
     REJECTED = 'rejected'
 
 
+class ExpenseCategory(enum.Enum):
+    """
+    The spending side of the chart of accounts.
+
+    The union of what the two halves of the app already used while this was free
+    text: the record-expense dialog offered rent/salaries/marketing and friends,
+    while seed.py's templates also produce services, safety, insurance, training
+    and software. Both sets are kept so no existing row has to be reinterpreted.
+
+    Revenue has no twin here on purpose — Transaction.transaction_type already
+    enumerates the income lines (subscription, renewal, freeze, other).
+    """
+    RENT = 'rent'
+    SALARIES = 'salaries'
+    UTILITIES = 'utilities'
+    EQUIPMENT = 'equipment'
+    MAINTENANCE = 'maintenance'
+    SUPPLIES = 'supplies'
+    MARKETING = 'marketing'
+    INSURANCE = 'insurance'
+    TRAINING = 'training'
+    SERVICES = 'services'
+    SAFETY = 'safety'
+    SOFTWARE = 'software'
+    OTHER = 'other'
+
+    @classmethod
+    def parse(cls, value):
+        """
+        Resolve a category from an API string, by value ('rent') or name ('RENT').
+
+        Returns None for blank input; raises ValueError for anything unknown, so
+        a typo is rejected at the boundary rather than stored.
+        """
+        if value is None or str(value).strip() == '':
+            return None
+        text = str(value).strip()
+        try:
+            return cls(text.lower())
+        except ValueError:
+            try:
+                return cls[text.upper()]
+            except KeyError:
+                raise ValueError(f'Unknown expense category: {value}')
+
+
 class Expense(db.Model):
     """Expense model - Track business expenses"""
     __tablename__ = 'expenses'
@@ -23,7 +69,27 @@ class Expense(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
-    category = db.Column(db.String(100), nullable=True)  # e.g., 'maintenance', 'supplies', 'utilities'
+    # Stored as the enum's VALUE ('rent'), not its name — unlike the other enum
+    # columns in this database, which hold names ('APPROVED', 'SUBSCRIPTION').
+    # This column predates the enum as free text and every writer and reader
+    # already speaks the lowercase form: the rows on disk, seed.py's templates,
+    # the record-expense dialog, and the JSON the clients label. Matching it
+    # keeps all four working untouched.
+    #
+    # validate_strings makes a bad write fail at insert. Without it SQLAlchemy
+    # passes unknown strings straight through and only raises on the way back
+    # out, which turns one typo into a table nobody can read.
+    #
+    # Indexed: the money page filters on it and the reports group by it.
+    category = db.Column(
+        db.Enum(
+            ExpenseCategory,
+            values_callable=lambda enum: [member.value for member in enum],
+            validate_strings=True,
+        ),
+        nullable=True,
+        index=True,
+    )
     
     # Branch
     branch_id = db.Column(db.Integer, db.ForeignKey('branches.id'), nullable=False, index=True)
@@ -87,7 +153,9 @@ class Expense(db.Model):
             'title': self.title,
             'description': self.description,
             'amount': float(self.amount),
-            'category': self.category,
+            # The column is an enum now; the API keeps speaking the lowercase
+            # value the clients already map to labels.
+            'category': self.category.value if self.category else None,
             'branch_id': self.branch_id,
             'branch_name': self.branch.name,
             'status': self.status.value,

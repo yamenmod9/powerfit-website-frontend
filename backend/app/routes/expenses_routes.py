@@ -5,7 +5,7 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 from app.schemas import ExpenseSchema, ExpenseReviewSchema
-from app.models.expense import Expense, ExpenseStatus
+from app.models.expense import Expense, ExpenseStatus, ExpenseCategory
 from app.utils import (
     success_response, error_response, role_required,
     paginate, format_pagination_response, get_current_user
@@ -88,12 +88,22 @@ def create_expense():
     if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
         if user.branch_id and data['branch_id'] != user.branch_id:
             return error_response("Cannot create expense for another branch", 403)
-    
+
+    # Reject an unknown category at the boundary rather than storing a typo that
+    # would later break reads or land in the wrong P&L line.
+    try:
+        category = ExpenseCategory.parse(data.get('category'))
+    except ValueError as e:
+        return error_response(
+            str(e), 400,
+            {'category': [c.value for c in ExpenseCategory]},
+        )
+
     expense = Expense(
         title=data['title'],
         description=data.get('description'),
         amount=data['amount'],
-        category=data.get('category'),
+        category=category,
         branch_id=data['branch_id'],
         expense_date=data['expense_date'],
         created_by_id=user.id,

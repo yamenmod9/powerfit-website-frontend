@@ -63,7 +63,13 @@ class Transaction(db.Model):
         return f'<Transaction {self.id} - {self.amount} - {self.transaction_type.value}>'
 
     def to_dict(self):
-        """Convert to dictionary"""
+        """
+        Convert to dictionary.
+
+        Only the single-record endpoints use this (the list endpoints go through
+        TransactionSchema), so the extra relationship reads below cost one query
+        each rather than N — they carry what a printed receipt needs.
+        """
         return {
             'id': self.id,
             'amount': float(self.amount),
@@ -72,8 +78,13 @@ class Transaction(db.Model):
             'transaction_type': self.transaction_type.value,
             'branch_id': self.branch_id,
             'branch_name': self.branch.name,
+            'branch_address': self.branch.address,
+            'branch_phone': self.branch.phone,
+            'branch_city': self.branch.city,
             'customer_id': self.customer_id,
+            'customer_name': self.customer.full_name if self.customer else None,
             'subscription_id': self.subscription_id,
+            'service_name': self.subscription.service.name if self.subscription and self.subscription.service else None,
             'created_by': self.created_by,
             'created_by_name': self.created_by_user.full_name,
             'description': self.description,

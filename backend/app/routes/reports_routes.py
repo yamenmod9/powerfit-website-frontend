@@ -4,14 +4,15 @@ Maps /api/reports/* for Flutter app compatibility
 """
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
-from app.models import Transaction, Subscription, Customer, Branch, User
-from app.models.transaction import PaymentMethod
+from app.models import Transaction, Subscription, Customer, Branch, User, Expense
+from app.models.transaction import PaymentMethod, TransactionType
 from app.models.subscription import SubscriptionStatus
 from app.models.complaint import ComplaintStatus
+from app.models.expense import ExpenseStatus
 from app.utils import success_response, error_response, get_current_user, role_required, get_current_gym_id
 from app.models.user import UserRole
 from app.extensions import db
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy import func, and_
 from collections import defaultdict
 
@@ -89,6 +90,19 @@ def get_revenue_report():
         if key in revenue_by_payment_method:
             revenue_by_payment_method[key] += float(t.amount) - float(t.discount or 0)
 
+    # Revenue by category — the income side of the chart of accounts.
+    #
+    # There is no Transaction.category column and deliberately so: transaction_type
+    # already enumerates exactly the income lines a P&L wants (subscription,
+    # renewal, freeze, other), so a second field would restate it and drift.
+    # Every type is seeded at 0.0 so a line never silently vanishes from a report.
+    revenue_by_category = {t_type.value: 0.0 for t_type in TransactionType}
+    transactions_by_category = {t_type.value: 0 for t_type in TransactionType}
+    for t in transactions:
+        key = t.transaction_type.value
+        revenue_by_category[key] += float(t.amount) - float(t.discount or 0)
+        transactions_by_category[key] += 1
+
     # Format response
     revenue_by_branch_list = [
         {
@@ -110,7 +124,17 @@ def get_revenue_report():
         'total_revenue': total_revenue,
         'revenue_by_branch': revenue_by_branch_list,
         'revenue_by_service': revenue_by_service_list,
-        'revenue_by_payment_method': revenue_by_payment_method
+        'revenue_by_payment_method': revenue_by_payment_method,
+        'revenue_by_category': [
+            {
+                'category': category,
+                'total': total,
+                'count': transactions_by_category[category]
+            }
+            for category, total in sorted(
+                revenue_by_category.items(), key=lambda kv: kv[1], reverse=True
+            )
+        ]
     })
 
 
@@ -357,13 +381,209 @@ def get_monthly_report():
     })
 
 
+@reports_bp.route('/revenue-trend', methods=['GET'])
+@jwt_required()
+def get_revenue_trend():
+    """
+    Revenue as a time series, for trend charts.
+
+    /daily, /weekly and /monthly each answer for a single window; this returns
+    one point per period so a chart can plot movement over time in one request.
+
+    Empty periods are returned with revenue 0.0 rather than omitted — a day with
+    no sales genuinely earned nothing, and a gapless series keeps the x-axis
+    honest about the passage of time.
+
+    Query params:
+        - period: daily | weekly | monthly (default: daily)
+        - buckets: how many periods back, including the current one (max 36)
+        - branch_id: Filter by branch
+    """
+    period = (request.args.get('period') or 'daily').lower()
+    if period not in ('daily', 'weekly', 'monthly'):
+        return error_response('period must be one of: daily, weekly, monthly', 400)
+
+    default_buckets = {'daily': 14, 'weekly': 8, 'monthly': 6}[period]
+    buckets = request.args.get('buckets', default_buckets, type=int)
+    buckets = max(1, min(buckets, 36))
+    branch_id = request.args.get('branch_id', type=int)
+
+    today = datetime.utcnow().date()
+
+    # Bucket start dates, oldest first.
+    if period == 'daily':
+        starts = [today - timedelta(days=i) for i in range(buckets - 1, -1, -1)]
+    elif period == 'weekly':
+        current_week = today - timedelta(days=today.weekday())
+        starts = [current_week - timedelta(weeks=i) for i in range(buckets - 1, -1, -1)]
+    else:
+        starts = []
+        for i in range(buckets - 1, -1, -1):
+            month = today.month - i
+            year = today.year
+            while month <= 0:
+                month += 12
+                year -= 1
+            starts.append(date(year, month, 1))
+
+    def bucket_of(day):
+        if period == 'daily':
+            return day
+        if period == 'weekly':
+            return day - timedelta(days=day.weekday())
+        return day.replace(day=1)
+
+    current_user = get_current_user()
+
+    # One query for the whole range; bucketing happens in memory rather than
+    # per-period round trips.
+    query = Transaction.query.filter(
+        and_(
+            Transaction.created_at >= datetime.combine(starts[0], datetime.min.time()),
+            Transaction.created_at <= datetime.combine(today, datetime.max.time())
+        )
+    )
+
+    # Never let one gym's revenue leak into another's chart.
+    gym_id = get_current_gym_id(current_user)
+    if gym_id:
+        query = query.join(Branch, Transaction.branch_id == Branch.id).filter(
+            Branch.gym_id == gym_id
+        )
+
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
+        query = query.filter(Transaction.branch_id == current_user.branch_id)
+    elif branch_id:
+        query = query.filter(Transaction.branch_id == branch_id)
+
+    revenue_by_bucket = defaultdict(float)
+    count_by_bucket = defaultdict(int)
+    for t in query.all():
+        key = bucket_of(t.created_at.date())
+        revenue_by_bucket[key] += float(t.amount) - float(t.discount or 0)
+        count_by_bucket[key] += 1
+
+    def label_of(start):
+        if period == 'daily':
+            return start.strftime('%d %b')
+        if period == 'weekly':
+            return start.strftime('%d %b')
+        return start.strftime('%b %Y')
+
+    points = [
+        {
+            'date': start.isoformat(),
+            'label': label_of(start),
+            'revenue': revenue_by_bucket.get(start, 0.0),
+            'transactions': count_by_bucket.get(start, 0)
+        }
+        for start in starts
+    ]
+
+    return success_response({
+        'period': period,
+        'buckets': buckets,
+        'start_date': starts[0].isoformat(),
+        'end_date': today.isoformat(),
+        'total_revenue': float(sum(p['revenue'] for p in points)),
+        'points': points
+    })
+
+
+@reports_bp.route('/expenses-by-category', methods=['GET'])
+@jwt_required()
+def get_expenses_by_category():
+    """
+    Expense totals grouped by category, for breakdown charts.
+
+    Aggregated in SQL rather than by summing a page of /finance/expenses, so the
+    totals stay correct however many expenses fall in the window.
+
+    Dates filter on expense_date (when the money was spent) rather than
+    created_at (when the row was filed), since this feeds accounting views.
+
+    Query params:
+        - date_from / date_to: Expense date range (YYYY-MM-DD)
+        - branch_id: Filter by branch
+        - status: pending | approved | rejected | all (default: approved)
+    """
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    branch_id = request.args.get('branch_id', type=int)
+    status = (request.args.get('status') or 'approved').lower()
+
+    query = db.session.query(
+        Expense.category,  # an ExpenseCategory member, unwrapped below
+        func.sum(Expense.amount).label('total'),
+        func.count(Expense.id).label('count')
+    )
+
+    # 'all' opts out of the approved-only default (e.g. to include pending spend).
+    if status != 'all':
+        try:
+            query = query.filter(Expense.status == ExpenseStatus(status))
+        except ValueError:
+            return error_response('status must be one of: pending, approved, rejected, all', 400)
+
+    current_user = get_current_user()
+
+    # Never let one gym's spending leak into another's breakdown.
+    gym_id = get_current_gym_id(current_user)
+    if gym_id:
+        query = query.join(Branch, Expense.branch_id == Branch.id).filter(
+            Branch.gym_id == gym_id
+        )
+
+    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER,
+                                 UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT]:
+        query = query.filter(Expense.branch_id == current_user.branch_id)
+    elif branch_id:
+        query = query.filter(Expense.branch_id == branch_id)
+
+    if date_from:
+        try:
+            query = query.filter(Expense.expense_date >= datetime.strptime(date_from, '%Y-%m-%d').date())
+        except ValueError:
+            return error_response('Invalid date format. Use YYYY-MM-DD', 400)
+
+    if date_to:
+        try:
+            query = query.filter(Expense.expense_date <= datetime.strptime(date_to, '%Y-%m-%d').date())
+        except ValueError:
+            return error_response('Invalid date format. Use YYYY-MM-DD', 400)
+
+    rows = query.group_by(Expense.category).all()
+
+    categories = [
+        {
+            # row[0] is an ExpenseCategory; keep emitting the lowercase value the
+            # clients label. Uncategorised spend is real money and still has to
+            # show up somewhere.
+            'category': row[0].value if row[0] else 'uncategorized',
+            'total': float(row[1] or 0),
+            'count': int(row[2] or 0)
+        }
+        for row in rows
+    ]
+    categories.sort(key=lambda c: c['total'], reverse=True)
+
+    return success_response({
+        'status': status,
+        'total': float(sum(c['total'] for c in categories)),
+        'categories': categories
+    })
+
+
 @reports_bp.route('/branch-comparison', methods=['GET'])
 @jwt_required()
-@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT])
+@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_MANAGER])
 def get_branch_comparison():
     """
     Compare performance across all branches
-    
+
+    Branch managers receive the same report scoped to their own branch only —
+    they never see peer branches' revenue.
+
     Query params:
         - start_date: Start date (YYYY-MM-DD)
         - end_date: End date (YYYY-MM-DD)
@@ -396,12 +616,20 @@ def get_branch_comparison():
     
     current_user = get_current_user()
     gym_id = get_current_gym_id(current_user)
-    
+
     branch_query = Branch.query.filter_by(is_active=True)
     if gym_id:
         branch_query = branch_query.filter_by(gym_id=gym_id)
+
+    # Branch managers get the same report scoped to their own branch — never a
+    # view of peer branches' revenue.
+    if current_user.role == UserRole.BRANCH_MANAGER:
+        if not current_user.branch_id:
+            return success_response([])
+        branch_query = branch_query.filter(Branch.id == current_user.branch_id)
+
     branches = branch_query.all()
-    
+
     branch_data = []
     
     for branch in branches:
@@ -544,6 +772,43 @@ def get_employee_performance():
         transactions_count = len(transactions)
         total_revenue = float(sum(float(t.amount) - float(t.discount or 0) for t in transactions))
 
+        # Share of this staff member's sales that were renewals rather than new
+        # business. Null rather than 0 when they sold nothing in the window, so
+        # "no sales" never renders as "0% renewals".
+        renewals_count = sum(
+            1 for t in transactions if t.transaction_type == TransactionType.RENEWAL
+        )
+        renewal_rate = (
+            renewals_count / transactions_count * 100 if transactions_count else None
+        )
+
+        # Retention: of the customers this staff member signed up during the
+        # window, how many still hold an active subscription now. Attribution is
+        # via Subscription.created_by, so it credits whoever filed the signup.
+        signed_customer_ids = {
+            row[0]
+            for row in db.session.query(Subscription.customer_id).filter(
+                and_(
+                    Subscription.created_by == staff.id,
+                    Subscription.created_at >= datetime.combine(month_start.date(), datetime.min.time()),
+                    Subscription.created_at <= datetime.combine(month_end.date(), datetime.max.time())
+                )
+            ).distinct()
+        }
+        if signed_customer_ids:
+            retained_customer_ids = {
+                row[0]
+                for row in db.session.query(Subscription.customer_id).filter(
+                    and_(
+                        Subscription.customer_id.in_(signed_customer_ids),
+                        Subscription.status == SubscriptionStatus.ACTIVE
+                    )
+                ).distinct()
+            }
+            retention_rate = len(retained_customer_ids) / len(signed_customer_ids) * 100
+        else:
+            retention_rate = None
+
         performance_data.append({
             'staff_id': staff.id,
             'staff_name': staff.username,
@@ -551,7 +816,11 @@ def get_employee_performance():
             'role': staff.role.value,
             'branch_name': staff.branch.name if staff.branch else 'N/A',
             'transactions_count': transactions_count,
-            'total_revenue': total_revenue
+            'total_revenue': total_revenue,
+            'renewals_count': renewals_count,
+            'renewal_rate': renewal_rate,
+            'customers_signed': len(signed_customer_ids),
+            'retention_rate': retention_rate
         })
     
     # Sort by revenue
