@@ -17,6 +17,7 @@ class UserRole(enum.Enum):
     ACCOUNTANT = 'accountant'
     BRANCH_ACCOUNTANT = 'branch_accountant'
     CENTRAL_ACCOUNTANT = 'central_accountant'
+    REGIONAL_ACCOUNTANT = 'regional_accountant'
 
 
 # Rank of each role in the staff hierarchy. Higher outranks lower; a user may
@@ -27,14 +28,20 @@ ROLE_RANK = {
     UserRole.REGIONAL_MANAGER: 80,
     UserRole.BRANCH_MANAGER: 70,
     UserRole.CENTRAL_ACCOUNTANT: 60,
+    UserRole.REGIONAL_ACCOUNTANT: 55,
     UserRole.BRANCH_ACCOUNTANT: 50,
     UserRole.ACCOUNTANT: 50,
     UserRole.FRONT_DESK: 10,
 }
 
+# Roles whose scope is a *group* of branches (managed_branches) rather than
+# the single branch_id every other branch-level role carries.
+BRANCH_GROUP_ROLES = (UserRole.REGIONAL_MANAGER, UserRole.REGIONAL_ACCOUNTANT)
 
-# Branches assigned to a regional manager. A regional manager has full
-# branch-manager powers over every branch in this set.
+
+# Branches assigned to a branch-group role (regional manager / regional
+# accountant). The member has their tier's full powers over every branch in
+# this set.
 regional_manager_branches = db.Table(
     'regional_manager_branches',
     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),

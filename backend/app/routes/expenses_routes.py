@@ -115,9 +115,9 @@ def create_expense():
 
 @expenses_bp.route('/<int:expense_id>/review', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT, UserRole.BRANCH_MANAGER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.BRANCH_MANAGER)
 def review_expense(expense_id):
-    """Approve or reject expense (managers review only their own branches)"""
+    """Approve or reject expense (managers/accountants review only their own branches)"""
     expense = db.session.get(Expense, expense_id)
 
     if not expense:

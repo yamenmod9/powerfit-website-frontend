@@ -133,6 +133,14 @@ GYM_SPECS = [
             ('accountant1', 'Omar Farid', '0203330001'),
             ('accountant2', 'Hassan Nasser', '0203330002'),
         ],
+        # Regional accountants mirror the regional managers' split: full money
+        # control over a branch group, nothing outside it.
+        'regional_accountants': [
+            {'username': 'raccountant1', 'full_name': 'Injy Sabbour', 'phone': '0205550001',
+             'label': 'Cairo & Giza Region', 'branch_codes': ['DRG001', 'PHX001', 'FLC001']},
+            {'username': 'raccountant2', 'full_name': 'Waleed Hegazy', 'phone': '0205550002',
+             'label': 'Coastal Region', 'branch_codes': ['TGR001', 'SHK001', 'LON001']},
+        ],
         'branch_accountants': [
             ('baccountant1', 'Amr Saleh', '0204440001', 'DRG001'),
             ('baccountant2', 'Tarek Hamdy', '0204440002', 'PHX001'),
@@ -192,6 +200,7 @@ GYM_SPECS = [
         'central_accountants': [
             ('it_accountant1', 'Nourhan Gamal', '0203331001'),
         ],
+        'regional_accountants': [],
         'branch_accountants': [],
         'reception': [
             ('it_reception1', 'Salma Wagdy', '0202221001', 'ITD001', True),
@@ -226,6 +235,7 @@ GYM_SPECS = [
             ('aq_manager1', 'Ziad Helmy', '0201113001', 'AQZ001'),
         ],
         'central_accountants': [],
+        'regional_accountants': [],
         'branch_accountants': [],
         'reception': [
             ('aq_reception1', 'Farida Emad', '0202222001', 'AQZ001', True),
@@ -472,6 +482,12 @@ def create_staff(gym, branches, spec):
         add(username, name, phone, UserRole.CENTRAL_ACCOUNTANT, 'accountant123')
         for username, name, phone in spec['central_accountants']
     ]
+    regional_accountants = []
+    for region in spec['regional_accountants']:
+        user = add(region['username'], region['full_name'], region['phone'],
+                   UserRole.REGIONAL_ACCOUNTANT, 'accountant123')
+        user.managed_branches = [branches[code] for code in region['branch_codes']]
+        regional_accountants.append(user)
     branch_accountants = [
         add(username, name, phone, UserRole.BRANCH_ACCOUNTANT, 'accountant123', branches[code])
         for username, name, phone, code in spec['branch_accountants']
@@ -497,7 +513,7 @@ def create_staff(gym, branches, spec):
         )
 
     print(f'  ✓ Staff: 1 owner, {len(regionals)} regional, {len(managers)} branch managers, '
-          f'{len(central_accountants) + len(branch_accountants)} accountants, '
+          f'{len(central_accountants) + len(regional_accountants) + len(branch_accountants)} accountants, '
           f'{len(reception)} front desk')
     for region, user in zip(spec['regions'], regionals):
         names = ', '.join(branches[c].name for c in region['branch_codes'])
@@ -508,6 +524,7 @@ def create_staff(gym, branches, spec):
         'regionals': regionals,
         'managers': managers,
         'central_accountants': central_accountants,
+        'regional_accountants': regional_accountants,
         'branch_accountants': branch_accountants,
         'reception': reception,
         'desk_by_branch': desk_by_branch,
@@ -1515,6 +1532,13 @@ def print_summary(worlds):
 
         for username, name, _phone in spec['central_accountants']:
             print(f'  [ACCT-C]   {username} / accountant123  — money across all branches')
+
+        for region in spec['regional_accountants']:
+            names = ', '.join(
+                b['name'] for b in spec['branches'] if b['code'] in region['branch_codes']
+            )
+            print(f"  [ACCT-R]   {region['username']} / accountant123"
+                  f"  — money for {region['label']}: {names}")
 
         for username, name, _phone, code in spec['branch_accountants']:
             branch = next(b['name'] for b in spec['branches'] if b['code'] == code)

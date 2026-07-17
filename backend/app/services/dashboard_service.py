@@ -121,19 +121,27 @@ class DashboardService:
         }
     
     @staticmethod
-    def get_accountant_dashboard(branch_id=None):
-        """Get accountant dashboard"""
+    def get_accountant_dashboard(branch_id=None, branch_ids=None):
+        """Get accountant dashboard.
+
+        branch_id restricts to one branch; branch_ids to a set (regional
+        accountants). Passing neither means gym-wide (central tier).
+        """
         today = date.today()
         current_month_start = today.replace(day=1)
         last_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
-        
+
+        def scoped(query, column):
+            if branch_id:
+                return query.filter(column == branch_id)
+            if branch_ids is not None:
+                return query.filter(column.in_(branch_ids))
+            return query
+
         # Daily sales (today)
-        today_transactions = Transaction.query.filter(
+        today_transactions = scoped(Transaction.query.filter(
             func.date(Transaction.transaction_date) == today
-        )
-        
-        if branch_id:
-            today_transactions = today_transactions.filter_by(branch_id=branch_id)
+        ), Transaction.branch_id)
         
         today_summary = {
             'cash': 0,
@@ -153,31 +161,24 @@ class DashboardService:
                 today_summary['transfer'] += amount
         
         # Monthly revenue
-        current_month_revenue = db.session.query(func.sum(Transaction.amount)).filter(
+        current_month_revenue = scoped(db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.transaction_date >= current_month_start
-        )
-        
-        last_month_revenue = db.session.query(func.sum(Transaction.amount)).filter(
+        ), Transaction.branch_id)
+
+        last_month_revenue = scoped(db.session.query(func.sum(Transaction.amount)).filter(
             and_(
                 Transaction.transaction_date >= last_month_start,
                 Transaction.transaction_date < current_month_start
             )
-        )
-        
-        if branch_id:
-            current_month_revenue = current_month_revenue.filter_by(branch_id=branch_id)
-            last_month_revenue = last_month_revenue.filter_by(branch_id=branch_id)
-        
+        ), Transaction.branch_id)
+
         current_month_total = current_month_revenue.scalar() or 0
         last_month_total = last_month_revenue.scalar() or 0
-        
+
         # Expenses
-        expenses_query = Expense.query.filter(
+        expenses_query = scoped(Expense.query.filter(
             Expense.expense_date >= current_month_start
-        )
-        
-        if branch_id:
-            expenses_query = expenses_query.filter_by(branch_id=branch_id)
+        ), Expense.branch_id)
         
         approved_expenses = expenses_query.filter(
             Expense.status == ExpenseStatus.APPROVED

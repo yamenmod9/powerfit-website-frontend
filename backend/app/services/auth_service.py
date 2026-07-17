@@ -4,7 +4,7 @@ Authentication service - handles login, JWT, and user management
 from datetime import datetime
 from flask_jwt_extended import create_access_token, create_refresh_token
 from app.extensions import db
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, BRANCH_GROUP_ROLES
 from app.models.gym import Gym
 
 
@@ -80,10 +80,10 @@ class AuthService:
         if role in branch_specific_roles and not data.get('branch_id'):
             return None, f"{role.value} must be assigned to a branch"
 
-        # Regional managers need a branch group instead of a single branch
+        # Regional roles need a branch group instead of a single branch
         managed_branch_ids = data.get('managed_branch_ids') or []
-        if role == UserRole.REGIONAL_MANAGER and not managed_branch_ids:
-            return None, "regional_manager must be assigned at least one branch"
+        if role in BRANCH_GROUP_ROLES and not managed_branch_ids:
+            return None, f"{role.value} must be assigned at least one branch"
 
         # Create user
         user = User(
@@ -98,7 +98,7 @@ class AuthService:
         )
         user.set_password(data['password'])
 
-        if role == UserRole.REGIONAL_MANAGER:
+        if role in BRANCH_GROUP_ROLES:
             from app.models.branch import Branch
             branches = Branch.query.filter(Branch.id.in_(managed_branch_ids)).all()
             if len(branches) != len(set(managed_branch_ids)):
@@ -140,7 +140,7 @@ class AuthService:
             user.is_active = data['is_active']
         if 'branch_id' in data:
             user.branch_id = data['branch_id']
-        if 'managed_branch_ids' in data and user.role == UserRole.REGIONAL_MANAGER:
+        if 'managed_branch_ids' in data and user.role in BRANCH_GROUP_ROLES:
             from app.models.branch import Branch
             ids = data['managed_branch_ids'] or []
             user.managed_branches = Branch.query.filter(Branch.id.in_(ids)).all()

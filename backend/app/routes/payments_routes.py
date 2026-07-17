@@ -6,7 +6,11 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from app.models import Transaction, DailyClosing, Branch
 from app.models.transaction import PaymentMethod
-from app.utils import success_response, error_response, get_current_user, role_required, paginate, format_pagination_response
+from app.utils import (
+    success_response, error_response, get_current_user, role_required,
+    paginate, format_pagination_response, get_accessible_branch_ids,
+    scope_query_to_branches
+)
 from app.models.user import UserRole
 from app.extensions import db
 from app.schemas import TransactionSchema, DailyClosingSchema
@@ -43,11 +47,7 @@ def get_payments():
     query = Transaction.query
     
     # Role-based filtering
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if current_user.branch_id:
-            query = query.filter(Transaction.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Transaction.branch_id == branch_id)
+    query = scope_query_to_branches(query, Transaction.branch_id, current_user, branch_id)
     
     # Payment method filter
     if payment_method:
@@ -100,17 +100,17 @@ def get_payment(payment_id):
     
     # Check access
     current_user = get_current_user()
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if current_user.branch_id and transaction.branch_id != current_user.branch_id:
-            return error_response("Access denied", 403)
-    
+    accessible = get_accessible_branch_ids(current_user)
+    if accessible is not None and transaction.branch_id not in accessible:
+        return error_response("Access denied", 403)
+
     schema = TransactionSchema()
     return success_response(schema.dump(transaction))
 
 
 @payments_bp.route('/record', methods=['POST'])
 @jwt_required()
-@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK])
+@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT])
 def record_payment():
     """
     Record a new payment/transaction
@@ -141,9 +141,9 @@ def record_payment():
     
     # Verify branch access
     current_user = get_current_user()
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if current_user.branch_id and subscription.branch_id != current_user.branch_id:
-            return error_response('Access denied', 403)
+    accessible = get_accessible_branch_ids(current_user)
+    if accessible is not None and subscription.branch_id not in accessible:
+        return error_response('Access denied', 403)
     
     # Create transaction
     try:
@@ -171,7 +171,7 @@ def record_payment():
 
 @payments_bp.route('/daily-closing', methods=['POST'])
 @jwt_required()
-@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK])
+@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT])
 def daily_closing():
     """
     Create daily closing record

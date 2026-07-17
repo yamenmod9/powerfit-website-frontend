@@ -4,7 +4,7 @@ Utility functions and decorators
 from functools import wraps
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, BRANCH_GROUP_ROLES
 from app.extensions import db
 
 
@@ -35,9 +35,15 @@ def role_required(*allowed_roles):
                 return jsonify({'success': False, 'error': 'User account is inactive'}), 403
 
             allowed = user.role in allowed_roles
-            # Regional managers can do anything a branch manager can
+            # Regional roles inherit their tier's branch-level permissions:
+            # a regional manager can do anything a branch manager can, a
+            # regional accountant anything a branch accountant can. Their
+            # scope (which branches) is enforced separately.
             if not allowed and user.role == UserRole.REGIONAL_MANAGER:
                 allowed = UserRole.BRANCH_MANAGER in allowed_roles
+            if not allowed and user.role == UserRole.REGIONAL_ACCOUNTANT:
+                allowed = (UserRole.BRANCH_ACCOUNTANT in allowed_roles
+                           or UserRole.ACCOUNTANT in allowed_roles)
             if not allowed:
                 return jsonify({'success': False, 'error': 'Insufficient permissions'}), 403
 
@@ -65,8 +71,8 @@ def branch_access_required(fn):
         if user.role in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
             return fn(*args, **kwargs)
 
-        # Regional managers can access any branch in their managed group
-        if user.role == UserRole.REGIONAL_MANAGER:
+        # Branch-group roles can access any branch in their managed group
+        if user.role in BRANCH_GROUP_ROLES:
             requested_branch_id = kwargs.get('branch_id')
             if requested_branch_id and requested_branch_id not in user.managed_branch_ids:
                 return jsonify({'success': False, 'error': 'Access denied to this branch'}), 403
@@ -107,7 +113,7 @@ def get_accessible_branch_ids(user=None):
     # Legacy plain 'accountant' with no home branch acts as a central accountant
     if user.role == UserRole.ACCOUNTANT and not user.branch_id:
         return None
-    if user.role == UserRole.REGIONAL_MANAGER:
+    if user.role in BRANCH_GROUP_ROLES:
         return user.managed_branch_ids
     return [user.branch_id] if user.branch_id else []
 

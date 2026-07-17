@@ -9,7 +9,8 @@ from app.models.daily_closing import DailyClosing
 from app.models.transaction import Transaction, PaymentMethod
 from app.utils import (
     success_response, error_response, role_required,
-    paginate, format_pagination_response, get_current_user
+    paginate, format_pagination_response, get_current_user,
+    get_accessible_branch_ids, scope_query_to_branches
 )
 from app.models.user import UserRole
 from app.extensions import db
@@ -33,11 +34,7 @@ def get_daily_closings():
     query = DailyClosing.query
     
     # Branch filtering based on role
-    if user.role in [UserRole.BRANCH_ACCOUNTANT, UserRole.BRANCH_MANAGER]:
-        if user.branch_id:
-            query = query.filter_by(branch_id=user.branch_id)
-    elif branch_id:
-        query = query.filter_by(branch_id=branch_id)
+    query = scope_query_to_branches(query, DailyClosing.branch_id, user, branch_id)
     
     # Date filtering
     if start_date:
@@ -71,16 +68,16 @@ def get_daily_closing(closing_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role in [UserRole.BRANCH_ACCOUNTANT, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK]:
-        if user.branch_id and closing.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
-    
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None and closing.branch_id not in accessible:
+        return error_response("Access denied", 403)
+
     return success_response(closing.to_dict())
 
 
 @daily_closing_bp.route('/calculate', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT)
 def calculate_expected_cash():
     """Calculate expected cash for a given date and branch"""
     data = request.json
@@ -97,12 +94,12 @@ def calculate_expected_cash():
         return error_response("Invalid date format. Use YYYY-MM-DD", 400)
     
     user = get_current_user()
-    
+
     # Check branch access
-    if user.role in [UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK]:
-        if user.branch_id != branch_id:
-            return error_response("Access denied to this branch", 403)
-    
+    _accessible = get_accessible_branch_ids(user)
+    if _accessible is not None and branch_id not in _accessible:
+        return error_response("Access denied to this branch", 403)
+
     # Calculate totals from transactions
     transactions = Transaction.query.filter(
         and_(
@@ -139,7 +136,7 @@ def calculate_expected_cash():
 
 @daily_closing_bp.route('', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT)
 def create_daily_closing():
     """Create daily closing (end of shift)"""
     data = request.json
@@ -163,12 +160,12 @@ def create_daily_closing():
         return error_response("Invalid date format. Use YYYY-MM-DD", 400)
     
     user = get_current_user()
-    
+
     # Check branch access
-    if user.role in [UserRole.BRANCH_MANAGER, UserRole.FRONT_DESK]:
-        if user.branch_id != branch_id:
-            return error_response("Access denied to this branch", 403)
-    
+    _accessible = get_accessible_branch_ids(user)
+    if _accessible is not None and branch_id not in _accessible:
+        return error_response("Access denied to this branch", 403)
+
     # Check if closing already exists for this date and branch
     existing = DailyClosing.query.filter(
         and_(

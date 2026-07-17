@@ -118,17 +118,21 @@ def get_owner_dashboard():
 @jwt_required()
 @role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT)
 def get_accountant_dashboard():
-    """Get accountant dashboard"""
+    """Get accountant dashboard.
+
+    Scope by tier: central sees the whole gym, a regional accountant their
+    branch group, a branch accountant their single branch.
+    """
     user = get_current_user()
-    
-    # Branch accountants can only see their branch
-    branch_id = None
-    if user.role in [UserRole.ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT]:
-        branch_id = user.branch_id
+    requested_branch_id = request.args.get('branch_id', type=int)
+    accessible = get_accessible_branch_ids(user)
+
+    if accessible is None:
+        data = DashboardService.get_accountant_dashboard(branch_id=requested_branch_id)
+    elif requested_branch_id and requested_branch_id in accessible:
+        data = DashboardService.get_accountant_dashboard(branch_id=requested_branch_id)
     else:
-        branch_id = request.args.get('branch_id', type=int)
-    
-    data = DashboardService.get_accountant_dashboard(branch_id)
+        data = DashboardService.get_accountant_dashboard(branch_ids=accessible)
     return success_response(data)
 
 
