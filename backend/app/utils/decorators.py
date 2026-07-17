@@ -13,6 +13,9 @@ def role_required(*allowed_roles):
     Decorator to check if user has required role
     Usage: @role_required(UserRole.OWNER, UserRole.BRANCH_MANAGER)
            @role_required([UserRole.OWNER, UserRole.BRANCH_MANAGER])  # also supported
+
+    A regional manager inherits every permission a branch manager has (their
+    scope — which branches — is enforced separately by the branch filters).
     """
     # Flatten: if caller passed a single list/tuple, unpack it
     if len(allowed_roles) == 1 and isinstance(allowed_roles[0], (list, tuple)):
@@ -24,16 +27,20 @@ def role_required(*allowed_roles):
             verify_jwt_in_request()
             user_id = int(get_jwt_identity())
             user = db.session.get(User, user_id)
-            
+
             if not user:
                 return jsonify({'success': False, 'error': 'Session expired. Please log in again.'}), 401
-            
+
             if not user.is_active:
                 return jsonify({'success': False, 'error': 'User account is inactive'}), 403
-            
-            if user.role not in allowed_roles:
+
+            allowed = user.role in allowed_roles
+            # Regional managers can do anything a branch manager can
+            if not allowed and user.role == UserRole.REGIONAL_MANAGER:
+                allowed = UserRole.BRANCH_MANAGER in allowed_roles
+            if not allowed:
                 return jsonify({'success': False, 'error': 'Insufficient permissions'}), 403
-            
+
             return fn(*args, **kwargs)
         return wrapper
     return decorator
@@ -57,16 +64,23 @@ def branch_access_required(fn):
         # Owner, super admin, and central accountant can access all branches
         if user.role in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
             return fn(*args, **kwargs)
-        
+
+        # Regional managers can access any branch in their managed group
+        if user.role == UserRole.REGIONAL_MANAGER:
+            requested_branch_id = kwargs.get('branch_id')
+            if requested_branch_id and requested_branch_id not in user.managed_branch_ids:
+                return jsonify({'success': False, 'error': 'Access denied to this branch'}), 403
+            return fn(*args, **kwargs)
+
         # Branch-specific roles must have branch_id
         if not user.branch_id:
             return jsonify({'success': False, 'error': 'User not assigned to any branch'}), 403
-        
+
         # Check if the requested branch_id matches user's branch
         requested_branch_id = kwargs.get('branch_id')
         if requested_branch_id and requested_branch_id != user.branch_id:
             return jsonify({'success': False, 'error': 'Access denied to this branch'}), 403
-        
+
         return fn(*args, **kwargs)
     return wrapper
 
@@ -76,6 +90,64 @@ def get_current_user():
     verify_jwt_in_request()
     user_id = int(get_jwt_identity())
     return db.session.get(User, user_id)
+
+
+def get_accessible_branch_ids(user=None):
+    """Branch scope for the current user.
+
+    Returns None when the user is unrestricted (super admin, owner, central
+    accountant — gym scoping still applies elsewhere), otherwise the list of
+    branch IDs the user may see: the managed group for a regional manager, or
+    the single home branch for branch-level roles.
+    """
+    if user is None:
+        user = get_current_user()
+    if user.role in (UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT):
+        return None
+    # Legacy plain 'accountant' with no home branch acts as a central accountant
+    if user.role == UserRole.ACCOUNTANT and not user.branch_id:
+        return None
+    if user.role == UserRole.REGIONAL_MANAGER:
+        return user.managed_branch_ids
+    return [user.branch_id] if user.branch_id else []
+
+
+def user_can_access_branch(branch, user=None):
+    """Whether the user may read/write this specific branch.
+
+    Two gates, both required: the branch must belong to the user's gym, and it
+    must fall inside their branch scope. The gym gate is the one that matters —
+    without it an owner can address another gym's branch by id, since their own
+    branch scope is unrestricted by design.
+    """
+    if user is None:
+        user = get_current_user()
+    if user.role == UserRole.SUPER_ADMIN:
+        return True
+
+    gym_id = get_current_gym_id(user)
+    if gym_id is not None and branch.gym_id != gym_id:
+        return False
+
+    ids = get_accessible_branch_ids(user)
+    return ids is None or branch.id in ids
+
+
+def scope_query_to_branches(query, branch_column, user=None, requested_branch_id=None):
+    """Apply the user's branch scope to a query.
+
+    Unrestricted users get the requested branch filter (if any); restricted
+    users are clamped to their accessible branches, optionally narrowed to a
+    single requested branch within that set.
+    """
+    ids = get_accessible_branch_ids(user)
+    if ids is None:
+        if requested_branch_id:
+            query = query.filter(branch_column == requested_branch_id)
+        return query
+    if requested_branch_id and requested_branch_id in ids:
+        return query.filter(branch_column == requested_branch_id)
+    return query.filter(branch_column.in_(ids))
 
 
 def get_current_gym_id(user=None):

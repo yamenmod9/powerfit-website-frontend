@@ -9,9 +9,9 @@ from app.services import AuthService
 from app.utils import (
     success_response, error_response, role_required,
     paginate, format_pagination_response,
-    get_current_user, get_current_gym_id
+    get_current_user, get_current_gym_id, get_accessible_branch_ids
 )
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, ROLE_RANK
 from app.extensions import db
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
@@ -41,12 +41,18 @@ def get_users():
             query = query.filter_by(role=UserRole(role))
         except ValueError:
             return error_response("Invalid role", 400)
-    
-    if branch_id:
+
+    # Branch-scoped managers only see staff of branches they run
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None:
+        query = query.filter(User.branch_id.in_(accessible))
+        if branch_id and branch_id in accessible:
+            query = query.filter_by(branch_id=branch_id)
+    elif branch_id:
         query = query.filter_by(branch_id=branch_id)
-    
+
     query = query.order_by(User.created_at.desc())
-    
+
     items, total, pages, current_page = paginate(query, page, per_page)
     
     schema = UserSchema()
@@ -73,9 +79,12 @@ def get_employees():
     if gym_id is not None:
         query = query.filter_by(gym_id=gym_id)
     
-    # Branch managers can only see their own branch staff
-    if user.role == UserRole.BRANCH_MANAGER:
-        query = query.filter_by(branch_id=user.branch_id)
+    # Branch-scoped managers can only see staff of branches they run
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None:
+        query = query.filter(User.branch_id.in_(accessible))
+        if branch_id and branch_id in accessible:
+            query = query.filter_by(branch_id=branch_id)
     elif branch_id:
         query = query.filter_by(branch_id=branch_id)
     
@@ -128,11 +137,28 @@ def create_user():
         data = schema.load(request.json)
     except ValidationError as e:
         return error_response("Validation error", 400, e.messages)
-    
+
+    # Hierarchy: you can only create accounts that rank strictly below you
+    try:
+        new_role = UserRole(data['role'])
+    except ValueError:
+        return error_response("Invalid role", 400)
+    if not creator.outranks(new_role):
+        return error_response("You cannot create an account at or above your own rank", 403)
+
+    # Branch-scoped managers can only create staff inside their own branches
+    accessible = get_accessible_branch_ids(creator)
+    if accessible is not None:
+        target_branches = set(data.get('managed_branch_ids') or [])
+        if data.get('branch_id'):
+            target_branches.add(data['branch_id'])
+        if not target_branches or not target_branches.issubset(set(accessible)):
+            return error_response("You can only create staff for branches you manage", 403)
+
     # Inject gym_id so the new user belongs to the same gym
     if gym_id is not None:
         data['gym_id'] = gym_id
-    
+
     user, error = AuthService.create_user(data)
     
     if error:
@@ -151,7 +177,15 @@ def update_user(user_id):
         data = schema.load(request.json)
     except ValidationError as e:
         return error_response("Validation error", 400, e.messages)
-    
+
+    editor = get_current_user()
+    target = db.session.get(User, user_id)
+    if not target:
+        return error_response("User not found", 404)
+    # Hierarchy: you can only edit accounts that rank strictly below you
+    if editor.id != target.id and not editor.outranks(target.role):
+        return error_response("You cannot edit an account at or above your own rank", 403)
+
     user, error = AuthService.update_user(user_id, data)
     
     if error:

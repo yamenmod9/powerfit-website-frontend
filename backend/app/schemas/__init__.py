@@ -22,6 +22,7 @@ class UserSchema(Schema):
     role = fields.Str(required=True, validate=validate.OneOf([r.value for r in UserRole]))
     branch_id = fields.Int(allow_none=True)
     branch_name = fields.Str(dump_only=True)
+    managed_branch_ids = fields.List(fields.Int(), allow_none=True)
     is_active = fields.Bool()
     created_at = fields.DateTime(dump_only=True)
     last_login = fields.DateTime(dump_only=True)

@@ -79,6 +79,17 @@ def _ensure_db_schema(app):
                 DeviceToken.__table__.create(db.engine)
                 app.logger.info('Auto-migration: created device_tokens table')
 
+            # Create the regional manager's branch group table if it doesn't exist.
+            #
+            # This one is load-bearing for every request, not just the new role:
+            # User.managed_branches loads eagerly (selectin), so a missing table
+            # fails *any* query that touches a user — including login. Without
+            # this the deploy is a full outage rather than one broken feature.
+            if 'regional_manager_branches' not in existing_tables:
+                from app.models.user import regional_manager_branches
+                regional_manager_branches.create(db.engine)
+                app.logger.info('Auto-migration: created regional_manager_branches table')
+
             # Add gym_id column to users table if missing
             if 'users' in existing_tables:
                 columns = [col['name'] for col in inspector.get_columns('users')]

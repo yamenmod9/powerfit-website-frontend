@@ -6,7 +6,10 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from app.models import Expense, DailyClosing, Transaction
 from app.models.expense import ExpenseStatus, ExpenseCategory
-from app.utils import success_response, error_response, get_current_user, role_required, paginate, format_pagination_response
+from app.utils import (
+    success_response, error_response, get_current_user, role_required,
+    paginate, format_pagination_response, scope_query_to_branches
+)
 from app.models.user import UserRole
 from app.extensions import db
 from app.schemas import ExpenseSchema, DailyClosingSchema
@@ -45,10 +48,7 @@ def get_expenses():
     query = Expense.query
     
     # Role-based filtering
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT]:
-        query = query.filter(Expense.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Expense.branch_id == branch_id)
+    query = scope_query_to_branches(query, Expense.branch_id, current_user, branch_id)
     
     # Status filter
     if status:
@@ -101,7 +101,7 @@ def get_expenses():
 
 @finance_bp.route('/cash-differences', methods=['GET'])
 @jwt_required()
-@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT])
+@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT, UserRole.BRANCH_MANAGER])
 def get_cash_differences():
     """
     Get cash difference records from daily closings
@@ -121,13 +121,7 @@ def get_cash_differences():
     query = DailyClosing.query
     
     # Role-based filtering
-    if current_user.role in [UserRole.BRANCH_ACCOUNTANT]:
-        query = query.filter(DailyClosing.branch_id == current_user.branch_id)
-    elif current_user.role in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT]:
-        if branch_id:
-            query = query.filter(DailyClosing.branch_id == branch_id)
-    else:
-        query = query.filter(DailyClosing.branch_id == current_user.branch_id)
+    query = scope_query_to_branches(query, DailyClosing.branch_id, current_user, branch_id)
     
     # Date range filter
     if date_from:

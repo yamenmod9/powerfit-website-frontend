@@ -158,6 +158,70 @@ def serve_logo(filename):
 @jwt_required()
 @role_required(UserRole.SUPER_ADMIN)
 def list_gyms():
-    """List all gyms (super admin only)."""
+    """List all gyms with headline stats (super admin only)."""
+    from app.models.branch import Branch
+    from app.models.customer import Customer
+    from app.models.user import User
+
     gyms = Gym.query.all()
-    return success_response([g.to_dict() for g in gyms])
+    result = []
+    for g in gyms:
+        d = g.to_dict()
+        branch_ids = [b.id for b in Branch.query.filter_by(gym_id=g.id).all()]
+        d['branch_count'] = len(branch_ids)
+        if branch_ids:
+            d['customer_count'] = Customer.query.filter(Customer.branch_id.in_(branch_ids)).count()
+        else:
+            d['customer_count'] = 0
+        d['staff_count'] = User.query.filter_by(gym_id=g.id).count()
+        result.append(d)
+    return success_response(result)
+
+
+@gyms_bp.route('/<int:gym_id>', methods=['PUT', 'PATCH'])
+@jwt_required()
+@role_required(UserRole.SUPER_ADMIN)
+def update_gym(gym_id):
+    """Update any gym's settings (super admin only)."""
+    gym = db.session.get(Gym, gym_id)
+    if not gym:
+        return error_response("Gym not found", 404)
+
+    data = request.json or {}
+    for field in ('name', 'primary_color', 'secondary_color', 'logo_url'):
+        if field in data:
+            setattr(gym, field, data[field])
+    if 'is_active' in data:
+        gym.is_active = bool(data['is_active'])
+    if 'is_setup_complete' in data:
+        gym.is_setup_complete = bool(data['is_setup_complete'])
+
+    db.session.commit()
+    return success_response(gym.to_dict(), "Gym updated successfully")
+
+
+@gyms_bp.route('/<int:gym_id>/branches', methods=['GET'])
+@jwt_required()
+@role_required(UserRole.SUPER_ADMIN)
+def gym_branches(gym_id):
+    """List a gym's branches with stats (super admin drill-down)."""
+    from app.models.branch import Branch
+    from app.models.customer import Customer
+    from app.models.user import User
+    from app.models.subscription import SubscriptionStatus
+
+    gym = db.session.get(Gym, gym_id)
+    if not gym:
+        return error_response("Gym not found", 404)
+
+    branches = Branch.query.filter_by(gym_id=gym_id).all()
+    result = []
+    for b in branches:
+        d = b.to_dict()
+        d['customers_count'] = Customer.query.filter_by(branch_id=b.id).count()
+        d['staff_count'] = User.query.filter_by(branch_id=b.id).count()
+        d['active_subscriptions'] = b.subscriptions.filter_by(
+            status=SubscriptionStatus.ACTIVE
+        ).count()
+        result.append(d)
+    return success_response(result)

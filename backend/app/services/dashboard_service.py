@@ -24,60 +24,80 @@ class DashboardService:
     """Dashboard and reporting service"""
     
     @staticmethod
-    def get_owner_dashboard():
-        """Get comprehensive owner dashboard"""
+    def get_owner_dashboard(branch_ids=None):
+        """Get comprehensive owner dashboard.
+
+        branch_ids: optional list restricting every metric to those branches
+        (used for regional managers, who see only their branch group).
+        """
         today = date.today()
         thirty_days_ago = today - timedelta(days=30)
         seven_days_ago = today - timedelta(days=7)
-        
+
+        def branch_scoped(query, column):
+            return query.filter(column.in_(branch_ids)) if branch_ids is not None else query
+
         # Smart alerts
+        if branch_ids is not None:
+            expiring_7 = sum(len(get_expiring_subscriptions(days=7, branch_id=b)) for b in branch_ids)
+            expiring_3 = sum(len(get_expiring_subscriptions(days=3, branch_id=b)) for b in branch_ids)
+        else:
+            expiring_7 = len(get_expiring_subscriptions(days=7))
+            expiring_3 = len(get_expiring_subscriptions(days=3))
         alerts = {
-            'expiring_subscriptions': len(get_expiring_subscriptions(days=7)),
-            'expiring_soon': len(get_expiring_subscriptions(days=3)),
-            'open_complaints': Complaint.query.filter(
+            'expiring_subscriptions': expiring_7,
+            'expiring_soon': expiring_3,
+            'open_complaints': branch_scoped(Complaint.query.filter(
                 Complaint.status == ComplaintStatus.OPEN
-            ).count(),
-            'pending_expenses': Expense.query.filter(
+            ), Complaint.branch_id).count(),
+            'pending_expenses': branch_scoped(Expense.query.filter(
                 Expense.status == ExpenseStatus.PENDING
-            ).count()
+            ), Expense.branch_id).count()
         }
-        
+
         # Revenue summary (last 30 days)
-        total_revenue = db.session.query(func.sum(Transaction.amount)).filter(
+        total_revenue = branch_scoped(db.session.query(func.sum(Transaction.amount)).filter(
             Transaction.transaction_date >= thirty_days_ago
-        ).scalar() or 0
-        
+        ), Transaction.branch_id).scalar() or 0
+
         # Active subscriptions
-        active_subscriptions = Subscription.query.filter(
+        active_subscriptions = branch_scoped(Subscription.query.filter(
             Subscription.status == SubscriptionStatus.ACTIVE
-        ).count()
-        
+        ), Subscription.branch_id).count()
+
         # Total customers
-        total_customers = Customer.query.filter_by(is_active=True).count()
-        
+        total_customers = branch_scoped(
+            Customer.query.filter_by(is_active=True), Customer.branch_id
+        ).count()
+
         # Branch comparison
         branch_performance = compare_branches_performance(thirty_days_ago, today)
-        
+        if branch_ids is not None:
+            branch_performance = [
+                b for b in branch_performance
+                if (b.get('branch_id') or b.get('id')) in branch_ids
+            ]
+
         # Best and worst branches
         best_branch = branch_performance[0] if branch_performance else None
         worst_branch = branch_performance[-1] if len(branch_performance) > 1 else None
-        
+
         # Recent complaints by type
-        complaints_by_type = db.session.query(
+        complaints_by_type = branch_scoped(db.session.query(
             Complaint.complaint_type,
             func.count(Complaint.id)
         ).filter(
             Complaint.created_at >= thirty_days_ago
-        ).group_by(Complaint.complaint_type).all()
-        
+        ), Complaint.branch_id).group_by(Complaint.complaint_type).all()
+
         # Staff performance (top 5)
-        staff_revenue = db.session.query(
+        staff_revenue = branch_scoped(db.session.query(
             User.id,
             User.full_name,
             func.sum(Transaction.amount).label('total')
         ).join(Transaction, Transaction.created_by == User.id).filter(
             Transaction.transaction_date >= thirty_days_ago
-        ).group_by(User.id, User.full_name).order_by(func.sum(Transaction.amount).desc()).limit(5).all()
+        ), Transaction.branch_id).group_by(User.id, User.full_name).order_by(func.sum(Transaction.amount).desc()).limit(5).all()
         
         return {
             'alerts': alerts,

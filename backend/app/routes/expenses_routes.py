@@ -8,7 +8,8 @@ from app.schemas import ExpenseSchema, ExpenseReviewSchema
 from app.models.expense import Expense, ExpenseStatus, ExpenseCategory
 from app.utils import (
     success_response, error_response, role_required,
-    paginate, format_pagination_response, get_current_user
+    paginate, format_pagination_response, get_current_user,
+    get_accessible_branch_ids, scope_query_to_branches
 )
 from app.models.user import UserRole
 from app.extensions import db
@@ -30,11 +31,7 @@ def get_expenses():
     query = Expense.query
     
     # Branch filtering based on role
-    if user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id:
-            query = query.filter_by(branch_id=user.branch_id)
-    elif branch_id:
-        query = query.filter_by(branch_id=branch_id)
+    query = scope_query_to_branches(query, Expense.branch_id, user, branch_id)
     
     # Status filter
     if status:
@@ -64,10 +61,10 @@ def get_expense(expense_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and expense.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
-    
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None and expense.branch_id not in accessible:
+        return error_response("Access denied", 403)
+
     return success_response(expense.to_dict())
 
 
@@ -85,9 +82,9 @@ def create_expense():
     user = get_current_user()
     
     # Validate branch access
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and data['branch_id'] != user.branch_id:
-            return error_response("Cannot create expense for another branch", 403)
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None and data['branch_id'] not in accessible:
+        return error_response("Cannot create expense for another branch", 403)
 
     # Reject an unknown category at the boundary rather than storing a typo that
     # would later break reads or land in the wrong P&L line.
@@ -118,13 +115,18 @@ def create_expense():
 
 @expenses_bp.route('/<int:expense_id>/review', methods=['POST'])
 @jwt_required()
-@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT, UserRole.BRANCH_MANAGER)
 def review_expense(expense_id):
-    """Approve or reject expense"""
+    """Approve or reject expense (managers review only their own branches)"""
     expense = db.session.get(Expense, expense_id)
-    
+
     if not expense:
         return error_response("Expense not found", 404)
+
+    reviewer = get_current_user()
+    accessible = get_accessible_branch_ids(reviewer)
+    if accessible is not None and expense.branch_id not in accessible:
+        return error_response("Access denied to this branch", 403)
     
     if expense.status != ExpenseStatus.PENDING:
         return error_response("Expense is not pending review", 400)
@@ -164,9 +166,9 @@ def delete_expense(expense_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER]:
-        if user.branch_id and expense.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None and expense.branch_id not in accessible:
+        return error_response("Access denied", 403)
     
     db.session.delete(expense)
     db.session.commit()

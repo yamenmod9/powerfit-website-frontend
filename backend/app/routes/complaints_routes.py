@@ -9,7 +9,8 @@ from app.schemas import ComplaintSchema, ComplaintUpdateSchema
 from app.models.complaint import Complaint, ComplaintStatus
 from app.utils import (
     success_response, error_response, role_required,
-    paginate, format_pagination_response, get_current_user
+    paginate, format_pagination_response, get_current_user,
+    get_accessible_branch_ids, scope_query_to_branches
 )
 from app.models.user import UserRole
 from app.extensions import db
@@ -33,11 +34,7 @@ def get_complaints():
     query = Complaint.query
     
     # Branch filtering based on role
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id:
-            query = query.filter_by(branch_id=user.branch_id)
-    elif branch_id:
-        query = query.filter_by(branch_id=branch_id)
+    query = scope_query_to_branches(query, Complaint.branch_id, user, branch_id)
     
     # Status filter
     if status:
@@ -67,10 +64,10 @@ def get_complaint(complaint_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and complaint.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
-    
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None and complaint.branch_id not in accessible:
+        return error_response("Access denied", 403)
+
     return success_response(complaint.to_dict())
 
 
@@ -87,9 +84,9 @@ def create_complaint():
     user = get_current_user()
     
     # Validate branch access
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and data['branch_id'] != user.branch_id:
-            return error_response("Cannot create complaint for another branch", 403)
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None and data['branch_id'] not in accessible:
+        return error_response("Cannot create complaint for another branch", 403)
     
     complaint = Complaint(
         title=data['title'],
@@ -138,10 +135,10 @@ def update_complaint(complaint_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and complaint.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
-    
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None and complaint.branch_id not in accessible:
+        return error_response("Access denied", 403)
+
     try:
         schema = ComplaintUpdateSchema()
         data = schema.load(request.json)
@@ -175,9 +172,9 @@ def delete_complaint(complaint_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER]:
-        if user.branch_id and complaint.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None and complaint.branch_id not in accessible:
+        return error_response("Access denied", 403)
     
     db.session.delete(complaint)
     db.session.commit()

@@ -1,18 +1,28 @@
 """
-Database seeding script - Creates comprehensive, realistic test data
-PRODUCTION-QUALITY DATASET for Flutter frontend testing
+Database seeding script — production-quality test data.
 
-Features:
-- Logical data consistency
-- Realistic date distributions  
-- Multi-branch performance variance
-- Complete user coverage (all roles)
-- Supports dashboards, analytics, alerts, leaderboards
-- No empty states - all features have data
+Shaped so every feature in the product has something real to show, and so the
+staff hierarchy can actually be *tested* rather than just represented:
+
+  super_admin > owner > regional_manager > branch_manager > accountant > front_desk
+
+Three gyms exist on purpose. One is the main test gym (6 branches split into two
+regions, so a regional manager's scope is provably narrower than the owner's and
+wider than a branch manager's). A second gym proves cross-gym isolation — its
+data must never appear in the first gym's dashboards, and only the super admin
+sees both. A third sits setup-incomplete and deactivated to exercise the owner
+setup wizard and the super admin's activate/deactivate control.
+
+Money data spans ~8 months so the daily/weekly/monthly revenue trend has points
+in every bucket, and expenses carry the full category chart (salaries and rent
+dominate, as they do in a real P&L) rather than only ad-hoc spending.
 """
 from datetime import datetime, date, timedelta
 import os
 import random
+import string
+import sys
+
 from app import create_app
 from app.extensions import db
 from app.models import (
@@ -22,16 +32,22 @@ from app.models import (
     Expense, ExpenseStatus, Complaint, ComplaintType, ComplaintStatus,
     Fingerprint, FreezeHistory, DailyClosing, EntryLog
 )
+from app.models.entry_log import EntryType, EntryStatus
+from app.models.expense import ExpenseCategory
 from app.models.gym import Gym
 
-# Set seed for reproducible results (can be commented out for true randomness)
+# Reproducible datasets — same seed, same database, so a bug found today is
+# still there tomorrow.
 random.seed(42)
 
-# Single source of truth for the platform-level super admin account, used
-# both to create the user and to print its credentials after seeding —
-# keeping these in one place avoids the printed credentials drifting out
-# of sync with what's actually created (as happened when this account was
-# renamed from 'Zyad' to 'powerfit').
+# How far back money data reaches. The monthly revenue trend shows 6 buckets by
+# default; 8 months of history means none of them are empty.
+HISTORY_DAYS = 240
+
+# Single source of truth for the platform-level super admin account, used both
+# to create the user and to print its credentials after seeding — keeping these
+# in one place avoids the printed credentials drifting out of sync with what's
+# actually created.
 SUPER_ADMIN = {
     'username': 'powerfit',
     'password': 'PowerFit2026!',
@@ -47,740 +63,679 @@ GOOGLE_PLAY_TEST_CLIENT = {
     'password': 'GP12TEST',
     'email': 'google.play.tester@example.com',
     'national_id': '2909999000001',
-    'branch_index': 0,
+    'gym_key': 'powerfit',
+    'branch_code': 'DRG001',
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GYM SPECIFICATIONS
+#
+# 'perf' is the branch's performance multiplier — it drives customer count,
+# subscription take-up, transaction volume and complaint load together, so a
+# branch that looks strong on the leaderboard is strong for consistent reasons.
+# ─────────────────────────────────────────────────────────────────────────────
+
+GYM_SPECS = [
+    {
+        'key': 'powerfit',
+        'name': 'PowerFit Elite',
+        'primary_color': '#DC2626',
+        'secondary_color': '#EF4444',
+        'is_setup_complete': True,
+        'is_active': True,
+        'email_domain': 'gymchain.com',
+        'owner': {
+            'username': 'owner',
+            'password': 'owner123',
+            'full_name': 'Abu Faisal - System Owner',
+            'phone': '0201000000',
+            'email': 'owner@gymchain.com',
+        },
+        'branches': [
+            {'name': 'Dragon Club', 'code': 'DRG001', 'city': 'Cairo',
+             'address': '123 Premium Street, Zamalek, Cairo', 'phone': '0227350001',
+             'perf': 1.00, 'customers': 45, 'region': 'cairo'},
+            {'name': 'Phoenix Club', 'code': 'PHX001', 'city': 'Giza',
+             'address': '456 Central Avenue, Mohandessin, Giza', 'phone': '0233450002',
+             'perf': 0.80, 'customers': 38, 'region': 'cairo'},
+            {'name': 'Falcon Club', 'code': 'FLC001', 'city': 'Cairo',
+             'address': '78 Abbas El-Akkad, Nasr City, Cairo', 'phone': '0224010003',
+             'perf': 0.62, 'customers': 28, 'region': 'cairo'},
+            {'name': 'Tiger Club', 'code': 'TGR001', 'city': 'Alexandria',
+             'address': '789 Beach Road, Alexandria', 'phone': '0345670004',
+             'perf': 0.55, 'customers': 28, 'region': 'coastal'},
+            {'name': 'Shark Club', 'code': 'SHK001', 'city': 'North Coast',
+             'address': 'Km 84 Sahel Road, North Coast', 'phone': '0465120005',
+             'perf': 0.45, 'customers': 22, 'region': 'coastal'},
+            {'name': 'Lion Club', 'code': 'LON001', 'city': 'Port Said',
+             'address': '12 El-Gomhoreya Street, Port Said', 'phone': '0663330006',
+             'perf': 0.30, 'customers': 14, 'region': 'coastal'},
+        ],
+        # Regional managers own a *group* of branches — the whole point of the role.
+        'regions': [
+            {'username': 'regional1', 'password': 'regional123',
+             'full_name': 'Yousef Abdel Aziz', 'phone': '0201500001',
+             'label': 'Cairo & Giza Region', 'branch_codes': ['DRG001', 'PHX001', 'FLC001']},
+            {'username': 'regional2', 'password': 'regional123',
+             'full_name': 'Nadia Shoukry', 'phone': '0201500002',
+             'label': 'Coastal Region', 'branch_codes': ['TGR001', 'SHK001', 'LON001']},
+        ],
+        # One branch manager per branch.
+        'managers': [
+            ('manager1', 'Ahmed Khalil', '0201111001', 'DRG001'),
+            ('manager2', 'Mohamed Rashad', '0201111002', 'PHX001'),
+            ('manager3', 'Khaled Mansour', '0201111003', 'FLC001'),
+            ('manager4', 'Sherif Lotfy', '0201111004', 'TGR001'),
+            ('manager5', 'Hossam Badawy', '0201111005', 'SHK001'),
+            ('manager6', 'Mazen Fouad', '0201111006', 'LON001'),
+        ],
+        'central_accountants': [
+            ('accountant1', 'Omar Farid', '0203330001'),
+            ('accountant2', 'Hassan Nasser', '0203330002'),
+        ],
+        'branch_accountants': [
+            ('baccountant1', 'Amr Saleh', '0204440001', 'DRG001'),
+            ('baccountant2', 'Tarek Hamdy', '0204440002', 'PHX001'),
+            ('baccountant3', 'Mona Farid', '0204440003', 'TGR001'),
+        ],
+        # Every branch needs its own front desk — transactions, closings and
+        # check-ins are all attributed to one, and borrowing another branch's
+        # would silently corrupt the per-staff leaderboards.
+        'reception': [
+            ('reception1', 'Sara Mohamed', '0202220001', 'DRG001', True),
+            ('reception2', 'Fatma Hassan', '0202220002', 'DRG001', True),
+            ('reception3', 'Noha Ibrahim', '0202220003', 'PHX001', True),
+            ('reception4', 'Heba Youssef', '0202220004', 'PHX001', True),
+            ('reception5', 'Mariam Ali', '0202220005', 'FLC001', True),
+            ('reception6', 'Yasmin Samir', '0202220006', 'TGR001', True),
+            ('reception7', 'Rania Nabil', '0202220007', 'SHK001', True),
+            ('reception8', 'Dina Ashraf', '0202220008', 'LON001', True),
+            # Deactivated on purpose: the staff lists render an "inactive" badge
+            # and this is the only row that proves it.
+            ('reception9', 'Karim Adel (Former)', '0202220009', 'DRG001', False),
+        ],
+    },
+    {
+        'key': 'irontemple',
+        'name': 'Iron Temple Fitness',
+        'primary_color': '#2563EB',
+        'secondary_color': '#3B82F6',
+        'is_setup_complete': True,
+        'is_active': True,
+        'email_domain': 'irontemple.com',
+        # A second, fully-working gym. Nothing here may ever surface in
+        # PowerFit's dashboards — that isolation is what this gym tests.
+        'owner': {
+            'username': 'owner2',
+            'password': 'owner123',
+            'full_name': 'Sameh Darwish - Iron Temple Owner',
+            'phone': '0201000002',
+            'email': 'owner@irontemple.com',
+        },
+        'branches': [
+            {'name': 'Iron Temple Downtown', 'code': 'ITD001', 'city': 'Cairo',
+             'address': '9 Talaat Harb Street, Downtown, Cairo', 'phone': '0225770001',
+             'perf': 0.70, 'customers': 20, 'region': 'main'},
+            {'name': 'Iron Temple Maadi', 'code': 'ITM001', 'city': 'Cairo',
+             'address': '55 Road 9, Maadi, Cairo', 'phone': '0225770002',
+             'perf': 0.40, 'customers': 12, 'region': 'main', 'is_active': False},
+        ],
+        'regions': [
+            {'username': 'regional3', 'password': 'regional123',
+             'full_name': 'Laila Mounir', 'phone': '0201500003',
+             'label': 'Iron Temple Region', 'branch_codes': ['ITD001', 'ITM001']},
+        ],
+        'managers': [
+            ('it_manager1', 'Bassem Ragab', '0201112001', 'ITD001'),
+            ('it_manager2', 'Ehab Sultan', '0201112002', 'ITM001'),
+        ],
+        'central_accountants': [
+            ('it_accountant1', 'Nourhan Gamal', '0203331001'),
+        ],
+        'branch_accountants': [],
+        'reception': [
+            ('it_reception1', 'Salma Wagdy', '0202221001', 'ITD001', True),
+            ('it_reception2', 'Menna Tarek', '0202221002', 'ITM001', True),
+        ],
+    },
+    {
+        'key': 'aqualife',
+        'name': 'AquaLife Wellness',
+        'primary_color': '#0891B2',
+        'secondary_color': '#06B6D4',
+        # Deliberately unfinished and switched off: logging in as this owner
+        # lands in the setup wizard, and the super admin's gym list is the only
+        # place this gym can be reactivated from.
+        'is_setup_complete': False,
+        'is_active': False,
+        'email_domain': 'aqualife.com',
+        'owner': {
+            'username': 'owner3',
+            'password': 'owner123',
+            'full_name': 'Hoda Serry - AquaLife Owner',
+            'phone': '0201000003',
+            'email': 'owner@aqualife.com',
+        },
+        'branches': [
+            {'name': 'AquaLife Sheikh Zayed', 'code': 'AQZ001', 'city': 'Giza',
+             'address': '3 Beverly Hills, Sheikh Zayed, Giza', 'phone': '0238500001',
+             'perf': 0.35, 'customers': 8, 'region': 'main'},
+        ],
+        'regions': [],
+        'managers': [
+            ('aq_manager1', 'Ziad Helmy', '0201113001', 'AQZ001'),
+        ],
+        'central_accountants': [],
+        'branch_accountants': [],
+        'reception': [
+            ('aq_reception1', 'Farida Emad', '0202222001', 'AQZ001', True),
+        ],
+    },
+]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NAME POOLS
+# ─────────────────────────────────────────────────────────────────────────────
+
+MALE_NAMES = [
+    'Ahmed', 'Mohamed', 'Mahmoud', 'Ali', 'Omar', 'Khaled', 'Youssef', 'Amr',
+    'Hassan', 'Karim', 'Tarek', 'Sherif', 'Tamer', 'Hossam', 'Essam', 'Walid',
+    'Adel', 'Sami', 'Nader', 'Ramy', 'Hany', 'Fady', 'Magdy', 'Samir',
+    'Ibrahim', 'Mostafa', 'Osama', 'Wael', 'Hatem', 'Mazen', 'Basel', 'Ziad',
+]
+
+FEMALE_NAMES = [
+    'Sara', 'Fatma', 'Mona', 'Noha', 'Heba', 'Mariam', 'Yasmin', 'Nour',
+    'Aya', 'Dina', 'Rania', 'Mai', 'Salma', 'Hana', 'Layla', 'Amira',
+    'Rana', 'Somaya', 'Nada', 'Hala', 'Iman', 'Reham', 'Nourhan', 'Hadeer',
+    'Doaa', 'Eman', 'Maha', 'Reem', 'Shaimaa', 'Nagwa', 'Amal', 'Zeinab',
+]
+
+LAST_NAMES = [
+    'Mohamed', 'Ali', 'Hassan', 'Ibrahim', 'Mahmoud', 'Youssef', 'Ahmed',
+    'Sayed', 'Abdel Rahman', 'El-Sayed', 'Khalil', 'Mostafa', 'Saad',
+    'Farid', 'Rashad', 'Nasser', 'Mansour', 'Saleh', 'Gaber', 'Zaki',
+    'Ismail', 'Hamdy', 'Fathy', 'Salem', 'Morsy', 'Kamel', 'Shafik',
+]
 
 
 def generate_temp_password():
-    """Generate a random 6-character temporary password (e.g., AB12CD)"""
-    import string
-    # Format: 2 uppercase + 2 digits + 2 uppercase
+    """Generate a random 6-character temporary password (e.g., AB12CD)."""
     part1 = ''.join(random.choices(string.ascii_uppercase, k=2))
     part2 = ''.join(random.choices(string.digits, k=2))
     part3 = ''.join(random.choices(string.ascii_uppercase, k=2))
-    return f"{part1}{part2}{part3}"
+    return f'{part1}{part2}{part3}'
 
+
+def payment_method():
+    """Realistic payment split: 40% cash, 40% network, 20% transfer."""
+    rand = random.random()
+    if rand < 0.40:
+        return PaymentMethod.CASH
+    if rand < 0.80:
+        return PaymentMethod.NETWORK
+    return PaymentMethod.TRANSFER
+
+
+def reference_number(method):
+    """Card and transfer payments carry a reference; cash doesn't."""
+    if method == PaymentMethod.CASH:
+        return None
+    return f'TXN{random.randint(100000, 999999)}'
+
+
+def at_business_hour(day):
+    """Turn a date into a datetime somewhere in opening hours."""
+    return datetime.combine(day, datetime.min.time()) + timedelta(
+        hours=random.randint(8, 20), minutes=random.randint(0, 59)
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SEED ENTRY POINT
+# ─────────────────────────────────────────────────────────────────────────────
 
 def seed_database():
-    """Seed the database with production-quality test data"""
-    # Check environment - use production on PythonAnywhere, development locally
-    import sys
-    env = 'production' if any('pythonanywhere' in path.lower() for path in sys.path) else os.getenv('FLASK_ENV', 'development')
-    
-    print(f"[+] Using environment: {env}")
+    """Seed the database with production-quality test data."""
+    env = 'production' if any('pythonanywhere' in path.lower() for path in sys.path) \
+        else os.getenv('FLASK_ENV', 'development')
+
+    print(f'[+] Using environment: {env}')
     app = create_app(env)
-    
+
     with app.app_context():
-        print("\n" + "="*70)
-        print("[*] SEEDING DATABASE - PRODUCTION-QUALITY TEST DATA")
-        print("="*70 + "\n")
-        
-        # Clear existing data
-        print("  ↳ Clearing existing data...")
+        print('\n' + '=' * 70)
+        print('[*] SEEDING DATABASE - PRODUCTION-QUALITY TEST DATA')
+        print('=' * 70 + '\n')
+
+        print('  > Clearing existing data...')
         db.drop_all()
         db.create_all()
-        
-        # Create users (super admin + default owner)
-        print("  ↳ Creating users...")
-        users = create_users([])  # branches not created yet
 
-        # Create gym for the DEFAULT owner only
-        print("  ↳ Creating gym for the default owner...")
-        default_owner = next(u for u in users if u.role == UserRole.OWNER)
-        default_gym = Gym(
-            name="Abu Faisal's Gym",
-            owner_id=default_owner.id,
-            primary_color='#DC2626',
-            secondary_color='#EF4444',
-            is_setup_complete=True,  # seed data fills it
-        )
-        db.session.add(default_gym)
-        db.session.flush()
-        gym_id = default_gym.id
+        print('  > Creating platform super admin...')
+        create_super_admin()
 
-        # Create branches (scoped to default owner's gym)
-        print("  ↳ Creating branches...")
-        branches = create_branches(gym_id)
-
-        # Back-fill gym_id + branch_id on staff users
-        print("  ↳ Assigning staff to gym & branches...")
-        assign_staff_to_branches(users, branches, gym_id)
-        
-        # Create services
-        print("  ↳ Creating services...")
+        print('  > Creating service catalog...')
         services = create_services()
-        
-        # Create customers
-        print("  ↳ Creating customers...")
-        customers = create_customers(branches)
-        
-        # Create subscriptions
-        print("  ↳ Creating subscriptions...")
-        subscriptions = create_subscriptions(customers, services, branches, users)
-        
-        # Create fingerprints (UPDATED: now requires subscriptions)
-        print("  ↳ Creating fingerprints...")
-        create_fingerprints(customers, subscriptions)
-        
-        # Create transactions
-        print("  ↳ Creating transactions...")
-        create_transactions(subscriptions, branches, users)
-        
-        # Create expenses
-        print("  ↳ Creating expenses...")
-        create_expenses(branches, users)
-        
-        # Create complaints
-        print("  ↳ Creating complaints...")
-        create_complaints(branches, customers)
-        
-        # Create daily closings
-        print("  ↳ Creating daily closings...")
-        create_daily_closings(branches, users)
-        
-        # Create entry logs (attendance records)
-        print("  ↳ Creating entry logs...")
-        create_entry_logs(customers, subscriptions, branches)
-        
+
+        worlds = []
+        for spec in GYM_SPECS:
+            print(f"\n  == Gym: {spec['name']} ==")
+            worlds.append(build_gym(spec, services))
+
         db.session.commit()
-        
-        # Print comprehensive statistics
-        print("\n" + "="*70)
-        print("[*] DATABASE STATISTICS - FINAL COUNTS")
-        print("="*70)
-        print(f"  Branches: {len(branches)}")
-        print(f"  Users: {len(users)} (14 total: Owner, 3 Managers, 6 Reception, 2 Central Accountants, 2 Branch Accountants)")
-        print(f"  Services: {len(services)}")
-        print(f"  Customers: {len(customers)} (150 total: weighted across branches)")
-        print(f"  Subscriptions: {len(subscriptions)}")
-        print(f"  Transactions: {Transaction.query.count()} (HUNDREDS for comprehensive testing)")
-        print(f"  Expenses: {Expense.query.count()}")
-        print(f"  Complaints: {Complaint.query.count()} (weighted by branch performance)")
-        print(f"  Fingerprints: {Fingerprint.query.count()}")
-        print(f"  Freeze History: {FreezeHistory.query.count()}")
-        print(f"  Daily Closings: {DailyClosing.query.count()}")
-        print(f"  Entry Logs: {EntryLog.query.count()} (2000 attendance records - last 30 days)")
-        print("="*70)
-        
-        print("\n" + "="*70)
-        print("[*] TEST ACCOUNTS - ALL ROLES (15 USERS TOTAL)")
-        print("="*70)
-        print("\n[SUPER ADMIN] SUPER ADMIN ROLE (1):")
-        print(f"  Username: {SUPER_ADMIN['username']} | Password: {SUPER_ADMIN['password']}")
-        print(f"  Full Name: {SUPER_ADMIN['full_name']}")
-        print("  Access: Platform-level - creates and manages gym owners")
-        print("\n[OWNER] OWNER ROLE (1):")
-        print("  Username: owner | Password: owner123")
-        print("  Full Name: Abu Faisal - System Owner")
-        print("  Access: Complete system control")
-        
-        print("\n[MANAGER] BRANCH MANAGER ROLES (3 - one per branch):")
-        print("  Username: manager1 | Password: manager123")
-        print("  Branch: Dragon Club | Name: Ahmed Khalil")
-        print("  ")
-        print("  Username: manager2 | Password: manager123")
-        print("  Branch: Phoenix Club | Name: Mohamed Rashad")
-        print("  ")
-        print("  Username: manager3 | Password: manager123")
-        print("  Branch: Tiger Club | Name: Khaled Mansour")
-        
-        print("\n[RECEPTION] FRONT DESK / RECEPTION ROLES (6 - two per branch):")
-        print("  Username: reception1 | Password: reception123")
-        print("  Branch: Dragon Club | Name: Sara Mohamed")
-        print("  ")
-        print("  Username: reception2 | Password: reception123")
-        print("  Branch: Dragon Club | Name: Fatma Hassan")
-        print("  ")
-        print("  Username: reception3 | Password: reception123")
-        print("  Branch: Phoenix Club | Name: Noha Ibrahim")
-        print("  ")
-        print("  Username: reception4 | Password: reception123")
-        print("  Branch: Phoenix Club | Name: Heba Youssef")
-        print("  ")
-        print("  Username: reception5 | Password: reception123")
-        print("  Branch: Tiger Club | Name: Mariam Ali")
-        print("  ")
-        print("  Username: reception6 | Password: reception123")
-        print("  Branch: Tiger Club | Name: Yasmin Samir")
-        
-        print("\n[ACCOUNTANT] CENTRAL ACCOUNTANT ROLES (2):")
-        print("  Username: accountant1 | Password: accountant123")
-        print("  Name: Hassan El-Masry | Access: All branches financial oversight")
-        print("  ")
-        print("  Username: accountant2 | Password: accountant123")
-        print("  Name: Amira Zaki | Access: All branches financial oversight")
-        
-        print("\n[ACCOUNTANT] BRANCH ACCOUNTANT ROLES (2):")
-        print("  Username: baccountant1 | Password: accountant123")
-        print("  Branch: Dragon Club | Name: Mona Farid")
-        print("  ")
-        print("  Username: baccountant2 | Password: accountant123")
-        print("  Branch: Phoenix Club | Name: Rania Nabil")
-
-        print("\n[CLIENT] DEDICATED GOOGLE PLAY TEST ACCOUNT:")
-        print(f"  Phone: {GOOGLE_PLAY_TEST_CLIENT['phone']} | Password: {GOOGLE_PLAY_TEST_CLIENT['password']}")
-        print(f"  Name: {GOOGLE_PLAY_TEST_CLIENT['full_name']} | Branch: {branches[GOOGLE_PLAY_TEST_CLIENT['branch_index']].name}")
-        print("  Note: Use this stable account in Google Play Console for reviewer testing")
-        
-        # Print sample customer credentials
-        print("\n[CLIENT] CLIENT APP TEST ACCOUNTS (Sample from 150 customers):")
-        sample_customers = Customer.query.limit(5).all()
-        for customer in sample_customers:
-            print(f"  Phone: {customer.phone} | Password: {customer.temp_password}")
-            print(f"  Name: {customer.full_name} | Branch: {customer.branch.name}")
-            print(f"  Note: Password must be changed on first login")
-            print("  ")
-        
-        print("\n" + "="*70)
-        print("[SUCCESS] DATABASE SEEDED SUCCESSFULLY - READY FOR FLUTTER TESTING")
-        print("="*70)
-        print("\n[*] Key Features:")
-        print("  [+] Hundreds of transactions for leaderboard testing")
-        print("  [+] Varied subscription statuses (active, frozen, stopped, expired)")
-        print("  [+] Expiring subscriptions for alert testing (48h, 7 days)")
-        print("  [+] Freeze history tracking")
-        print("  [+] Expense approval workflows with pending items")
-        print("  [+] Weighted branch performance (Dragon high, Tiger lower)")
-        print("  [+] Daily closing surplus/shortage scenarios")
-        print("  [+] Complaint resolution tracking")
-        print("  [+] All 150 customers have temporary passwords for first-time login")
-        print("  ✓ Complete data for all dashboard analytics")
-        print("="*70 + "\n")
+        print_summary(worlds)
 
 
-def create_branches(gym_id):
-    """Create test branches scoped to the default owner's gym"""
-    branches = [
-        Branch(
-            name='Dragon Club',  # High performance
-            code='DRG001',
-            address='123 Premium Street, Zamalek, Cairo',
-            phone='0227350001',
-            city='Cairo',
-            gym_id=gym_id,
-            is_active=True
-        ),
-        Branch(
-            name='Phoenix Club',  # Medium performance
-            code='PHX001',
-            address='456 Central Avenue, Mohandessin, Giza',
-            phone='0233450002',
-            city='Giza',
-            gym_id=gym_id,
-            is_active=True
-        ),
-        Branch(
-            name='Tiger Club',  # Lower performance but growing
-            code='TGR001',
-            address='789 Beach Road, Alexandria',
-            phone='0345670003',
-            city='Alexandria',
-            gym_id=gym_id,
-            is_active=True
-        )
-    ]
-    
-    for branch in branches:
-        db.session.add(branch)
-    
-    db.session.flush()
-    print(f"  ✓ Created {len(branches)} branches")
-    return branches
+def build_gym(spec, services):
+    """Create one complete, self-contained gym.
+
+    Everything below is scoped to this gym's own branches and staff. Nothing
+    reaches across gyms — that is precisely the isolation the app must honour.
+    """
+    gym = create_gym(spec)
+    branches = create_branches(gym, spec)
+    staff = create_staff(gym, branches, spec)
+    customers = create_customers(branches, spec)
+    subscriptions = create_subscriptions(customers, services, branches, staff)
+    create_fingerprints(customers, subscriptions)
+    create_transactions(subscriptions, branches, staff, spec)
+    create_expenses(branches, staff, spec)
+    create_complaints(branches, customers, spec)
+    create_daily_closings(branches, staff)
+    create_entry_logs(subscriptions, branches, spec)
+
+    return {
+        'spec': spec,
+        'gym': gym,
+        'branches': branches,
+        'staff': staff,
+        'customers': customers,
+        'subscriptions': subscriptions,
+    }
 
 
-def create_users(branches):
-    """Create test users — branches are assigned later via assign_staff_to_branches."""
-    users = []
-    
-    # ========== SUPER ADMIN (platform-level) ==========
+def create_super_admin():
+    """The one account that stands above every gym."""
     super_admin = User(
         username=SUPER_ADMIN['username'],
         email=SUPER_ADMIN['email'],
         full_name=SUPER_ADMIN['full_name'],
         phone=SUPER_ADMIN['phone'],
         role=UserRole.SUPER_ADMIN,
-        is_active=True
+        is_active=True,
     )
     super_admin.set_password(SUPER_ADMIN['password'])
-    users.append(super_admin)
+    db.session.add(super_admin)
+    db.session.flush()
+    print(f"  ✓ Super admin: {SUPER_ADMIN['username']}")
+    return super_admin
 
-    # ========== OWNER (exactly 1 — the default/test owner) ==========
+
+def create_gym(spec):
+    """Create the gym and its owner."""
+    owner_spec = spec['owner']
     owner = User(
-        username='owner',
-        email='owner@gymchain.com',
-        full_name='Abu Faisal - System Owner',
-        phone='0201000000',
+        username=owner_spec['username'],
+        email=owner_spec['email'],
+        full_name=owner_spec['full_name'],
+        phone=owner_spec['phone'],
         role=UserRole.OWNER,
-        is_active=True
+        is_active=True,
     )
-    owner.set_password('owner123')
-    users.append(owner)
-    
-    # ========== Staff users (branch_id + gym_id set later) ==========
-    # BRANCH MANAGERS (1 per branch minimum)
-    manager_names = [
-        ('Ahmed Khalil', '0201111001'),
-        ('Mohamed Rashad', '0201111002'),
-        ('Khaled Mansour', '0201111003')
-    ]
-    for i, (name, phone) in enumerate(manager_names):
-        manager = User(
-            username=f'manager{i+1}',
-            email=f'manager{i+1}@gymchain.com',
-            full_name=name,
-            phone=phone,
-            role=UserRole.BRANCH_MANAGER,
-            is_active=True
+    owner.set_password(owner_spec['password'])
+    db.session.add(owner)
+    db.session.flush()
+
+    gym = Gym(
+        name=spec['name'],
+        owner_id=owner.id,
+        primary_color=spec['primary_color'],
+        secondary_color=spec['secondary_color'],
+        is_setup_complete=spec['is_setup_complete'],
+        is_active=spec['is_active'],
+    )
+    db.session.add(gym)
+    db.session.flush()
+
+    # The owner belongs to their own gym, like every other member of staff.
+    owner.gym_id = gym.id
+    db.session.flush()
+
+    print(f"  ✓ Gym + owner: {spec['name']} ({owner_spec['username']})")
+    return gym
+
+
+def create_branches(gym, spec):
+    """Create the gym's branches, keyed by code for the staff wiring below."""
+    branches = {}
+    for branch_spec in spec['branches']:
+        branch = Branch(
+            name=branch_spec['name'],
+            code=branch_spec['code'],
+            address=branch_spec['address'],
+            phone=branch_spec['phone'],
+            city=branch_spec['city'],
+            gym_id=gym.id,
+            is_active=branch_spec.get('is_active', True),
         )
-        manager.set_password('manager123')
-        users.append(manager)
-    
-    # FRONT DESK / RECEPTION (6 total — 2 per branch)
-    reception_names = [
-        ('Sara Mohamed', '0202220001'),
-        ('Fatma Hassan', '0202220002'),
-        ('Noha Ibrahim', '0202220003'),
-        ('Heba Youssef', '0202220004'),
-        ('Mariam Ali', '0202220005'),
-        ('Yasmin Samir', '0202220006')
-    ]
-    for i, (name, phone) in enumerate(reception_names):
-        reception = User(
-            username=f'reception{i+1}',
-            email=f'reception{i+1}@gymchain.com',
-            full_name=name,
-            phone=phone,
-            role=UserRole.FRONT_DESK,
-            is_active=True
-        )
-        reception.set_password('reception123')
-        users.append(reception)
-    
-    # CENTRAL ACCOUNTANTS (2)
-    central_accountants = [
-        ('Omar Farid', '0203330001', 'accountant1'),
-        ('Hassan Nasser', '0203330002', 'accountant2')
-    ]
-    for name, phone, username in central_accountants:
-        accountant = User(
+        db.session.add(branch)
+        branches[branch_spec['code']] = branch
+
+    db.session.flush()
+    inactive = sum(1 for b in branches.values() if not b.is_active)
+    suffix = f' ({inactive} inactive)' if inactive else ''
+    print(f'  ✓ Branches: {len(branches)}{suffix}')
+    return branches
+
+
+def create_staff(gym, branches, spec):
+    """Create every staff tier for this gym.
+
+    Returns the roster grouped by role, plus a per-branch front-desk index —
+    callers must attribute money and check-ins to someone who actually works at
+    that branch, never to whoever happens to be first in the list.
+    """
+    domain = spec['email_domain']
+    owner = User.query.filter_by(username=spec['owner']['username']).one()
+
+    def add(username, full_name, phone, role, password, branch=None, active=True):
+        user = User(
             username=username,
-            email=f'{username}@gymchain.com',
-            full_name=name,
+            email=f'{username}@{domain}',
+            full_name=full_name,
             phone=phone,
-            role=UserRole.CENTRAL_ACCOUNTANT,
-            is_active=True
+            role=role,
+            gym_id=gym.id,
+            branch_id=branch.id if branch is not None else None,
+            is_active=active,
         )
-        accountant.set_password('accountant123')
-        users.append(accountant)
-    
-    # BRANCH ACCOUNTANTS (2 — branch assigned later)
-    branch_accountant_names = [
-        ('Amr Saleh', '0204440001', 'baccountant1'),
-        ('Tarek Hamdy', '0204440002', 'baccountant2')
-    ]
-    for name, phone, username in branch_accountant_names:
-        accountant = User(
-            username=username,
-            email=f'{username}@gymchain.com',
-            full_name=name,
-            phone=phone,
-            role=UserRole.BRANCH_ACCOUNTANT,
-            is_active=True
-        )
-        accountant.set_password('accountant123')
-        users.append(accountant)
-    
-    for user in users:
+        user.set_password(password)
         db.session.add(user)
-    
-    db.session.flush()
-    print(f"  ✓ Created {len(users)} users")
-    print(f"    - Super Admin: 1")
-    print(f"    - Owners: 1 (default)")
-    print(f"    - Branch Managers: 3")
-    print(f"    - Front Desk: 6")
-    print(f"    - Central Accountants: 2")
-    print(f"    - Branch Accountants: 2")
-    return users
+        return user
 
+    regionals = []
+    for region in spec['regions']:
+        user = add(region['username'], region['full_name'], region['phone'],
+                   UserRole.REGIONAL_MANAGER, region['password'])
+        # The branch group *is* the role — without it a regional manager can
+        # see nothing at all.
+        user.managed_branches = [branches[code] for code in region['branch_codes']]
+        regionals.append(user)
 
-def assign_staff_to_branches(users, branches, gym_id):
-    """Assign gym_id and branch_id to staff users after branches are created."""
-    # Map roles to branches
-    managers = [u for u in users if u.role == UserRole.BRANCH_MANAGER]
-    receptionists = [u for u in users if u.role == UserRole.FRONT_DESK]
-    central_accountants = [u for u in users if u.role == UserRole.CENTRAL_ACCOUNTANT]
-    branch_accountants = [u for u in users if u.role == UserRole.BRANCH_ACCOUNTANT]
-
-    # Assign managers: 1 per branch
-    for i, mgr in enumerate(managers):
-        mgr.branch_id = branches[i % len(branches)].id
-        mgr.gym_id = gym_id
-
-    # Assign receptionists: 2 per branch
-    for i, rec in enumerate(receptionists):
-        rec.branch_id = branches[i // 2 % len(branches)].id
-        rec.gym_id = gym_id
-
-    # Central accountants: no branch but belong to the gym
-    for acc in central_accountants:
-        acc.gym_id = gym_id
-
-    # Branch accountants: assign to first 2 branches
-    for i, acc in enumerate(branch_accountants):
-        acc.branch_id = branches[i % len(branches)].id
-        acc.gym_id = gym_id
+    managers = [
+        add(username, name, phone, UserRole.BRANCH_MANAGER, 'manager123', branches[code])
+        for username, name, phone, code in spec['managers']
+    ]
+    central_accountants = [
+        add(username, name, phone, UserRole.CENTRAL_ACCOUNTANT, 'accountant123')
+        for username, name, phone in spec['central_accountants']
+    ]
+    branch_accountants = [
+        add(username, name, phone, UserRole.BRANCH_ACCOUNTANT, 'accountant123', branches[code])
+        for username, name, phone, code in spec['branch_accountants']
+    ]
+    reception = [
+        add(username, name, phone, UserRole.FRONT_DESK, 'reception123', branches[code], active)
+        for username, name, phone, code, active in spec['reception']
+    ]
 
     db.session.flush()
-    print(f"  ✓ Staff assigned to branches & gym")
+
+    # Front desk per branch — only active staff can be credited with work.
+    desk_by_branch = {}
+    for user in reception:
+        if user.is_active:
+            desk_by_branch.setdefault(user.branch_id, []).append(user)
+
+    missing = [b.name for b in branches.values() if b.id not in desk_by_branch]
+    if missing:
+        raise RuntimeError(
+            f"Branches without active front desk staff: {missing}. "
+            f"Every branch needs one, or its revenue would be attributed to another branch."
+        )
+
+    print(f'  ✓ Staff: 1 owner, {len(regionals)} regional, {len(managers)} branch managers, '
+          f'{len(central_accountants) + len(branch_accountants)} accountants, '
+          f'{len(reception)} front desk')
+    for region, user in zip(spec['regions'], regionals):
+        names = ', '.join(branches[c].name for c in region['branch_codes'])
+        print(f"      - {region['username']} → {region['label']}: {names}")
+
+    return {
+        'owner': owner,
+        'regionals': regionals,
+        'managers': managers,
+        'central_accountants': central_accountants,
+        'branch_accountants': branch_accountants,
+        'reception': reception,
+        'desk_by_branch': desk_by_branch,
+    }
 
 
 def create_services():
-    """Create services with varied pricing and types"""
+    """The service catalog, shared across gyms."""
     services = [
-        # Gym services
         Service(
             name='Monthly Gym Membership',
             service_type=ServiceType.GYM,
             description='Full gym access for 30 days',
-            price=500,
-            duration_days=30,
-            allowed_days_per_week=7,
-            freeze_count_limit=2,
-            freeze_max_days=15,
-            freeze_is_paid=False,
-            is_active=True
+            price=500, duration_days=30, allowed_days_per_week=7,
+            freeze_count_limit=2, freeze_max_days=15, freeze_is_paid=False,
+            is_active=True,
         ),
         Service(
             name='Quarterly Gym Membership',
             service_type=ServiceType.GYM,
             description='Full gym access for 90 days',
-            price=1350,
-            duration_days=90,
-            allowed_days_per_week=7,
-            freeze_count_limit=3,
-            freeze_max_days=30,
-            freeze_is_paid=False,
-            is_active=True
+            price=1350, duration_days=90, allowed_days_per_week=7,
+            freeze_count_limit=3, freeze_max_days=30, freeze_is_paid=False,
+            is_active=True,
         ),
-        
-        # Swimming services
         Service(
             name='Swimming Education - Monthly',
             service_type=ServiceType.SWIMMING_EDUCATION,
             description='Learn to swim - 8 classes per month',
-            price=600,
-            duration_days=30,
-            allowed_days_per_week=2,
-            class_limit=8,
-            freeze_count_limit=1,
-            freeze_max_days=7,
-            freeze_is_paid=True,
-            freeze_cost=50,
-            is_active=True
+            price=600, duration_days=30, allowed_days_per_week=2, class_limit=8,
+            freeze_count_limit=1, freeze_max_days=7, freeze_is_paid=True, freeze_cost=50,
+            is_active=True,
         ),
         Service(
             name='Swimming Recreation - Monthly',
             service_type=ServiceType.SWIMMING_RECREATION,
             description='Recreational swimming access',
-            price=400,
-            duration_days=30,
-            allowed_days_per_week=7,
-            freeze_count_limit=2,
-            freeze_max_days=10,
-            freeze_is_paid=False,
-            is_active=True
+            price=400, duration_days=30, allowed_days_per_week=7,
+            freeze_count_limit=2, freeze_max_days=10, freeze_is_paid=False,
+            is_active=True,
         ),
-        
-        # Karate
         Service(
             name='Karate Classes - Monthly',
             service_type=ServiceType.KARATE,
             description='Karate training - 12 classes per month',
-            price=550,
-            duration_days=30,
-            allowed_days_per_week=3,
-            class_limit=12,
-            freeze_count_limit=1,
-            freeze_max_days=7,
-            freeze_is_paid=True,
-            freeze_cost=50,
-            is_active=True
+            price=550, duration_days=30, allowed_days_per_week=3, class_limit=12,
+            freeze_count_limit=1, freeze_max_days=7, freeze_is_paid=True, freeze_cost=50,
+            is_active=True,
         ),
-        
-        # Bundle
         Service(
             name='Gym + Swimming Bundle',
             service_type=ServiceType.BUNDLE,
             description='Full gym and swimming pool access',
-            price=800,
-            duration_days=30,
-            allowed_days_per_week=7,
-            freeze_count_limit=2,
-            freeze_max_days=15,
-            freeze_is_paid=False,
-            is_active=True
-        )
+            price=800, duration_days=30, allowed_days_per_week=7,
+            freeze_count_limit=2, freeze_max_days=15, freeze_is_paid=False,
+            is_active=True,
+        ),
+        # Retired line item: proves the UI filters inactive services out of the
+        # sell flow while old subscriptions that reference it still render.
+        Service(
+            name='Legacy Annual Pass (retired)',
+            service_type=ServiceType.GYM,
+            description='Discontinued annual membership - kept for historical records',
+            price=4500, duration_days=365, allowed_days_per_week=7,
+            freeze_count_limit=4, freeze_max_days=60, freeze_is_paid=False,
+            is_active=False,
+        ),
     ]
-    
+
     for service in services:
         db.session.add(service)
-    
+
     db.session.flush()
-    print(f"  ✓ Created {len(services)} services (varied pricing: 400-1350 EGP)")
+    sellable = [s for s in services if s.is_active]
+    print(f'  ✓ Services: {len(services)} ({len(sellable)} sellable, prices 400-1350 EGP)')
     return services
 
 
-def create_customers(branches):
-    """Create test customers - WEIGHTED distribution for realistic branch performance"""
+def create_customers(branches, spec):
+    """Create customers, weighted by each branch's performance."""
     from passlib.hash import pbkdf2_sha256
 
     customers = []
-    
-    # Egyptian first names
-    male_names = [
-        'Ahmed', 'Mohamed', 'Mahmoud', 'Ali', 'Omar', 'Khaled', 'Youssef', 'Amr',
-        'Hassan', 'Karim', 'Tarek', 'Sherif', 'Tamer', 'Hossam', 'Essam', 'Walid',
-        'Adel', 'Sami', 'Nader', 'Ramy', 'Hany', 'Fady', 'Magdy', 'Samir',
-        'Ibrahim', 'Mostafa', 'Osama', 'Wael', 'Hatem', 'Mazen', 'Basel', 'Ziad'
-    ]
-    
-    female_names = [
-        'Sara', 'Fatma', 'Mona', 'Noha', 'Heba', 'Mariam', 'Yasmin', 'Nour',
-        'Aya', 'Dina', 'Rania', 'Mai', 'Salma', 'Hana', 'Layla', 'Amira',
-        'Rana', 'Somaya', 'Nada', 'Hala', 'Iman', 'Reham', 'Nourhan', 'Hadeer',
-        'Doaa', 'Eman', 'Maha', 'Reem', 'Shaimaa', 'Nagwa', 'Amal', 'Zeinab'
-    ]
-    
-    last_names = [
-        'Mohamed', 'Ali', 'Hassan', 'Ibrahim', 'Mahmoud', 'Youssef', 'Ahmed',
-        'Sayed', 'Abdel Rahman', 'El-Sayed', 'Khalil', 'Mostafa', 'Saad',
-        'Farid', 'Rashad', 'Nasser', 'Mansour', 'Saleh', 'Gaber', 'Zaki',
-        'Ismail', 'Hamdy', 'Fathy', 'Salem', 'Morsy', 'Kamel', 'Shafik'
-    ]
-    
-    # Branch distribution for realistic performance variance
-    # Dragon Club (high): 60 customers (40%)
-    # Phoenix Club (medium): 55 customers (36.7%)
-    # Tiger Club (lower): 35 customers (23.3%)
-    branch_distribution = [60, 55, 35]
+    gp_client = GOOGLE_PLAY_TEST_CLIENT
 
-    # Add one fixed account specifically for Google Play reviewer testing.
-    test_branch_idx = GOOGLE_PLAY_TEST_CLIENT['branch_index']
-    if 0 <= test_branch_idx < len(branches):
-        test_branch = branches[test_branch_idx]
-        test_password = GOOGLE_PLAY_TEST_CLIENT['password']
-        test_customer = Customer(
-            full_name=GOOGLE_PLAY_TEST_CLIENT['full_name'],
-            phone=GOOGLE_PLAY_TEST_CLIENT['phone'],
-            email=GOOGLE_PLAY_TEST_CLIENT['email'],
-            national_id=GOOGLE_PLAY_TEST_CLIENT['national_id'],
-            date_of_birth=date(1998, 6, 15),
-            gender=Gender.MALE,
-            address=f'100 Review Street, {test_branch.city}',
-            height=178,
-            weight=78,
-            health_notes='Google Play reviewer test account',
-            branch_id=test_branch.id,
-            is_active=True,
-            temp_password=test_password,
-            password_changed=False
-        )
-        test_customer.password_hash = pbkdf2_sha256.hash(test_password)
-        test_customer.calculate_health_metrics()
-        customers.append(test_customer)
-        db.session.add(test_customer)
+    for branch_spec in spec['branches']:
+        branch = branches[branch_spec['code']]
+        count = branch_spec['customers']
 
-        # Keep total customers at 150 by reducing generated count in that branch.
-        branch_distribution[test_branch_idx] = max(0, branch_distribution[test_branch_idx] - 1)
-    
-    customer_id = 1
-    for branch_idx, branch in enumerate(branches):
-        customer_count = branch_distribution[branch_idx]
-        
-        for i in range(customer_count):
+        # The Google Play reviewer's account is fixed, not generated — its
+        # credentials are published in the Play Console and must not drift.
+        if spec['key'] == gp_client['gym_key'] and branch_spec['code'] == gp_client['branch_code']:
+            test_customer = Customer(
+                full_name=gp_client['full_name'],
+                phone=gp_client['phone'],
+                email=gp_client['email'],
+                national_id=gp_client['national_id'],
+                date_of_birth=date(1998, 6, 15),
+                gender=Gender.MALE,
+                address=f"100 Review Street, {branch.city}",
+                height=178,
+                weight=78,
+                health_notes='Google Play reviewer test account',
+                branch_id=branch.id,
+                is_active=True,
+                temp_password=gp_client['password'],
+                password_changed=False,
+            )
+            test_customer.password_hash = pbkdf2_sha256.hash(gp_client['password'])
+            test_customer.calculate_health_metrics()
+            customers.append(test_customer)
+            db.session.add(test_customer)
+            count = max(0, count - 1)
+
+        for _ in range(count):
             gender = random.choice(['male', 'female'])
-            
-            if gender == 'male':
-                first_name = random.choice(male_names)
-            else:
-                first_name = random.choice(female_names)
-            
-            last_name = random.choice(last_names)
-            full_name = f'{first_name} {last_name}'
-            
-            # Generate realistic birth dates (ages 18-55)
+            first_name = random.choice(MALE_NAMES if gender == 'male' else FEMALE_NAMES)
+            full_name = f'{first_name} {random.choice(LAST_NAMES)}'
+
             age = random.randint(18, 55)
-            birth_year = date.today().year - age
-            birth_month = random.randint(1, 12)
-            birth_day = random.randint(1, 28)
-            dob = date(birth_year, birth_month, birth_day)
-            
-            # Height: 155-195 cm, Weight: 50-120 kg
-            height = random.randint(155, 195)
-            weight = random.randint(50, 120)
-            
-            # Generate temporary password for first login
+            dob = date(date.today().year - age, random.randint(1, 12), random.randint(1, 28))
             temp_password = generate_temp_password()
-            
+
             customer = Customer(
                 full_name=full_name,
                 phone=f'010{random.randint(10000000, 99999999)}',
-                email=f'customer{customer_id}@example.com',
+                email=f'{spec["key"]}.customer{len(customers) + 1}@example.com',
                 national_id=f'290{random.randint(1000000000, 9999999999)}',
                 date_of_birth=dob,
                 gender=Gender(gender),
                 address=f'{random.randint(1, 200)} Street, {branch.city}',
-                height=height,
-                weight=weight,
+                height=random.randint(155, 195),
+                weight=random.randint(50, 120),
                 health_notes=random.choice([
                     'No health issues',
                     'Previous knee injury',
                     'Back pain - needs special attention',
                     'Asthma - no heavy cardio',
                     'Diabetes - monitor blood sugar',
-                    None
+                    None,
                 ]),
                 branch_id=branch.id,
                 is_active=True,
                 temp_password=temp_password,
-                password_changed=False
+                password_changed=False,
             )
-            
-            # Hash the temp password (don't use set_password() as it clears temp_password)
+            # Not set_password() — that clears temp_password, and the client app
+            # needs it to drive the first-login change flow.
             customer.password_hash = pbkdf2_sha256.hash(temp_password)
-            
-            # Calculate health metrics
             customer.calculate_health_metrics()
-            
             customers.append(customer)
             db.session.add(customer)
-            customer_id += 1
-    
+
     db.session.flush()
-    print(f"  ✓ Created {len(customers)} customers")
-    print(f"    - Dragon Club: {branch_distribution[0]}")
-    print(f"    - Phoenix Club: {branch_distribution[1]}")
-    print(f"    - Tiger Club: {branch_distribution[2]}")
-    print(f"    - Dedicated Google Play test account: {GOOGLE_PLAY_TEST_CLIENT['phone']}")
+    print(f'  ✓ Customers: {len(customers)}')
     return customers
 
 
-def create_subscriptions(customers, services, branches, users):
-    """Create subscriptions and ensure every seeded client has active access."""
+def create_subscriptions(customers, services, branches, staff):
+    """Create subscriptions across the whole status space.
+
+    Statuses are derived from real expiry maths rather than sprinkled at random,
+    so the 48-hour and 7-day expiry alerts fire on subscriptions that genuinely
+    are about to lapse.
+    """
     subscriptions = []
-    reception_users = [u for u in users if u.role == UserRole.FRONT_DESK]
-    
-    # Get customers by branch for weighted performance
-    branch_customers = {branch.id: [] for branch in branches}
-    for customer in customers:
-        branch_customers[customer.branch_id].append(customer)
-    
-    # Subscription rate per branch (Dragon high, Phoenix medium, Tiger lower)
-    subscription_rates = [0.90, 0.82, 0.70]  # 90%, 82%, 70%
-    
-    renewal_reasons_rejected = [
-        'Too expensive',
-        'Moving to another city',
-        'Not satisfied with service',
-        'Joining competitor gym',
-        'Financial difficulties',
-        'Medical reasons',
-        'Taking a break from training'
-    ]
-    
+    sellable = [s for s in services if s.is_active]
+    default_service = sellable[0]  # Monthly Gym Membership
+    branch_by_id = {b.id: b for b in branches.values()}
+
     stop_reasons = [
         'Customer requested - medical reasons',
         'Customer requested - relocation',
         'Non-payment',
         'Violation of gym rules',
-        'Customer dissatisfaction'
+        'Customer dissatisfaction',
     ]
-    
-    for branch_idx, branch in enumerate(branches):
-        branch_cust = branch_customers[branch.id]
-        subscription_count = int(len(branch_cust) * subscription_rates[branch_idx])
-        
-        # Select customers for subscriptions
-        subscribed_customers = random.sample(branch_cust, subscription_count)
 
-        # Ensure the Google Play test customer always has an active subscription.
-        test_customer = next((c for c in branch_cust if c.phone == GOOGLE_PLAY_TEST_CLIENT['phone']), None)
-        if test_customer and test_customer not in subscribed_customers:
-            if subscribed_customers:
-                subscribed_customers[-1] = test_customer
-            else:
-                subscribed_customers.append(test_customer)
-        
-        for customer in subscribed_customers:
-            # Get reception user from same branch
-            reception = next((u for u in reception_users if u.branch_id == branch.id), reception_users[0])
-            
-            # Choose service (Dragon prefers premium, Tiger prefers basic)
-            if branch_idx == 0:  # Dragon - Premium preferences
-                service = random.choice(services) if random.random() > 0.3 else services[-1]  # 70% bundle
-            elif branch_idx == 1:  # Phoenix - Mixed
-                service = random.choice(services)
-            else:  # Tiger - More basic
-                service = random.choice(services[:3])
-            
-            # Subscription age (days since start) - realistic distribution
+    customers_by_branch = {}
+    for customer in customers:
+        customers_by_branch.setdefault(customer.branch_id, []).append(customer)
+
+    for branch_id, branch_customers in customers_by_branch.items():
+        branch = branch_by_id[branch_id]
+        desk = staff['desk_by_branch'][branch_id]
+
+        for customer in branch_customers:
+            reception = random.choice(desk)
+            service = random.choice(sellable)
+
             days_old = random.choices(
-                [random.randint(0, 10), random.randint(11, 25), random.randint(26, 60), random.randint(61, 90)],
-                weights=[30, 40, 20, 10],  # More recent subscriptions
-                k=1
+                [random.randint(0, 10), random.randint(11, 25),
+                 random.randint(26, 60), random.randint(61, 90)],
+                weights=[30, 40, 20, 10],
+                k=1,
             )[0]
-            
             start_date = date.today() - timedelta(days=days_old)
             end_date = start_date + timedelta(days=service.duration_days)
-            
-            # Determine realistic status
             days_until_expiry = (end_date - date.today()).days
-            
+
             if days_until_expiry < 0:
-                # Expired
                 status = SubscriptionStatus.EXPIRED
-                freeze_count = 0
-                total_frozen = 0
-            elif days_until_expiry <= 2:
-                # Expiring in 48h - HIGH PRIORITY ALERT
-                status = SubscriptionStatus.ACTIVE
-                freeze_count = random.randint(0, 1)
-                total_frozen = random.randint(0, 5) if freeze_count > 0 else 0
-            elif days_until_expiry <= 7:
-                # Expiring in week - MEDIUM PRIORITY
-                status = SubscriptionStatus.ACTIVE
-                freeze_count = random.randint(0, 2)
-                total_frozen = random.randint(0, 10) if freeze_count > 0 else 0
+                freeze_count, total_frozen = 0, 0
             elif random.random() < 0.06:
-                # 6% frozen
                 status = SubscriptionStatus.FROZEN
                 freeze_count = random.randint(1, 2)
                 total_frozen = random.randint(3, 14)
             elif random.random() < 0.04:
-                # 4% stopped
                 status = SubscriptionStatus.STOPPED
-                freeze_count = 0
-                total_frozen = 0
+                freeze_count, total_frozen = 0, 0
             else:
-                # Active
                 status = SubscriptionStatus.ACTIVE
                 freeze_count = random.randint(0, 2)
-                total_frozen = random.randint(0, 7) if freeze_count > 0 else 0
+                total_frozen = random.randint(0, 7) if freeze_count else 0
 
+            # The reviewer's account gets a predictable, comfortably-active plan.
             if customer.phone == GOOGLE_PLAY_TEST_CLIENT['phone']:
-                service = services[0]  # Monthly gym membership for predictable review flow
+                service = default_service
                 days_old = 5
                 start_date = date.today() - timedelta(days=days_old)
                 end_date = start_date + timedelta(days=service.duration_days)
                 status = SubscriptionStatus.ACTIVE
-                freeze_count = 0
-                total_frozen = 0
-            
+                freeze_count, total_frozen = 0, 0
+
             subscription = Subscription(
                 customer_id=customer.id,
                 service_id=service.id,
-                branch_id=customer.branch_id,
+                branch_id=branch.id,
                 start_date=start_date,
                 end_date=end_date,
                 status=status,
@@ -788,916 +743,827 @@ def create_subscriptions(customers, services, branches, users):
                 total_frozen_days=total_frozen,
                 classes_attended=random.randint(0, service.class_limit) if service.class_limit else 0,
                 stop_reason=random.choice(stop_reasons) if status == SubscriptionStatus.STOPPED else None,
-                stopped_at=datetime.now() - timedelta(days=random.randint(1, 10)) if status == SubscriptionStatus.STOPPED else None,
-                created_by=reception.id
+                stopped_at=datetime.now() - timedelta(days=random.randint(1, 10))
+                if status == SubscriptionStatus.STOPPED else None,
+                created_by=reception.id,
             )
-            
-            # Assign subscription type and remaining values based on service type
-            if service.service_type == ServiceType.GYM:
-                # Gym services are coin-based
-                subscription.subscription_type = 'coins'
-                subscription.total_coins = random.choice([20, 25, 30])  # Random coin package
-                # Calculate remaining coins based on subscription age and status
-                if status == SubscriptionStatus.EXPIRED:
-                    subscription.remaining_coins = 0
-                elif status == SubscriptionStatus.STOPPED:
-                    subscription.remaining_coins = random.randint(0, subscription.total_coins // 2)
-                else:
-                    # Active/Frozen: use some coins but not all
-                    coins_used = int((days_old / service.duration_days) * subscription.total_coins * random.uniform(0.6, 1.0))
-                    subscription.remaining_coins = max(0, subscription.total_coins - coins_used)
-            
-            elif service.class_limit and service.class_limit > 0:
-                # Services with class limits are session-based
-                if service.service_type == ServiceType.KARATE:
-                    subscription.subscription_type = 'training'
-                else:
-                    subscription.subscription_type = 'sessions'
-                
-                subscription.total_sessions = service.class_limit
-                # Calculate remaining sessions based on classes_attended
-                subscription.remaining_sessions = max(0, service.class_limit - subscription.classes_attended)
-                
-                if status == SubscriptionStatus.EXPIRED:
-                    subscription.remaining_sessions = 0
-                elif status == SubscriptionStatus.STOPPED:
-                    subscription.remaining_sessions = random.randint(0, service.class_limit // 2)
-            
-            else:
-                # Time-based subscriptions (swimming recreation, bundles)
-                subscription.subscription_type = 'time_based'
-                subscription.remaining_coins = None
-                subscription.total_coins = None
-                subscription.remaining_sessions = None
-                subscription.total_sessions = None
-            
+            apply_subscription_balance(subscription, service, status, days_old)
             subscriptions.append(subscription)
             db.session.add(subscription)
 
-    # Ensure every seeded customer has at least one active subscription for client app testing.
-    ensured_active_count = 0
-    customers_with_active = {
-        s.customer_id
-        for s in subscriptions
-        if s.status == SubscriptionStatus.ACTIVE and (
-            s.subscription_type == 'coins' or s.end_date >= date.today()
-        )
+    db.session.flush()
+
+    # Guarantee a spread of imminent expiries — the alert panels are a headline
+    # feature and must never render empty. These are pinned rather than left to
+    # the random draw above, which on a given seed might produce none.
+    pin_expiring_subscriptions(subscriptions)
+
+    # Every customer must be able to log into the client app and see an active
+    # plan, so anyone the draw above left without one gets a fresh membership.
+    ensured = 0
+    with_active = {
+        s.customer_id for s in subscriptions
+        if s.status == SubscriptionStatus.ACTIVE and s.end_date >= date.today()
     }
-
-    default_client_service = services[0]  # Monthly Gym Membership (coin-based)
     for customer in customers:
-        if customer.id in customers_with_active:
+        if customer.id in with_active:
             continue
-
-        reception = next((u for u in reception_users if u.branch_id == customer.branch_id), None)
+        desk = staff['desk_by_branch'][customer.branch_id]
         start_date = date.today() - timedelta(days=random.randint(0, 5))
-        end_date = start_date + timedelta(days=default_client_service.duration_days)
-
-        fallback_subscription = Subscription(
+        fallback = Subscription(
             customer_id=customer.id,
-            service_id=default_client_service.id,
+            service_id=default_service.id,
             branch_id=customer.branch_id,
             start_date=start_date,
-            end_date=end_date,
+            end_date=start_date + timedelta(days=default_service.duration_days),
             status=SubscriptionStatus.ACTIVE,
             freeze_count=0,
             total_frozen_days=0,
             classes_attended=0,
-            created_by=reception.id if reception else None,
+            created_by=random.choice(desk).id,
         )
-        fallback_subscription.subscription_type = 'coins'
-        fallback_subscription.total_coins = 30
-        fallback_subscription.remaining_coins = random.randint(18, 30)
+        fallback.subscription_type = 'coins'
+        fallback.total_coins = 30
+        fallback.remaining_coins = random.randint(18, 30)
+        subscriptions.append(fallback)
+        db.session.add(fallback)
+        with_active.add(customer.id)
+        ensured += 1
 
-        subscriptions.append(fallback_subscription)
-        db.session.add(fallback_subscription)
-        customers_with_active.add(customer.id)
-        ensured_active_count += 1
-    
     db.session.flush()
-    
-    # Create freeze history for frozen/previously frozen subscriptions
-    freeze_history_count = 0
-    for subscription in subscriptions:
-        if subscription.freeze_count > 0 and subscription.total_frozen_days > 0:
-            for i in range(subscription.freeze_count):
-                freeze_start = subscription.start_date + timedelta(days=random.randint(5, 20))
-                # Ensure freeze_days is valid
-                max_freeze_days = max(1, min(10, subscription.total_frozen_days))
-                freeze_days = random.randint(1, max_freeze_days)
-                
-                freeze = FreezeHistory(
-                    subscription_id=subscription.id,
-                    freeze_start=freeze_start,
-                    freeze_end=freeze_start + timedelta(days=freeze_days),
-                    freeze_days=freeze_days,
-                    reason=random.choice(['Travel', 'Medical', 'Personal', 'Work commitment']),
-                    cost=subscription.service.freeze_cost if subscription.service.freeze_is_paid else 0
-                )
-                db.session.add(freeze)
-                freeze_history_count += 1
-    
+    create_freeze_history(subscriptions)
     db.session.flush()
-    
-    # Count by status
-    active_count = sum(1 for s in subscriptions if s.status == SubscriptionStatus.ACTIVE)
-    frozen_count = sum(1 for s in subscriptions if s.status == SubscriptionStatus.FROZEN)
-    stopped_count = sum(1 for s in subscriptions if s.status == SubscriptionStatus.STOPPED)
-    expired_count = sum(1 for s in subscriptions if s.status == SubscriptionStatus.EXPIRED)
-    expiring_48h = sum(1 for s in subscriptions if s.status == SubscriptionStatus.ACTIVE and (s.end_date - date.today()).days <= 2)
-    expiring_7d = sum(1 for s in subscriptions if s.status == SubscriptionStatus.ACTIVE and (s.end_date - date.today()).days <= 7)
-    
-    print(f"  ✓ Created {len(subscriptions)} subscriptions")
-    print(f"    - Active: {active_count} (including {expiring_48h} expiring in 48h, {expiring_7d} in 7days)")
-    print(f"    - Frozen: {frozen_count}")
-    print(f"    - Stopped: {stopped_count}")
-    print(f"    - Expired: {expired_count}")
-    print(f"    - Added fallback active subscriptions: {ensured_active_count}")
-    print(f"    - Freeze history records: {freeze_history_count}")
-    
+
+    counts = {
+        status.value: sum(1 for s in subscriptions if s.status == status)
+        for status in SubscriptionStatus
+    }
+    expiring_48h = sum(
+        1 for s in subscriptions
+        if s.status == SubscriptionStatus.ACTIVE and 0 <= (s.end_date - date.today()).days <= 2
+    )
+    expiring_7d = sum(
+        1 for s in subscriptions
+        if s.status == SubscriptionStatus.ACTIVE and 0 <= (s.end_date - date.today()).days <= 7
+    )
+    print(f'  ✓ Subscriptions: {len(subscriptions)} '
+          f'(active {counts["active"]}, frozen {counts["frozen"]}, '
+          f'stopped {counts["stopped"]}, expired {counts["expired"]})')
+    print(f'      - Expiry alerts: {expiring_48h} within 48h, {expiring_7d} within 7 days')
+    if ensured:
+        print(f'      - Added {ensured} fallback memberships so every client app login has one')
     return subscriptions
 
 
-def create_fingerprints(customers, subscriptions):
-    """Create fingerprints - LINKED to subscription status (active/disabled)"""
-    fingerprints = []
-    
-    # Map customers to their subscriptions
-    customer_subscriptions = {}
-    for subscription in subscriptions:
-        customer_subscriptions[subscription.customer_id] = subscription
-    
-    # Create fingerprints for 92% of customers
-    eligible_customers = random.sample(customers, int(len(customers) * 0.92))
-    
-    for customer in eligible_customers:
-        subscription = customer_subscriptions.get(customer.id)
-        
-        # Determine if fingerprint should be active based on subscription
-        if subscription:
-            if subscription.status == SubscriptionStatus.ACTIVE:
-                is_active = True  # Active subscription = active fingerprint
-            elif subscription.status == SubscriptionStatus.FROZEN:
-                is_active = random.random() < 0.3  # 30% still active during freeze
-            elif subscription.status == SubscriptionStatus.STOPPED:
-                is_active = False  # Stopped subscription = disabled fingerprint
-            elif subscription.status == SubscriptionStatus.EXPIRED:
-                is_active = random.random() < 0.1  # 10% remain active (grace period)
-            else:
-                is_active = True
+def apply_subscription_balance(subscription, service, status, days_old):
+    """Set the coin/session balance to match the plan type and how used-up it is."""
+    if service.service_type == ServiceType.GYM:
+        subscription.subscription_type = 'coins'
+        subscription.total_coins = random.choice([20, 25, 30])
+        if status == SubscriptionStatus.EXPIRED:
+            subscription.remaining_coins = 0
+        elif status == SubscriptionStatus.STOPPED:
+            subscription.remaining_coins = random.randint(0, subscription.total_coins // 2)
         else:
-            # No subscription - 40% have active fingerprints (new registrations)
+            used = int((days_old / service.duration_days) * subscription.total_coins
+                       * random.uniform(0.6, 1.0))
+            subscription.remaining_coins = max(0, subscription.total_coins - used)
+
+    elif service.class_limit:
+        subscription.subscription_type = (
+            'training' if service.service_type == ServiceType.KARATE else 'sessions'
+        )
+        subscription.total_sessions = service.class_limit
+        subscription.remaining_sessions = max(0, service.class_limit - subscription.classes_attended)
+        if status == SubscriptionStatus.EXPIRED:
+            subscription.remaining_sessions = 0
+        elif status == SubscriptionStatus.STOPPED:
+            subscription.remaining_sessions = random.randint(0, service.class_limit // 2)
+
+    else:
+        subscription.subscription_type = 'time_based'
+        subscription.remaining_coins = None
+        subscription.total_coins = None
+        subscription.remaining_sessions = None
+        subscription.total_sessions = None
+
+
+def pin_expiring_subscriptions(subscriptions):
+    """Force a handful of active plans to expire imminently, per branch.
+
+    The expiry alerts are what the owner and managers open the app for; leaving
+    their existence to chance would mean some seeds ship an empty alert panel.
+    """
+    by_branch = {}
+    for subscription in subscriptions:
+        if subscription.status == SubscriptionStatus.ACTIVE:
+            by_branch.setdefault(subscription.branch_id, []).append(subscription)
+
+    for branch_subscriptions in by_branch.values():
+        # Two expiring inside 48h, three more inside the week.
+        sample = random.sample(branch_subscriptions, min(5, len(branch_subscriptions)))
+        for index, subscription in enumerate(sample):
+            days_left = random.randint(0, 2) if index < 2 else random.randint(3, 7)
+            subscription.end_date = date.today() + timedelta(days=days_left)
+            subscription.start_date = subscription.end_date - timedelta(
+                days=subscription.service.duration_days
+            )
+
+
+def create_freeze_history(subscriptions):
+    """Write the freeze audit trail behind each subscription's freeze counters."""
+    created = 0
+    for subscription in subscriptions:
+        if not (subscription.freeze_count > 0 and subscription.total_frozen_days > 0):
+            continue
+        for _ in range(subscription.freeze_count):
+            freeze_start = subscription.start_date + timedelta(days=random.randint(5, 20))
+            freeze_days = random.randint(1, max(1, min(10, subscription.total_frozen_days)))
+            db.session.add(FreezeHistory(
+                subscription_id=subscription.id,
+                freeze_start=freeze_start,
+                freeze_end=freeze_start + timedelta(days=freeze_days),
+                freeze_days=freeze_days,
+                reason=random.choice(['Travel', 'Medical', 'Personal', 'Work commitment']),
+                cost=subscription.service.freeze_cost if subscription.service.freeze_is_paid else 0,
+            ))
+            created += 1
+    return created
+
+
+def create_fingerprints(customers, subscriptions):
+    """Create fingerprints whose enrolment state tracks subscription state."""
+    latest = {}
+    for subscription in subscriptions:
+        latest[subscription.customer_id] = subscription
+
+    fingerprints = []
+    for customer in random.sample(customers, int(len(customers) * 0.92)):
+        subscription = latest.get(customer.id)
+        if subscription is None:
             is_active = random.random() < 0.4
-        
+        elif subscription.status == SubscriptionStatus.ACTIVE:
+            is_active = True
+        elif subscription.status == SubscriptionStatus.FROZEN:
+            is_active = random.random() < 0.3
+        elif subscription.status == SubscriptionStatus.STOPPED:
+            is_active = False
+        else:  # expired — a few keep working through the grace period
+            is_active = random.random() < 0.1
+
         fingerprint = Fingerprint(
             customer_id=customer.id,
             fingerprint_hash=Fingerprint.generate_fingerprint_hash(
-                customer.id,
-                f'fingerprint_data_{customer.id}_{random.randint(1000, 9999)}'
+                customer.id, f'fingerprint_data_{customer.id}_{random.randint(1000, 9999)}'
             ),
-            is_active=is_active
+            is_active=is_active,
         )
         fingerprints.append(fingerprint)
         db.session.add(fingerprint)
-    
+
     db.session.flush()
-    
-    active_count = sum(1 for f in fingerprints if f.is_active)
-    disabled_count = len(fingerprints) - active_count
-    
-    print(f"  ✓ Created {len(fingerprints)} fingerprints")
-    print(f"    - Active: {active_count}")
-    print(f"    - Disabled: {disabled_count}")
-    
+    active = sum(1 for f in fingerprints if f.is_active)
+    print(f'  ✓ Fingerprints: {len(fingerprints)} ({active} active, {len(fingerprints) - active} disabled)')
     return fingerprints
 
 
-def create_transactions(subscriptions, branches, users):
-    """Create transactions - HUNDREDS of realistic transactions for leaderboards"""
-    reception_users = [u for u in users if u.role == UserRole.FRONT_DESK]
+MISC_SALES = [
+    ('Personal training session', 150, 200),
+    ('Protein shake', 30, 50),
+    ('Gym merchandise - T-shirt', 100, 150),
+    ('Gym merchandise - Bottle', 40, 70),
+    ('Locker rental - Monthly', 50, 80),
+    ('Towel service', 15, 30),
+    ('Private class', 180, 250),
+    ('Nutritionist consultation', 250, 400),
+    ('Fitness assessment', 100, 150),
+    ('Body composition analysis', 80, 120),
+    ('Sports massage', 200, 300),
+    ('Supplement purchase', 150, 350),
+    ('Yoga mat purchase', 80, 150),
+    ('Resistance bands', 60, 100),
+    ('Swimming goggles', 50, 100),
+    ('Gym gloves', 70, 120),
+    ('Lock purchase', 30, 60),
+]
+
+
+def create_transactions(subscriptions, branches, staff, spec):
+    """Create the money trail: signups, renewals, freeze fees and counter sales.
+
+    Sales reach back 8 months so the monthly revenue trend has a point in every
+    bucket; a chart that starts mid-axis reads as a data bug, not a young gym.
+    """
     transactions = []
-    
-    def get_payment_method():
-        """Realistic payment distribution: 40% cash, 40% network, 20% transfer"""
-        rand = random.random()
-        if rand < 0.4:
-            return PaymentMethod.CASH
-        elif rand < 0.8:
-            return PaymentMethod.NETWORK
-        else:
-            return PaymentMethod.TRANSFER
-    
-    def get_ref_number(payment_method):
-        """Generate reference number for non-cash payments"""
-        if payment_method == PaymentMethod.CASH:
-            return None
-        return f'TXN{random.randint(100000, 999999)}'
-    
-    # === 1. INITIAL SUBSCRIPTION PAYMENTS (one per subscription) ===
+
+    def desk_for(branch_id):
+        return random.choice(staff['desk_by_branch'][branch_id])
+
+    # 1. The signup payment behind every subscription.
     for subscription in subscriptions:
-        reception = next((u for u in reception_users if u.branch_id == subscription.branch_id), reception_users[0])
-        payment_method = get_payment_method()
-        
-        transaction = Transaction(
+        method = payment_method()
+        transactions.append(Transaction(
             amount=subscription.service.price,
-            payment_method=payment_method,
+            payment_method=method,
             transaction_type=TransactionType.SUBSCRIPTION,
             branch_id=subscription.branch_id,
             customer_id=subscription.customer_id,
             subscription_id=subscription.id,
-            created_by=reception.id,
+            created_by=desk_for(subscription.branch_id).id,
             description=f'New subscription: {subscription.service.name}',
             transaction_date=subscription.start_date,
-            created_at=datetime.combine(subscription.start_date, datetime.min.time()) + timedelta(hours=random.randint(8, 20), minutes=random.randint(0, 59)),
-            reference_number=get_ref_number(payment_method)
-        )
-        transactions.append(transaction)
-        db.session.add(transaction)
-    
-    # === 2. RENEWAL TRANSACTIONS (35% of subscriptions have renewals) ===
-    renewal_count = int(len(subscriptions) * 0.35)
-    renewals_created = 0
-    for subscription in random.sample(subscriptions, renewal_count):
-        reception = next((u for u in reception_users if u.branch_id == subscription.branch_id), reception_users[0])
-        
-        # Some subscriptions have multiple renewals (history)
-        renewal_history = random.choices([1, 2, 3], weights=[60, 30, 10], k=1)[0]
-        
-        for renewal_num in range(renewal_history):
-            payment_method = get_payment_method()
-            # Each renewal goes back further in time
-            renewal_date = subscription.start_date - timedelta(days=random.randint(30, 90) * (renewal_num + 1))
-            
-            transaction = Transaction(
+            created_at=at_business_hour(subscription.start_date),
+            reference_number=reference_number(method),
+        ))
+
+    # 2. Renewal history for a third of members — the renewal-rate metric needs
+    #    both renewers and non-renewers to say anything.
+    for subscription in random.sample(subscriptions, int(len(subscriptions) * 0.35)):
+        for renewal_num in range(random.choices([1, 2, 3], weights=[60, 30, 10], k=1)[0]):
+            method = payment_method()
+            renewal_date = subscription.start_date - timedelta(
+                days=random.randint(30, 90) * (renewal_num + 1)
+            )
+            transactions.append(Transaction(
                 amount=subscription.service.price,
-                payment_method=payment_method,
+                payment_method=method,
                 transaction_type=TransactionType.RENEWAL,
                 branch_id=subscription.branch_id,
                 customer_id=subscription.customer_id,
                 subscription_id=subscription.id,
-                created_by=reception.id,
+                created_by=desk_for(subscription.branch_id).id,
                 description=f'Renewal #{renewal_num + 1}: {subscription.service.name}',
                 transaction_date=renewal_date,
-                created_at=datetime.combine(renewal_date, datetime.min.time()) + timedelta(hours=random.randint(8, 20), minutes=random.randint(0, 59)),
-                reference_number=get_ref_number(payment_method)
-            )
-            transactions.append(transaction)
-            db.session.add(transaction)
-            renewals_created += 1
-    
-    # === 3. RENEWAL REJECTIONS (10-15% of customers rejected renewal offers) ===
-    # These don't create transactions but help test renewal workflows
-    # We simulate by NOT creating renewals for some expired/stopped subscriptions
-    
-    # === 4. FREEZE PAYMENT TRANSACTIONS ===
-    freeze_payments = 0
+                created_at=at_business_hour(renewal_date),
+                reference_number=reference_number(method),
+            ))
+
+    # 3. Freeze fees, but only for the plans that actually charge for freezing.
     for subscription in subscriptions:
-        if subscription.freeze_count > 0 and subscription.service.freeze_is_paid:
-            reception = next((u for u in reception_users if u.branch_id == subscription.branch_id), reception_users[0])
-            
-            # Create transaction for each freeze
-            for i in range(subscription.freeze_count):
-                payment_method = get_payment_method()
-                freeze_date = subscription.start_date + timedelta(days=random.randint(5, 25))
-                
-                transaction = Transaction(
-                    amount=subscription.service.freeze_cost,
-                    payment_method=payment_method,
-                    transaction_type=TransactionType.FREEZE,
-                    branch_id=subscription.branch_id,
-                    customer_id=subscription.customer_id,
-                    subscription_id=subscription.id,
-                    created_by=reception.id,
-                    description=f'Freeze fee #{i+1}: {subscription.service.name}',
-                    transaction_date=freeze_date,
-                    created_at=datetime.combine(freeze_date, datetime.min.time()) + timedelta(hours=random.randint(8, 20), minutes=random.randint(0, 59)),
-                    reference_number=get_ref_number(payment_method)
-                )
-                transactions.append(transaction)
-                db.session.add(transaction)
-                freeze_payments += 1
-    
-    # === 5. MISCELLANEOUS / OTHER TRANSACTIONS (large volume for revenue) ===
-    misc_types = [
-        ('Personal training session', 150, 200),
-        ('Protein shake', 30, 50),
-        ('Gym merchandise - T-shirt', 100, 150),
-        ('Gym merchandise - Bottle', 40, 70),
-        ('Locker rental - Monthly', 50, 80),
-        ('Towel service', 15, 30),
-        ('Private class', 180, 250),
-        ('Nutritionist consultation', 250, 400),
-        ('Fitness assessment', 100, 150),
-        ('Body composition analysis', 80, 120),
-        ('Sports massage', 200, 300),
-        ('Supplement purchase', 150, 350),
-        ('Yoga mat purchase', 80, 150),
-        ('Resistance bands', 60, 100),
-        ('Swimming goggles', 50, 100),
-        ('Gym gloves', 70, 120),
-        ('Lock purchase', 30, 60)
-    ]
-    
-    # Create 60-90 misc transactions per branch (180-270 total)
-    misc_created = 0
-    for branch in branches:
-        reception = next((u for u in reception_users if u.branch_id == branch.id), reception_users[0])
-        
-        # Variable count per branch based on performance
-        if branch.name == 'Dragon Club':
-            misc_count = random.randint(80, 100)  # High performer
-        elif branch.name == 'Phoenix Club':
-            misc_count = random.randint(65, 85)   # Medium
-        else:
-            misc_count = random.randint(50, 70)   # Lower
-        
-        for _ in range(misc_count):
-            desc, min_amt, max_amt = random.choice(misc_types)
-            amount = random.randint(min_amt, max_amt)
-            
-            # Spread transactions over last 90 days
-            trans_date = date.today() - timedelta(days=random.randint(0, 90))
-            
-            payment_method = get_payment_method()
-            
-            # 70% linked to existing customers, 30% walk-ins
-            customer_id = None
-            if random.random() < 0.7 and subscriptions:
-                customer_id = random.choice(subscriptions).customer_id
-            
-            transaction = Transaction(
-                amount=amount,
-                payment_method=payment_method,
+        if not (subscription.freeze_count > 0 and subscription.service.freeze_is_paid):
+            continue
+        for i in range(subscription.freeze_count):
+            method = payment_method()
+            freeze_date = subscription.start_date + timedelta(days=random.randint(5, 25))
+            transactions.append(Transaction(
+                amount=subscription.service.freeze_cost,
+                payment_method=method,
+                transaction_type=TransactionType.FREEZE,
+                branch_id=subscription.branch_id,
+                customer_id=subscription.customer_id,
+                subscription_id=subscription.id,
+                created_by=desk_for(subscription.branch_id).id,
+                description=f'Freeze fee #{i + 1}: {subscription.service.name}',
+                transaction_date=freeze_date,
+                created_at=at_business_hour(freeze_date),
+                reference_number=reference_number(method),
+            ))
+
+    # 4. Counter sales — the volume that makes leaderboards and trends move.
+    subscriber_ids = [s.customer_id for s in subscriptions]
+    for branch_spec, branch in _spec_branch_pairs(branches, spec):
+        # Scaled by branch performance: a strong branch sells more of everything.
+        sale_count = int(random.randint(90, 120) * branch_spec['perf'])
+        for _ in range(sale_count):
+            description, low, high = random.choice(MISC_SALES)
+            sale_date = date.today() - timedelta(days=random.randint(0, HISTORY_DAYS))
+            method = payment_method()
+            transactions.append(Transaction(
+                amount=random.randint(low, high),
+                payment_method=method,
                 transaction_type=TransactionType.OTHER,
                 branch_id=branch.id,
-                customer_id=customer_id,
-                created_by=reception.id,
-                description=desc,
-                transaction_date=trans_date,
-                created_at=datetime.combine(trans_date, datetime.min.time()) + timedelta(hours=random.randint(8, 20), minutes=random.randint(0, 59)),
-                reference_number=get_ref_number(payment_method)
-            )
-            transactions.append(transaction)
-            db.session.add(transaction)
-            misc_created += 1
-    
+                customer_id=random.choice(subscriber_ids) if random.random() < 0.7 else None,
+                created_by=desk_for(branch.id).id,
+                description=description,
+                transaction_date=sale_date,
+                created_at=at_business_hour(sale_date),
+                reference_number=reference_number(method),
+            ))
+
+    for transaction in transactions:
+        db.session.add(transaction)
     db.session.flush()
-    
-    # === STATISTICS FOR CONSOLE ===
-    total = len(transactions)
+
+    revenue = sum(float(t.amount) for t in transactions)
     by_type = {
-        'Subscriptions': sum(1 for t in transactions if t.transaction_type == TransactionType.SUBSCRIPTION),
-        'Renewals': sum(1 for t in transactions if t.transaction_type == TransactionType.RENEWAL),
-        'Freeze Payments': sum(1 for t in transactions if t.transaction_type == TransactionType.FREEZE),
-        'Other/Misc': sum(1 for t in transactions if t.transaction_type == TransactionType.OTHER)
+        t_type.value: sum(1 for t in transactions if t.transaction_type == t_type)
+        for t_type in TransactionType
     }
-    
-    by_payment = {
-        'Cash': sum(1 for t in transactions if t.payment_method == PaymentMethod.CASH),
-        'Network': sum(1 for t in transactions if t.payment_method == PaymentMethod.NETWORK),
-        'Transfer': sum(1 for t in transactions if t.payment_method == PaymentMethod.TRANSFER)
-    }
-    
-    total_revenue = sum(t.amount for t in transactions)
-    
-    print(f"  ✓ Created {total} transactions (TOTAL REVENUE: {total_revenue:,.0f} EGP)")
-    print(f"    By Type: {by_type}")
-    print(f"    By Payment: {by_payment}")
-    print(f"    - Revenue supports leaderboards & analytics")
-    
+    print(f'  ✓ Transactions: {len(transactions)} ({revenue:,.0f} EGP over {HISTORY_DAYS} days)')
+    print(f'      - By type: {by_type}')
     return transactions
 
 
-def create_expenses(branches, users):
-    """Create expenses - REALISTIC approval workflows & accountant alerts"""
-    managers = [u for u in users if u.role == UserRole.BRANCH_MANAGER]
-    central_accountants = [u for u in users if u.role == UserRole.CENTRAL_ACCOUNTANT]
-    branch_accountants = [u for u in users if u.role == UserRole.BRANCH_ACCOUNTANT]
-    accountants = central_accountants + branch_accountants
-    
-    expense_templates = [
-        ('Equipment Maintenance', 'Treadmill repair and maintenance', 500, 800, 'maintenance'),
-        ('Cleaning Supplies', 'Monthly cleaning and sanitation supplies', 150, 300, 'supplies'),
-        ('Electricity Bill', 'Monthly electricity consumption', 1200, 2000, 'utilities'),
-        ('Water Bill', 'Monthly water usage', 250, 500, 'utilities'),
-        ('Equipment Purchase', 'New gym equipment', 1500, 5000, 'equipment'),
-        ('Pool Chemicals', 'Chlorine and pool maintenance chemicals', 300, 600, 'supplies'),
-        ('Staff Training', 'Professional development and certifications', 800, 1500, 'training'),
-        ('Marketing Materials', 'Flyers, banners, and promotional items', 200, 800, 'marketing'),
-        ('Internet & Phone', 'Monthly communication bills', 400, 700, 'utilities'),
-        ('Security Service', 'Monthly security guard service', 2000, 3000, 'services'),
-        ('Insurance Payment', 'Monthly insurance premium', 1500, 2500, 'insurance'),
-        ('Repair Work', 'General facility repairs', 300, 1200, 'maintenance'),
-        ('AC Maintenance', 'Air conditioning service and repair', 800, 1500, 'maintenance'),
-        ('Locker Replacement', 'New lockers for changing room', 2000, 4000, 'equipment'),
-        ('Music System', 'Sound system upgrade', 1000, 2000, 'equipment'),
-        ('Painting Work', 'Interior painting and decoration', 1500, 3000, 'maintenance'),
-        ('Uniform Purchase', 'Staff uniforms', 500, 1000, 'supplies'),
-        ('First Aid Supplies', 'Medical supplies and first aid kit', 200, 400, 'supplies'),
-        ('Software License', 'Management software annual fee', 1000, 2000, 'software'),
-        ('Pest Control', 'Monthly pest control service', 300, 500, 'services'),
-        ('Fire Extinguisher Service', 'Annual fire safety inspection', 800, 1200, 'safety'),
-        ('Emergency Exit Signs', 'Replace emergency lighting', 600, 1000, 'safety'),
-        ('Plumbing Repair', 'Shower and sink repairs', 400, 900, 'maintenance'),
-        ('Mirror Replacement', 'Large wall mirrors for training area', 1200, 2000, 'equipment'),
-        ('Floor Resurfacing', 'Gym floor maintenance', 2500, 4000, 'maintenance'),
-        ('Sound Insulation', 'Noise reduction treatment', 1800, 3000, 'maintenance'),
-        ('LED Lighting Upgrade', 'Energy efficient lighting', 1500, 2500, 'equipment'),
-        ('Parking Lot Repair', 'Asphalt and marking', 2000, 3500, 'maintenance'),
-        ('Sauna Heater Repair', 'Sauna maintenance', 800, 1500, 'equipment'),
-        ('Weighing Scale Purchase', 'Digital body analysis scales', 1000, 1800, 'equipment')
-    ]
-    
+def _spec_branch_pairs(branches, spec):
+    """Pair each Branch object back to the spec dict that described it."""
+    for branch_spec in spec['branches']:
+        yield branch_spec, branches[branch_spec['code']]
+
+
+# Recurring monthly costs — the backbone of a real P&L, and the reason the
+# expense-by-category chart has a shape instead of a flat scatter of repairs.
+RECURRING_EXPENSES = [
+    ('Staff Salaries', 'Monthly payroll', ExpenseCategory.SALARIES, 18000, 32000),
+    ('Branch Rent', 'Monthly facility rent', ExpenseCategory.RENT, 12000, 22000),
+    ('Electricity Bill', 'Monthly electricity consumption', ExpenseCategory.UTILITIES, 1200, 2000),
+    ('Water Bill', 'Monthly water usage', ExpenseCategory.UTILITIES, 250, 500),
+    ('Internet & Phone', 'Monthly communication bills', ExpenseCategory.UTILITIES, 400, 700),
+    ('Security Service', 'Monthly security guard service', ExpenseCategory.SERVICES, 2000, 3000),
+    ('Insurance Premium', 'Monthly insurance premium', ExpenseCategory.INSURANCE, 1500, 2500),
+]
+
+# Ad-hoc spending, spread thinly across the remaining categories.
+ADHOC_EXPENSES = [
+    ('Equipment Maintenance', 'Treadmill repair and maintenance', ExpenseCategory.MAINTENANCE, 500, 800),
+    ('Cleaning Supplies', 'Monthly cleaning and sanitation supplies', ExpenseCategory.SUPPLIES, 150, 300),
+    ('Equipment Purchase', 'New gym equipment', ExpenseCategory.EQUIPMENT, 1500, 5000),
+    ('Pool Chemicals', 'Chlorine and pool maintenance chemicals', ExpenseCategory.SUPPLIES, 300, 600),
+    ('Staff Training', 'Professional development and certifications', ExpenseCategory.TRAINING, 800, 1500),
+    ('Marketing Campaign', 'Social media and promotional materials', ExpenseCategory.MARKETING, 200, 800),
+    ('Repair Work', 'General facility repairs', ExpenseCategory.MAINTENANCE, 300, 1200),
+    ('AC Maintenance', 'Air conditioning service and repair', ExpenseCategory.MAINTENANCE, 800, 1500),
+    ('Locker Replacement', 'New lockers for changing room', ExpenseCategory.EQUIPMENT, 2000, 4000),
+    ('Sound System Upgrade', 'Music and PA system', ExpenseCategory.EQUIPMENT, 1000, 2000),
+    ('Painting Work', 'Interior painting and decoration', ExpenseCategory.MAINTENANCE, 1500, 3000),
+    ('Uniform Purchase', 'Staff uniforms', ExpenseCategory.SUPPLIES, 500, 1000),
+    ('First Aid Supplies', 'Medical supplies and first aid kit', ExpenseCategory.SUPPLIES, 200, 400),
+    ('Software License', 'Management software fee', ExpenseCategory.SOFTWARE, 1000, 2000),
+    ('Pest Control', 'Pest control service', ExpenseCategory.SERVICES, 300, 500),
+    ('Fire Safety Inspection', 'Annual fire safety inspection', ExpenseCategory.SAFETY, 800, 1200),
+    ('Emergency Exit Signs', 'Replace emergency lighting', ExpenseCategory.SAFETY, 600, 1000),
+    ('Plumbing Repair', 'Shower and sink repairs', ExpenseCategory.MAINTENANCE, 400, 900),
+    ('Mirror Replacement', 'Large wall mirrors for training area', ExpenseCategory.EQUIPMENT, 1200, 2000),
+    ('Floor Resurfacing', 'Gym floor maintenance', ExpenseCategory.MAINTENANCE, 2500, 4000),
+    ('LED Lighting Upgrade', 'Energy efficient lighting', ExpenseCategory.EQUIPMENT, 1500, 2500),
+    ('Sauna Heater Repair', 'Sauna maintenance', ExpenseCategory.EQUIPMENT, 800, 1500),
+    ('Miscellaneous', 'Uncategorised petty cash spending', ExpenseCategory.OTHER, 100, 500),
+]
+
+APPROVAL_NOTES = [
+    'Approved', 'Approved - necessary expense', 'Approved - within budget',
+    'Approved as per policy', 'Approved - urgent requirement', 'Approved by central office',
+]
+
+REJECTION_NOTES = [
+    'Not in budget this month', 'Needs more documentation', 'Exceeds approval limit',
+    'Duplicate expense', 'Requires manager escalation',
+    'Quote too high - negotiate better price', 'Insufficient justification',
+]
+
+
+def create_expenses(branches, staff, spec):
+    """Create spending with a realistic approval workflow.
+
+    created_at tracks expense_date rather than defaulting to now: the money page
+    filters on one and the reports on the other, and if they disagree the same
+    expense appears and disappears depending on which screen you're looking at.
+    """
     expenses = []
-    
-    # Create 60-90 expenses across branches over last 90 days
-    expense_count = random.randint(60, 90)
-    
-    for _ in range(expense_count):
-        branch = random.choice(branches)
-        manager = next((u for u in managers if u.branch_id == branch.id), managers[0])
-        
-        template = random.choice(expense_templates)
-        title, base_desc, min_amount, max_amount, category = template
-        
-        amount = random.randint(min_amount, max_amount)
-        expense_date = date.today() - timedelta(days=random.randint(0, 90))
-        days_old = (date.today() - expense_date).days
-        
-        # Realistic status distribution based on age
-        if days_old < 3:
-            # Very recent - mostly pending (80%), some fast-tracked approved (20%)
-            status = random.choices(
-                [ExpenseStatus.PENDING, ExpenseStatus.APPROVED],
-                weights=[80, 20],
-                k=1
-            )[0]
-        elif days_old < 7:
-            # Recent - 50% pending, 45% approved, 5% rejected
-            status = random.choices(
-                [ExpenseStatus.PENDING, ExpenseStatus.APPROVED, ExpenseStatus.REJECTED],
-                weights=[50, 45, 5],
-                k=1
-            )[0]
-        elif days_old < 15:
-            # Medium age - 20% pending, 70% approved, 10% rejected
-            status = random.choices(
-                [ExpenseStatus.PENDING, ExpenseStatus.APPROVED, ExpenseStatus.REJECTED],
-                weights=[20, 70, 10],
-                k=1
-            )[0]
-        else:
-            # Old - 5% pending (require action!), 85% approved, 10% rejected
-            status = random.choices(
-                [ExpenseStatus.PENDING, ExpenseStatus.APPROVED, ExpenseStatus.REJECTED],
-                weights=[5, 85, 10],
-                k=1
-            )[0]
-        
+    reviewers = staff['central_accountants'] + staff['branch_accountants'] + staff['managers']
+    manager_by_branch = {m.branch_id: m for m in staff['managers']}
+
+    def author_for(branch_id):
+        return manager_by_branch.get(branch_id) or staff['managers'][0]
+
+    def add_expense(branch, title, description, category, amount, expense_date, status):
         expense = Expense(
             title=title,
-            description=f'{base_desc} - {branch.name}',
+            description=f'{description} - {branch.name}',
             amount=amount,
             category=category,
             branch_id=branch.id,
             status=status,
             expense_date=expense_date,
-            created_by_id=manager.id
+            created_by_id=author_for(branch.id).id,
+            created_at=at_business_hour(expense_date),
         )
-        
-        # If reviewed (approved/rejected), add review details
-        if status in [ExpenseStatus.APPROVED, ExpenseStatus.REJECTED]:
-            reviewer = random.choice(accountants)
-            expense.reviewed_by_id = reviewer.id
-            expense.reviewed_at = expense_date + timedelta(days=random.randint(1, 7))
-            
-            if status == ExpenseStatus.APPROVED:
-                expense.review_notes = random.choice([
-                    'Approved',
-                    'Approved - necessary expense',
-                    'Approved - within budget',
-                    'Approved as per policy',
-                    'Approved - urgent requirement',
-                    'Approved by central office'
-                ])
-            else:
-                expense.review_notes = random.choice([
-                    'Not in budget this month',
-                    'Needs more documentation',
-                    'Exceeds approval limit',
-                    'Duplicate expense',
-                    'Requires manager escalation',
-                    'Quote too high - negotiate better price',
-                    'Insufficient justification'
-                ])
-        
+        if status in (ExpenseStatus.APPROVED, ExpenseStatus.REJECTED) and reviewers:
+            expense.reviewed_by_id = random.choice(reviewers).id
+            expense.reviewed_at = at_business_hour(
+                expense_date + timedelta(days=random.randint(1, 7))
+            )
+            expense.review_notes = random.choice(
+                APPROVAL_NOTES if status == ExpenseStatus.APPROVED else REJECTION_NOTES
+            )
         expenses.append(expense)
         db.session.add(expense)
-    
+        return expense
+
+    def status_for_age(days_old):
+        """Older expenses have mostly been dealt with; fresh ones are pending."""
+        if days_old < 3:
+            weights = [(ExpenseStatus.PENDING, 80), (ExpenseStatus.APPROVED, 20)]
+        elif days_old < 7:
+            weights = [(ExpenseStatus.PENDING, 50), (ExpenseStatus.APPROVED, 45),
+                       (ExpenseStatus.REJECTED, 5)]
+        elif days_old < 15:
+            weights = [(ExpenseStatus.PENDING, 20), (ExpenseStatus.APPROVED, 70),
+                       (ExpenseStatus.REJECTED, 10)]
+        else:
+            weights = [(ExpenseStatus.PENDING, 5), (ExpenseStatus.APPROVED, 85),
+                       (ExpenseStatus.REJECTED, 10)]
+        return random.choices([w[0] for w in weights], weights=[w[1] for w in weights], k=1)[0]
+
+    for branch_spec, branch in _spec_branch_pairs(branches, spec):
+        # Recurring bills, once a month for the last 8 months.
+        for months_ago in range(8):
+            bill_date = date.today().replace(day=1) - timedelta(days=months_ago * 30)
+            if bill_date > date.today():
+                continue
+            for title, description, category, low, high in RECURRING_EXPENSES:
+                amount = int(random.randint(low, high) * branch_spec['perf'])
+                if amount <= 0:
+                    continue
+                days_old = (date.today() - bill_date).days
+                # Last month's bills may still be awaiting sign-off; older ones are settled.
+                status = ExpenseStatus.APPROVED if days_old > 35 else status_for_age(days_old)
+                add_expense(branch, title, description, category, amount, bill_date, status)
+
+        # Ad-hoc spending across the whole history window.
+        for _ in range(int(random.randint(18, 26) * max(branch_spec['perf'], 0.4))):
+            title, description, category, low, high = random.choice(ADHOC_EXPENSES)
+            expense_date = date.today() - timedelta(days=random.randint(0, HISTORY_DAYS))
+            add_expense(branch, title, description, category,
+                        random.randint(low, high), expense_date,
+                        status_for_age((date.today() - expense_date).days))
+
+        # Every branch gets live approvals waiting: the manager's and
+        # accountant's review queue is a core flow and must never be empty.
+        for _ in range(3):
+            title, description, category, low, high = random.choice(ADHOC_EXPENSES)
+            add_expense(branch, title, description, category,
+                        random.randint(low, high),
+                        date.today() - timedelta(days=random.randint(0, 5)),
+                        ExpenseStatus.PENDING)
+
     db.session.flush()
-    
-    # Statistics
+
     pending = sum(1 for e in expenses if e.status == ExpenseStatus.PENDING)
     approved = sum(1 for e in expenses if e.status == ExpenseStatus.APPROVED)
     rejected = sum(1 for e in expenses if e.status == ExpenseStatus.REJECTED)
-    pending_old = sum(1 for e in expenses if e.status == ExpenseStatus.PENDING and (date.today() - e.expense_date).days > 7)
-    total_amount = sum(e.amount for e in expenses if e.status == ExpenseStatus.APPROVED)
-    
-    print(f"  ✓ Created {len(expenses)} expenses")
-    print(f"    - Pending: {pending} ({pending_old} need urgent review > 7 days old)")
-    print(f"    - Approved: {approved} (Total: {total_amount:,.0f} EGP)")
-    print(f"    - Rejected: {rejected}")
-    
+    approved_total = sum(float(e.amount) for e in expenses if e.status == ExpenseStatus.APPROVED)
+    categories = len({e.category for e in expenses})
+    print(f'  ✓ Expenses: {len(expenses)} across {categories} categories '
+          f'({approved_total:,.0f} EGP approved)')
+    print(f'      - Pending {pending} (awaiting review), approved {approved}, rejected {rejected}')
     return expenses
 
 
-def create_complaints(branches, customers):
-    """Create complaints - WEIGHTED by branch performance (Dragon low, Phoenix mid, Tiger high)"""
-    complaint_templates = [
-        ('Broken Treadmill', 'Treadmill #{} is not working properly', ComplaintType.DEVICE),
-        ('Pool Temperature Issue', 'Pool water temperature is {}', ComplaintType.POOL),
-        ('Locker Room Cleanliness', 'Locker room needs better cleaning', ComplaintType.CLEANLINESS),
-        ('Staff Behavior', 'Staff member was {} during my visit', ComplaintType.SERVICE),
-        ('AC Not Working', 'Air conditioning not functioning in {} area', ComplaintType.DEVICE),
-        ('Equipment Missing', 'Some gym equipment is missing or unavailable', ComplaintType.DEVICE),
-        ('Pool Cleanliness', 'Pool water appears dirty and needs cleaning', ComplaintType.POOL),
-        ('Bathroom Condition', 'Bathroom facilities need maintenance', ComplaintType.CLEANLINESS),
-        ('Rude Reception', 'Reception staff was unprofessional', ComplaintType.SERVICE),
-        ('Shower Issues', 'Shower water pressure is very low', ComplaintType.DEVICE),
-        ('Wet Floor', 'Floor is wet and slippery - safety hazard', ComplaintType.CLEANLINESS),
-        ('Music Too Loud', 'Music volume is disturbing', ComplaintType.OTHER),
-        ('Class Overcrowded', 'Too many people in swimming class', ComplaintType.POOL),
-        ('Trainer Absent', 'Scheduled trainer did not show up', ComplaintType.SERVICE),
-        ('Parking Problem', 'Not enough parking spaces available', ComplaintType.OTHER),
-        ('WiFi Not Working', 'Internet connection is not working', ComplaintType.DEVICE),
-        ('Smell in Gym', 'Unpleasant smell in the gym area', ComplaintType.CLEANLINESS),
-        ('Wrong Charge', 'I was charged incorrect amount', ComplaintType.SERVICE),
-        ('Towel Service', 'No clean towels available', ComplaintType.CLEANLINESS),
-        ('Lock Broken', 'My locker lock is broken', ComplaintType.DEVICE),
-        ('Sauna Too Hot', 'Sauna temperature dangerously high', ComplaintType.DEVICE),
-        ('Mirror Cracked', 'Large mirror in training area is cracked', ComplaintType.DEVICE),
-        ('Floor Damage', 'Gym floor has holes and cracks', ComplaintType.OTHER),
-        ('Lighting Dim', 'Insufficient lighting in certain areas', ComplaintType.OTHER),
-        ('Noise Complaints', 'Weight dropping noise excessive', ComplaintType.OTHER)
-    ]
-    
-    descriptive_words = {
-        'temperature': ['too cold', 'too hot', 'not comfortable'],
-        'area': ['main gym', 'cardio section', 'weight area', 'group class room'],
-        'staff': ['rude', 'unhelpful', 'not attentive', 'unprofessional'],
-        'number': ['1', '2', '3', '5', '7', '12']
-    }
-    
-    # Group customers by branch
-    branch_customers = {branch.id: [] for branch in branches}
-    for customer in customers:
-        branch_customers[customer.branch_id].append(customer)
-    
+COMPLAINT_TEMPLATES = [
+    ('Broken Treadmill', 'Treadmill #{number} is not working properly', ComplaintType.DEVICE),
+    ('Pool Temperature Issue', 'Pool water temperature is {temperature}', ComplaintType.POOL),
+    ('Locker Room Cleanliness', 'Locker room needs better cleaning', ComplaintType.CLEANLINESS),
+    ('Staff Behavior', 'Staff member was {staff} during my visit', ComplaintType.SERVICE),
+    ('AC Not Working', 'Air conditioning not functioning in {area} area', ComplaintType.DEVICE),
+    ('Equipment Missing', 'Some gym equipment is missing or unavailable', ComplaintType.DEVICE),
+    ('Pool Cleanliness', 'Pool water appears dirty and needs cleaning', ComplaintType.POOL),
+    ('Bathroom Condition', 'Bathroom facilities need maintenance', ComplaintType.CLEANLINESS),
+    ('Rude Reception', 'Reception staff was unprofessional', ComplaintType.SERVICE),
+    ('Shower Issues', 'Shower water pressure is very low', ComplaintType.DEVICE),
+    ('Wet Floor', 'Floor is wet and slippery - safety hazard', ComplaintType.CLEANLINESS),
+    ('Music Too Loud', 'Music volume is disturbing', ComplaintType.OTHER),
+    ('Class Overcrowded', 'Too many people in swimming class', ComplaintType.POOL),
+    ('Trainer Absent', 'Scheduled trainer did not show up', ComplaintType.SERVICE),
+    ('Parking Problem', 'Not enough parking spaces available', ComplaintType.OTHER),
+    ('WiFi Not Working', 'Internet connection is not working', ComplaintType.DEVICE),
+    ('Smell in Gym', 'Unpleasant smell in the gym area', ComplaintType.CLEANLINESS),
+    ('Wrong Charge', 'I was charged incorrect amount', ComplaintType.SERVICE),
+    ('Towel Service', 'No clean towels available', ComplaintType.CLEANLINESS),
+    ('Lock Broken', 'My locker lock is broken', ComplaintType.DEVICE),
+    ('Sauna Too Hot', 'Sauna temperature dangerously high', ComplaintType.DEVICE),
+    ('Mirror Cracked', 'Large mirror in training area is cracked', ComplaintType.DEVICE),
+    ('Lighting Dim', 'Insufficient lighting in certain areas', ComplaintType.OTHER),
+]
+
+COMPLAINT_DETAILS = {
+    'temperature': ['too cold', 'too hot', 'not comfortable'],
+    'area': ['main gym', 'cardio section', 'weight area', 'group class room'],
+    'staff': ['rude', 'unhelpful', 'not attentive', 'unprofessional'],
+    'number': ['1', '2', '3', '5', '7', '12'],
+}
+
+RESOLUTION_NOTES = [
+    'Issue resolved', 'Equipment repaired', 'Staff member trained',
+    'Cleaning schedule updated', 'Policy explained to customer',
+    'Compensation provided', 'Maintenance completed', 'Replacement ordered',
+    'Apology issued',
+]
+
+
+def create_complaints(branches, customers, spec):
+    """Create complaints inversely weighted by branch performance.
+
+    A well-run branch gets fewer complaints and closes them faster. Tying both
+    to the same 'perf' number that drives revenue is what makes the branch
+    leaderboard tell a coherent story instead of a random one.
+    """
     complaints = []
-    
-    # Weighted complaint counts: Dragon (low quality issues) = 8-12, Phoenix = 15-20, Tiger = 22-28
-    complaint_counts_by_branch = [
-        (branches[0], random.randint(8, 12)),   # Dragon Club - Best managed
-        (branches[1], random.randint(15, 20)),  # Phoenix Club - Medium
-        (branches[2], random.randint(22, 28))   # Tiger Club - More issues
-    ]
-    
-    for branch, complaint_count in complaint_counts_by_branch:
-        branch_custs = branch_customers[branch.id]
-        
-        for _ in range(complaint_count):
-            template = random.choice(complaint_templates)
-            title, desc_template, comp_type = template
-            
-            # Fill in template with random details
-            if '{}' in desc_template:
-                if 'temperature' in desc_template.lower():
-                    detail = random.choice(descriptive_words['temperature'])
-                elif 'area' in desc_template.lower():
-                    detail = random.choice(descriptive_words['area'])
-                elif 'was {}' in desc_template:
-                    detail = random.choice(descriptive_words['staff'])
-                elif '#{}'  in desc_template:
-                    detail = random.choice(descriptive_words['number'])
-                else:
-                    detail = 'not satisfactory'
-                
-                description = desc_template.format(detail)
-            else:
-                description = desc_template
-            
-            # Random date within last 60 days
-            complaint_date = datetime.now() - timedelta(days=random.randint(0, 60))
-            days_old = (datetime.now() - complaint_date).days
-            
-            # Determine status based on age and branch quality
-            # Dragon resolves faster, Tiger slower
-            if branch.name == 'Dragon Club':
-                # Best performance - fast resolution
-                if days_old < 2:
-                    status = ComplaintStatus.OPEN if random.random() < 0.5 else ComplaintStatus.IN_PROGRESS
-                elif days_old < 5:
-                    status = random.choices(
-                        [ComplaintStatus.OPEN, ComplaintStatus.IN_PROGRESS, ComplaintStatus.CLOSED],
-                        weights=[10, 30, 60],
-                        k=1
-                    )[0]
-                else:
-                    status = ComplaintStatus.CLOSED if random.random() < 0.9 else ComplaintStatus.IN_PROGRESS
-            elif branch.name == 'Phoenix Club':
-                # Medium performance
-                if days_old < 3:
-                    status = ComplaintStatus.OPEN if random.random() < 0.6 else ComplaintStatus.IN_PROGRESS
-                elif days_old < 10:
-                    status = random.choices(
-                        [ComplaintStatus.OPEN, ComplaintStatus.IN_PROGRESS, ComplaintStatus.CLOSED],
-                        weights=[20, 40, 40],
-                        k=1
-                    )[0]
-                else:
-                    status = ComplaintStatus.CLOSED if random.random() < 0.75 else ComplaintStatus.IN_PROGRESS
-            else:
-                # Tiger - slower resolution
-                if days_old < 5:
-                    status = ComplaintStatus.OPEN if random.random() < 0.7 else ComplaintStatus.IN_PROGRESS
-                elif days_old < 15:
-                    status = random.choices(
-                        [ComplaintStatus.OPEN, ComplaintStatus.IN_PROGRESS, ComplaintStatus.CLOSED],
-                        weights=[30, 40, 30],
-                        k=1
-                    )[0]
-                else:
-                    status = ComplaintStatus.CLOSED if random.random() < 0.65 else ComplaintStatus.OPEN
-            
-            # 75% have customer info, 25% anonymous
-            customer = random.choice(branch_custs) if branch_custs and random.random() < 0.75 else None
-            
-            complaint = Complaint(
+    customers_by_branch = {}
+    for customer in customers:
+        customers_by_branch.setdefault(customer.branch_id, []).append(customer)
+
+    for branch_spec, branch in _spec_branch_pairs(branches, spec):
+        perf = branch_spec['perf']
+        # Inverse of performance: the weakest branch carries the heaviest load.
+        count = int(random.randint(8, 12) + (1 - perf) * 20)
+        branch_customers = customers_by_branch.get(branch.id, [])
+
+        for _ in range(count):
+            title, template, complaint_type = random.choice(COMPLAINT_TEMPLATES)
+            description = template.format(**{
+                key: random.choice(values) for key, values in COMPLAINT_DETAILS.items()
+            }) if '{' in template else template
+
+            created_at = datetime.now() - timedelta(days=random.randint(0, 60))
+            days_old = (datetime.now() - created_at).days
+            status = _complaint_status(perf, days_old)
+
+            customer = random.choice(branch_customers) \
+                if branch_customers and random.random() < 0.75 else None
+
+            complaints.append(Complaint(
                 title=title,
                 description=description,
-                complaint_type=comp_type,
+                complaint_type=complaint_type,
                 status=status,
                 branch_id=branch.id,
                 customer_id=customer.id if customer else None,
-                customer_name=customer.full_name if customer else f'Anonymous Customer',
+                customer_name=customer.full_name if customer else 'Anonymous Customer',
                 customer_phone=customer.phone if customer else None,
-                created_at=complaint_date,
-                resolution_notes=random.choice([
-                    'Issue resolved',
-                    'Equipment repaired',
-                    'Staff member trained',
-                    'Cleaning schedule updated',
-                    'Policy explained to customer',
-                    'Compensation provided',
-                    'Maintenance completed',
-                    'Replacement ordered',
-                    'Apology issued'
-                ]) if status == ComplaintStatus.CLOSED else None,
-                resolved_at=complaint_date + timedelta(days=random.randint(1, 7)) if status == ComplaintStatus.CLOSED else None
-            )
-            complaints.append(complaint)
-            db.session.add(complaint)
-    
+                created_at=created_at,
+                resolution_notes=random.choice(RESOLUTION_NOTES)
+                if status == ComplaintStatus.CLOSED else None,
+                resolved_at=created_at + timedelta(days=random.randint(1, 7))
+                if status == ComplaintStatus.CLOSED else None,
+            ))
+
+    for complaint in complaints:
+        db.session.add(complaint)
     db.session.flush()
-    
-    # Statistics by branch
-    by_branch = {}
-    for branch in branches:
-        branch_comps = [c for c in complaints if c.branch_id == branch.id]
-        open_count = sum(1 for c in branch_comps if c.status == ComplaintStatus.OPEN)
-        by_branch[branch.name] = f"{len(branch_comps)} total ({open_count} open)"
-    
-    print(f"  ✓ Created {len(complaints)} complaints")
-    print(f"    By Branch: {by_branch}")
-    print(f"    - Dragon has fewest (best quality), Tiger has most")
-    
+
+    open_count = sum(1 for c in complaints if c.status == ComplaintStatus.OPEN)
+    in_progress = sum(1 for c in complaints if c.status == ComplaintStatus.IN_PROGRESS)
+    closed = sum(1 for c in complaints if c.status == ComplaintStatus.CLOSED)
+    print(f'  ✓ Complaints: {len(complaints)} '
+          f'(open {open_count}, in progress {in_progress}, closed {closed})')
     return complaints
 
 
-def create_daily_closings(branches, users):
-    """Create daily closings - SURPLUS/SHORTAGE scenarios for accountant alerts"""
-    from app.models.daily_closing import DailyClosing
-    from app.models.transaction import Transaction
+def _complaint_status(perf, days_old):
+    """Strong branches clear their queue; weak ones let it age."""
+    close_rate = 0.55 + perf * 0.35  # 0.65 (weak) → 0.90 (strong)
+    if days_old < 2:
+        return ComplaintStatus.OPEN if random.random() < 0.6 else ComplaintStatus.IN_PROGRESS
+    if days_old < 10:
+        return random.choices(
+            [ComplaintStatus.OPEN, ComplaintStatus.IN_PROGRESS, ComplaintStatus.CLOSED],
+            weights=[25 * (1 - perf) + 5, 35, close_rate * 60],
+            k=1,
+        )[0]
+    return ComplaintStatus.CLOSED if random.random() < close_rate else ComplaintStatus.OPEN
+
+
+def create_daily_closings(branches, staff):
+    """Close each branch's till for the last 30 days, against real takings.
+
+    The expected cash is summed from that day's actual transactions rather than
+    invented, so a shortage the accountant investigates traces back to real
+    rows — an audit trail that stops at a random number teaches nothing.
+    """
     from sqlalchemy import func, and_
-    
-    reception_users = [u for u in users if u.role == UserRole.FRONT_DESK]
+
     closings = []
-    
-    # Track alert scenarios
-    high_alerts = 0  # Difference > 100 EGP
-    medium_alerts = 0  # Difference 50-100 EGP
-    
-    # Create closings for last 30 days for each branch
-    for branch in branches:
-        reception = next((u for u in reception_users if u.branch_id == branch.id), reception_users[0])
-        
+    medium_alerts = high_alerts = 0
+
+    for branch in branches.values():
+        desk = staff['desk_by_branch'][branch.id]
+
         for days_ago in range(30, 0, -1):
             closing_date = date.today() - timedelta(days=days_ago)
-            
-            # Calculate actual totals from transactions for that day
             day_transactions = Transaction.query.filter(
                 and_(
                     Transaction.branch_id == branch.id,
-                    func.date(Transaction.transaction_date) == closing_date
+                    func.date(Transaction.transaction_date) == closing_date,
                 )
             ).all()
-            
-            expected_cash = 0
-            network_total = 0
-            transfer_total = 0
-            
-            for txn in day_transactions:
-                amount = float(txn.amount)
-                if txn.payment_method == PaymentMethod.CASH:
+
+            expected_cash = network_total = transfer_total = 0.0
+            for transaction in day_transactions:
+                amount = float(transaction.amount)
+                if transaction.payment_method == PaymentMethod.CASH:
                     expected_cash += amount
-                elif txn.payment_method == PaymentMethod.NETWORK:
+                elif transaction.payment_method == PaymentMethod.NETWORK:
                     network_total += amount
-                elif txn.payment_method == PaymentMethod.TRANSFER:
+                else:
                     transfer_total += amount
-            
-            # Skip days with no transactions
-            if expected_cash == 0 and network_total == 0 and transfer_total == 0:
+
+            if not (expected_cash or network_total or transfer_total):
                 continue
-            
-            # Determine variance for realistic shortage/surplus scenarios
-            # Most days: small variance (±0-30)
-            # Some days: medium variance (±50-100) - ~15%
-            # Few days: high variance (±100-200) - ~5%
+
             rand = random.random()
-            
             if rand < 0.80:
-                # 80% - Small variance (normal operations)
                 variance = random.randint(-30, 30)
-                notes = random.choice([
-                    'Normal closing',
-                    'All cash accounted',
-                    'Busy day',
-                    'Regular operations',
-                    None
-                ])
+                notes = random.choice(['Normal closing', 'All cash accounted',
+                                       'Busy day', 'Regular operations', None])
             elif rand < 0.95:
-                # 15% - Medium variance (requires attention)
-                variance = random.choice([
-                    random.randint(50, 100),    # Surplus
-                    random.randint(-100, -50)   # Shortage
-                ])
+                variance = random.choice([random.randint(50, 100), random.randint(-100, -50)])
                 medium_alerts += 1
-                if variance > 0:
-                    notes = f'Cash surplus: {variance} EGP - needs verification'
-                else:
-                    notes = f'Cash shortage: {variance} EGP - requires investigation'
+                notes = (f'Cash surplus: {variance} EGP - needs verification' if variance > 0
+                         else f'Cash shortage: {variance} EGP - requires investigation')
             else:
-                # 5% - High variance (URGENT ALERT)
-                variance = random.choice([
-                    random.randint(100, 200),   # Large surplus
-                    random.randint(-200, -100)  # Large shortage
-                ])
+                variance = random.choice([random.randint(100, 200), random.randint(-200, -100)])
                 high_alerts += 1
-                if variance > 0:
-                    notes = f'LARGE SURPLUS: {variance} EGP - URGENT: Verify all transactions'
-                else:
-                    notes = f'LARGE SHORTAGE: {variance} EGP - URGENT: Manager investigation required'
-            
-            actual_cash = expected_cash + variance
-            
-            closing = DailyClosing(
+                notes = (f'LARGE SURPLUS: {variance} EGP - URGENT: Verify all transactions'
+                         if variance > 0
+                         else f'LARGE SHORTAGE: {variance} EGP - URGENT: Manager investigation required')
+
+            closings.append(DailyClosing(
                 branch_id=branch.id,
                 closing_date=closing_date,
                 expected_cash=expected_cash,
-                actual_cash=actual_cash,
+                actual_cash=expected_cash + variance,
                 cash_difference=variance,
                 network_total=network_total,
                 transfer_total=transfer_total,
                 total_revenue=expected_cash + network_total + transfer_total,
-                closed_by=reception.id,
+                closed_by=random.choice(desk).id,
                 notes=notes,
-                created_at=datetime.combine(closing_date, datetime.min.time()) + timedelta(hours=22)
-            )
-            closings.append(closing)
-            db.session.add(closing)
-    
+                created_at=datetime.combine(closing_date, datetime.min.time()) + timedelta(hours=22),
+            ))
+
+    for closing in closings:
+        db.session.add(closing)
     db.session.flush()
-    
-    # Statistics
-    total_closings = len(closings)
-    normal_count = total_closings - high_alerts - medium_alerts
-    
-    print(f"  ✓ Created {total_closings} daily closing records")
-    print(f"    - Normal variance: {normal_count} (±30 EGP)")
-    print(f"    - Medium alerts: {medium_alerts} (±50-100 EGP)")
-    print(f"    - HIGH PRIORITY alerts: {high_alerts} (±100-200 EGP)")
-    print(f"    - Accountants have {high_alerts + medium_alerts} items requiring attention")
-    
+
+    print(f'  ✓ Daily closings: {len(closings)} '
+          f'({medium_alerts} medium + {high_alerts} urgent cash variances)')
     return closings
 
 
-def create_entry_logs(customers, subscriptions, branches):
-    """Create 2000 entry logs (attendance records) for last 30 days"""
-    from app.models.entry_log import EntryLog, EntryType, EntryStatus
-    
-    entry_logs = []
-    today = date.today()
-    thirty_days_ago = today - timedelta(days=30)
-    
-    # Get active/recently active subscriptions
-    eligible_subscriptions = [
-        s for s in subscriptions 
-        if s.status in [SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN] 
-        or (s.status == SubscriptionStatus.EXPIRED and (today - s.end_date).days < 30)
+def create_entry_logs(subscriptions, branches, spec):
+    """Create 30 days of check-ins, weighted toward recent days."""
+    eligible = [
+        s for s in subscriptions
+        if s.status in (SubscriptionStatus.ACTIVE, SubscriptionStatus.FROZEN)
+        or (s.status == SubscriptionStatus.EXPIRED and (date.today() - s.end_date).days < 30)
     ]
-    
-    if not eligible_subscriptions:
-        print("  ⚠ No eligible subscriptions for entry logs")
+    if not eligible:
+        print('  ! No eligible subscriptions for entry logs')
         return []
-    
-    # Create 2000 entries over last 30 days
-    target_entries = 2000
-    entries_created = 0
-    
-    # Distribution: More entries on recent days, fewer on older days
-    for day_offset in range(30):
-        entry_date = today - timedelta(days=day_offset)
-        
-        # More entries on recent days (exponential decay)
-        # Recent days: 80-100 entries, older days: 40-60 entries
-        if day_offset < 7:
-            daily_entries = random.randint(80, 100)
-        elif day_offset < 14:
-            daily_entries = random.randint(65, 85)
-        elif day_offset < 21:
-            daily_entries = random.randint(50, 70)
-        else:
-            daily_entries = random.randint(40, 60)
-        
-        # Adjust to hit target
-        remaining = target_entries - entries_created
-        if day_offset == 29:  # Last day
-            daily_entries = remaining
-        elif remaining < daily_entries:
-            daily_entries = remaining
-        
-        for _ in range(daily_entries):
-            if entries_created >= target_entries:
-                break
-            
-            # Pick random active subscription
-            subscription = random.choice(eligible_subscriptions)
-            customer = subscription.customer
-            branch = subscription.branch
-            
-            # Random time during gym hours (6 AM - 11 PM)
-            entry_hour = random.randint(6, 22)
-            entry_minute = random.randint(0, 59)
-            entry_time = datetime.combine(entry_date, datetime.min.time()) + timedelta(hours=entry_hour, minutes=entry_minute)
-            
-            # Determine coins/sessions deducted
-            coins_deducted = 0
-            if subscription.subscription_type == 'coins':
-                coins_deducted = 1
-            elif subscription.subscription_type in ['sessions', 'training']:
-                # For session-based, track in classes_attended not coins_deducted
-                coins_deducted = 0
-            
-            # Determine entry type (mostly QR scan)
-            entry_type = random.choices(
-                [EntryType.QR_SCAN, EntryType.FINGERPRINT, EntryType.MANUAL],
-                weights=[85, 10, 5],
-                k=1
-            )[0]
-            
-            entry_log = EntryLog(
-                customer_id=customer.id,
-                subscription_id=subscription.id,
-                branch_id=branch.id,
-                entry_time=entry_time,
-                entry_type=entry_type,
-                entry_status=EntryStatus.APPROVED,
-                coins_deducted=coins_deducted,
-                validation_token=customer.qr_code if entry_type == EntryType.QR_SCAN else None,
-                created_at=entry_time
-            )
-            
-            entry_logs.append(entry_log)
-            db.session.add(entry_log)
-            entries_created += 1
-        
-        if entries_created >= target_entries:
-            break
-    
+
+    by_branch = {}
+    for subscription in eligible:
+        by_branch.setdefault(subscription.branch_id, []).append(subscription)
+
+    entry_logs = []
+    for branch_spec, branch in _spec_branch_pairs(branches, spec):
+        branch_subscriptions = by_branch.get(branch.id)
+        if not branch_subscriptions:
+            continue
+
+        for day_offset in range(30):
+            entry_date = date.today() - timedelta(days=day_offset)
+            # Traffic scales with the branch and tapers off going back in time.
+            base = 26 if day_offset < 7 else 20 if day_offset < 14 else 15
+            daily = int(random.randint(base - 5, base + 5) * branch_spec['perf'])
+
+            for _ in range(max(0, daily)):
+                subscription = random.choice(branch_subscriptions)
+                entry_time = datetime.combine(entry_date, datetime.min.time()) + timedelta(
+                    hours=random.randint(6, 22), minutes=random.randint(0, 59)
+                )
+                entry_type = random.choices(
+                    [EntryType.QR_SCAN, EntryType.FINGERPRINT, EntryType.MANUAL],
+                    weights=[85, 10, 5], k=1,
+                )[0]
+
+                entry_logs.append(EntryLog(
+                    customer_id=subscription.customer_id,
+                    subscription_id=subscription.id,
+                    branch_id=branch.id,
+                    entry_time=entry_time,
+                    entry_type=entry_type,
+                    entry_status=EntryStatus.APPROVED,
+                    coins_deducted=1 if subscription.subscription_type == 'coins' else 0,
+                    validation_token=subscription.customer.qr_code
+                    if entry_type == EntryType.QR_SCAN else None,
+                    created_at=entry_time,
+                ))
+
+    for entry_log in entry_logs:
+        db.session.add(entry_log)
     db.session.flush()
-    
-    # Statistics by branch
-    branch_stats = {}
-    for branch in branches:
-        count = sum(1 for e in entry_logs if e.branch_id == branch.id)
-        branch_stats[branch.name] = count
-    
-    print(f"  ✓ Created {len(entry_logs)} entry logs (attendance records)")
-    print(f"    - Last 30 days: {len(entry_logs)} check-ins")
-    for branch_name, count in branch_stats.items():
-        print(f"    - {branch_name}: {count} entries")
-    
+
+    print(f'  ✓ Entry logs: {len(entry_logs)} check-ins over the last 30 days')
     return entry_logs
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUMMARY
+# ─────────────────────────────────────────────────────────────────────────────
+
+def print_summary(worlds):
+    """Print the counts and every credential needed to test the app."""
+    print('\n' + '=' * 70)
+    print('[*] DATABASE TOTALS')
+    print('=' * 70)
+    print(f'  Gyms:          {Gym.query.count()}')
+    print(f'  Branches:      {Branch.query.count()}')
+    print(f'  Users:         {User.query.count()}')
+    print(f'  Services:      {Service.query.count()}')
+    print(f'  Customers:     {Customer.query.count()}')
+    print(f'  Subscriptions: {Subscription.query.count()}')
+    print(f'  Transactions:  {Transaction.query.count()}')
+    print(f'  Expenses:      {Expense.query.count()}')
+    print(f'  Complaints:    {Complaint.query.count()}')
+    print(f'  Fingerprints:  {Fingerprint.query.count()}')
+    print(f'  Freeze history:{FreezeHistory.query.count()}')
+    print(f'  Daily closings:{DailyClosing.query.count()}')
+    print(f'  Entry logs:    {EntryLog.query.count()}')
+
+    print('\n' + '=' * 70)
+    print('[*] STAFF ACCOUNTS BY RANK  (highest → lowest)')
+    print('=' * 70)
+
+    print('\n[SUPER ADMIN] — sees and edits every gym, every branch:')
+    print(f"  {SUPER_ADMIN['username']} / {SUPER_ADMIN['password']}  ({SUPER_ADMIN['full_name']})")
+
+    for world in worlds:
+        spec, staff = world['spec'], world['staff']
+        state = []
+        if not spec['is_active']:
+            state.append('DEACTIVATED')
+        if not spec['is_setup_complete']:
+            state.append('SETUP INCOMPLETE')
+        suffix = f"   [{', '.join(state)}]" if state else ''
+
+        print(f"\n--- {spec['name']}{suffix} ---")
+        print(f"  [OWNER]    {spec['owner']['username']} / {spec['owner']['password']}"
+              f"  — all {len(spec['branches'])} branches of this gym")
+
+        for region in spec['regions']:
+            names = ', '.join(
+                b['name'] for b in spec['branches'] if b['code'] in region['branch_codes']
+            )
+            print(f"  [REGIONAL] {region['username']} / {region['password']}"
+                  f"  — {region['label']}: {names}")
+
+        for username, name, _phone, code in spec['managers']:
+            branch = next(b['name'] for b in spec['branches'] if b['code'] == code)
+            print(f'  [MANAGER]  {username} / manager123  — {branch} (full control of this branch)')
+
+        for username, name, _phone in spec['central_accountants']:
+            print(f'  [ACCT-C]   {username} / accountant123  — money across all branches')
+
+        for username, name, _phone, code in spec['branch_accountants']:
+            branch = next(b['name'] for b in spec['branches'] if b['code'] == code)
+            print(f'  [ACCT-B]   {username} / accountant123  — money at {branch}')
+
+        for username, name, _phone, code, active in spec['reception']:
+            branch = next(b['name'] for b in spec['branches'] if b['code'] == code)
+            flag = '' if active else '  (INACTIVE - login must fail)'
+            print(f'  [DESK]     {username} / reception123  — {branch}{flag}')
+
+    print('\n' + '=' * 70)
+    print('[*] CLIENT APP ACCOUNTS')
+    print('=' * 70)
+    print('\n[GOOGLE PLAY REVIEWER] — stable account, do not delete:')
+    print(f"  Phone: {GOOGLE_PLAY_TEST_CLIENT['phone']} | Password: {GOOGLE_PLAY_TEST_CLIENT['password']}")
+    print(f"  {GOOGLE_PLAY_TEST_CLIENT['full_name']} — active membership, Dragon Club")
+
+    print('\n[SAMPLE MEMBERS] — every member has a temp password and must change it on first login:')
+    for customer in Customer.query.limit(5).all():
+        print(f'  {customer.phone} / {customer.temp_password}  — {customer.full_name} ({customer.branch.name})')
+
+    print('\n' + '=' * 70)
+    print('[*] WHAT THIS DATA LETS YOU TEST')
+    print('=' * 70)
+    print('  Hierarchy')
+    print('    - regional1 sees Dragon/Phoenix/Falcon and is denied Tiger/Shark/Lion')
+    print('    - regional2 sees Tiger/Shark/Lion and is denied the Cairo branches')
+    print('    - manager1 sees only Dragon Club; owner sees all six')
+    print('    - a manager cannot create a regional manager or another manager')
+    print('  Cross-gym isolation')
+    print('    - owner (PowerFit) must never see Iron Temple data, and vice versa')
+    print('    - only the super admin sees both, plus the deactivated AquaLife gym')
+    print('  Super admin')
+    print('    - gym list with live branch/customer/staff counts; drill into any branch')
+    print('    - activate/deactivate any gym (AquaLife starts deactivated)')
+    print('  Owner setup wizard')
+    print('    - owner3 / owner123 lands in the wizard (setup deliberately incomplete)')
+    print('  Money & BI')
+    print(f'    - {HISTORY_DAYS} days of revenue: daily, weekly and monthly trends all have points')
+    print('    - expense categories led by salaries and rent, as in a real P&L')
+    print('    - pending expenses at every branch for the approve/reject queue')
+    print('    - daily closings with cash surpluses and shortages to investigate')
+    print('  Alerts')
+    print('    - subscriptions expiring within 48h and within 7 days at every branch')
+    print('    - open complaints, weighted so weak branches carry more')
+    print('  Edge cases')
+    print('    - reception9 is deactivated; Iron Temple Maadi is an inactive branch')
+    print('    - a retired service that must not appear in the sell flow')
+    print('=' * 70 + '\n')
 
 
 if __name__ == '__main__':

@@ -9,7 +9,10 @@ from app.models.transaction import PaymentMethod, TransactionType
 from app.models.subscription import SubscriptionStatus
 from app.models.complaint import ComplaintStatus
 from app.models.expense import ExpenseStatus
-from app.utils import success_response, error_response, get_current_user, role_required, get_current_gym_id
+from app.utils import (
+    success_response, error_response, get_current_user, role_required,
+    get_current_gym_id, get_accessible_branch_ids, scope_query_to_branches
+)
 from app.models.user import UserRole
 from app.extensions import db
 from datetime import date, datetime, timedelta
@@ -21,11 +24,11 @@ reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
 
 @reports_bp.route('/revenue', methods=['GET'])
 @jwt_required()
-@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT])
+@role_required([UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT, UserRole.BRANCH_ACCOUNTANT, UserRole.ACCOUNTANT, UserRole.BRANCH_MANAGER])
 def get_revenue_report():
     """
     Revenue report with breakdown by branch, service, and payment method
-    
+
     Query params:
         - branch_id: Filter by specific branch
         - date_from: Start date (YYYY-MM-DD)
@@ -34,17 +37,14 @@ def get_revenue_report():
     branch_id = request.args.get('branch_id', type=int)
     date_from = request.args.get('date_from')
     date_to = request.args.get('date_to')
-    
+
     current_user = get_current_user()
-    
+
     # Build query
     query = Transaction.query
-    
+
     # Role-based filtering
-    if current_user.role == UserRole.BRANCH_ACCOUNTANT:
-        query = query.filter(Transaction.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Transaction.branch_id == branch_id)
+    query = scope_query_to_branches(query, Transaction.branch_id, current_user, branch_id)
     
     # Date range
     if date_from:
@@ -173,10 +173,7 @@ def get_daily_report():
     )
     
     # Role-based filtering
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        query = query.filter(Transaction.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Transaction.branch_id == branch_id)
+    query = scope_query_to_branches(query, Transaction.branch_id, current_user, branch_id)
 
     transactions = query.all()
     
@@ -201,10 +198,7 @@ def get_daily_report():
         func.date(Subscription.start_date) == report_date
     )
     
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        sub_query = sub_query.filter(Subscription.branch_id == current_user.branch_id)
-    elif branch_id:
-        sub_query = sub_query.filter(Subscription.branch_id == branch_id)
+    sub_query = scope_query_to_branches(sub_query, Subscription.branch_id, current_user, branch_id)
     
     new_subscriptions = sub_query.count()
     
@@ -268,10 +262,7 @@ def get_weekly_report():
     )
     
     # Role-based filtering
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        query = query.filter(Transaction.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Transaction.branch_id == branch_id)
+    query = scope_query_to_branches(query, Transaction.branch_id, current_user, branch_id)
     
     transactions = query.all()
     
@@ -337,17 +328,14 @@ def get_monthly_report():
         )
     )
     
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        query = query.filter(Transaction.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Transaction.branch_id == branch_id)
-    
+    query = scope_query_to_branches(query, Transaction.branch_id, current_user, branch_id)
+
     transactions = query.all()
-    
+
     # Calculate metrics
     total_revenue = float(sum(float(t.amount) - float(t.discount or 0) for t in transactions))
     total_transactions = len(transactions)
-    
+
     # New subscriptions this month
     sub_query = Subscription.query.filter(
         and_(
@@ -355,19 +343,13 @@ def get_monthly_report():
             Subscription.start_date <= month_end.date()
         )
     )
-    
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        sub_query = sub_query.filter(Subscription.branch_id == current_user.branch_id)
-    elif branch_id:
-        sub_query = sub_query.filter(Subscription.branch_id == branch_id)
-    
+
+    sub_query = scope_query_to_branches(sub_query, Subscription.branch_id, current_user, branch_id)
+
     new_subscriptions = sub_query.count()
     active_subscriptions = Subscription.query.filter_by(status=SubscriptionStatus.ACTIVE)
-    
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        active_subscriptions = active_subscriptions.filter(Subscription.branch_id == current_user.branch_id)
-    elif branch_id:
-        active_subscriptions = active_subscriptions.filter(Subscription.branch_id == branch_id)
+
+    active_subscriptions = scope_query_to_branches(active_subscriptions, Subscription.branch_id, current_user, branch_id)
     
     active_subscriptions_count = active_subscriptions.count()
     
@@ -451,10 +433,7 @@ def get_revenue_trend():
             Branch.gym_id == gym_id
         )
 
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        query = query.filter(Transaction.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Transaction.branch_id == branch_id)
+    query = scope_query_to_branches(query, Transaction.branch_id, current_user, branch_id)
 
     revenue_by_bucket = defaultdict(float)
     count_by_bucket = defaultdict(int)
@@ -534,11 +513,7 @@ def get_expenses_by_category():
             Branch.gym_id == gym_id
         )
 
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER,
-                                 UserRole.CENTRAL_ACCOUNTANT, UserRole.ACCOUNTANT]:
-        query = query.filter(Expense.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Expense.branch_id == branch_id)
+    query = scope_query_to_branches(query, Expense.branch_id, current_user, branch_id)
 
     if date_from:
         try:
@@ -622,11 +597,12 @@ def get_branch_comparison():
         branch_query = branch_query.filter_by(gym_id=gym_id)
 
     # Branch managers get the same report scoped to their own branch — never a
-    # view of peer branches' revenue.
-    if current_user.role == UserRole.BRANCH_MANAGER:
-        if not current_user.branch_id:
+    # view of peer branches' revenue. Regional managers see their branch group.
+    accessible = get_accessible_branch_ids(current_user)
+    if accessible is not None:
+        if not accessible:
             return success_response([])
-        branch_query = branch_query.filter(Branch.id == current_user.branch_id)
+        branch_query = branch_query.filter(Branch.id.in_(accessible))
 
     branches = branch_query.all()
 
@@ -710,14 +686,18 @@ def get_employee_performance():
     month_str = request.args.get('month')
     
     current_user = get_current_user()
-    
-    # Branch managers can only see their branch
+
+    # Branch managers can only see their branch; regional managers their group
+    accessible = get_accessible_branch_ids(current_user)
     if current_user.role == UserRole.BRANCH_MANAGER:
         branch_id = current_user.branch_id
+    elif accessible is not None and branch_id and branch_id not in accessible:
+        return error_response('Access denied to this branch', 403)
 
     gym_id = get_current_gym_id(current_user)
 
-    if not branch_id and current_user.role not in [UserRole.OWNER, UserRole.SUPER_ADMIN, UserRole.CENTRAL_ACCOUNTANT]:
+    if (not branch_id and accessible is None
+            and current_user.role not in [UserRole.OWNER, UserRole.SUPER_ADMIN, UserRole.CENTRAL_ACCOUNTANT]):
         return error_response('branch_id is required', 400)
     
     if start_str and end_str:
@@ -754,7 +734,9 @@ def get_employee_performance():
     
     if branch_id:
         staff_query = staff_query.filter_by(branch_id=branch_id)
-    
+    elif accessible is not None:
+        staff_query = staff_query.filter(User.branch_id.in_(accessible))
+
     staff_members = staff_query.all()
     
     performance_data = []

@@ -7,7 +7,7 @@ from datetime import datetime, date, timedelta
 from app.services import DashboardService
 from app.utils import (
     success_response, error_response, role_required, get_current_user,
-    get_current_gym_id,
+    get_current_gym_id, get_accessible_branch_ids, user_can_access_branch,
     calculate_branch_revenue, get_expiring_subscriptions
 )
 from app.models.user import UserRole
@@ -21,9 +21,9 @@ dashboards_bp = Blueprint('dashboards', __name__, url_prefix='/api/dashboards')
 
 @dashboards_bp.route('/overview', methods=['GET'])
 @jwt_required()
-@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.REGIONAL_MANAGER)
 def get_dashboard_overview():
-    """Get overall gym system metrics (gym-scoped for owners)"""
+    """Get overall gym system metrics (gym-scoped for owners, branch-group-scoped for regional managers)"""
     from app.models import Branch, Customer, Subscription, Transaction
     from app.models.expense import Expense, ExpenseStatus
     from sqlalchemy import func
@@ -35,6 +35,9 @@ def get_dashboard_overview():
     branch_query = Branch.query.filter_by(is_active=True)
     if gym_id is not None:
         branch_query = branch_query.filter_by(gym_id=gym_id)
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None:
+        branch_query = branch_query.filter(Branch.id.in_(accessible))
     branches = branch_query.all()
     branch_ids = [b.id for b in branches]
 
@@ -98,10 +101,16 @@ def get_dashboard_overview():
 
 @dashboards_bp.route('/owner', methods=['GET'])
 @jwt_required()
-@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER)
+@role_required(UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.REGIONAL_MANAGER)
 def get_owner_dashboard():
-    """Get owner dashboard with smart alerts and analytics"""
-    data = DashboardService.get_owner_dashboard()
+    """Get owner dashboard with smart alerts and analytics.
+
+    Regional managers get the same dashboard restricted to their branch group.
+    """
+    user = get_current_user()
+    data = DashboardService.get_owner_dashboard(
+        branch_ids=get_accessible_branch_ids(user)
+    )
     return success_response(data)
 
 
@@ -132,14 +141,15 @@ def get_branch_dashboard(branch_id):
     from sqlalchemy import func
     
     user = get_current_user()
-    
-    # Branch managers can only see their own branch (not super_admin or owner)
-    if user.role == UserRole.BRANCH_MANAGER and user.branch_id != branch_id:
-        return error_response("Access denied to this branch", 403)
-    
+
     branch = db.session.get(Branch, branch_id)
     if not branch:
         return error_response("Branch not found", 404)
+
+    # Gym scope first, then branch scope — an owner's branch scope is
+    # unrestricted, so only the gym check keeps them out of another gym.
+    if not user_can_access_branch(branch, user):
+        return error_response("Access denied to this branch", 403)
     
     # Branch metrics
     total_customers = Customer.query.filter_by(branch_id=branch_id).count()
@@ -190,6 +200,15 @@ def get_branch_manager_dashboard():
         branch_id = user.branch_id
         if not branch_id:
             return error_response("User not assigned to a branch", 403)
+    elif user.role == UserRole.REGIONAL_MANAGER:
+        branch_id = request.args.get('branch_id', type=int)
+        managed = user.managed_branch_ids
+        if branch_id and branch_id not in managed:
+            return error_response("Access denied to this branch", 403)
+        if not branch_id:
+            if not managed:
+                return error_response("User has no managed branches", 403)
+            branch_id = managed[0]
     else:
         branch_id = request.args.get('branch_id', type=int)
         if not branch_id and user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER]:
@@ -274,13 +293,16 @@ def get_staff_performance():
     
     user = get_current_user()
     
-    # Branch managers can only see their branch
+    # Branch managers can only see their branch; regional managers their group
+    accessible = get_accessible_branch_ids(user)
     if user.role == UserRole.BRANCH_MANAGER:
         branch_id = user.branch_id
-    
+    elif accessible is not None and branch_id and branch_id not in accessible:
+        return error_response("Access denied to this branch", 403)
+
     from app.models import User, Transaction, Subscription
     from sqlalchemy import func
-    
+
     # Staff revenue generation
     query = db.session.query(
         User.id,
@@ -292,9 +314,11 @@ def get_staff_performance():
         Transaction.transaction_date >= start_date_obj,
         Transaction.transaction_date <= end_date_obj
     )
-    
+
     if branch_id:
         query = query.filter(User.branch_id == branch_id)
+    elif accessible is not None:
+        query = query.filter(User.branch_id.in_(accessible))
     
     staff_data = query.group_by(User.id, User.full_name, User.role).order_by(
         func.sum(Transaction.amount).desc()
@@ -311,6 +335,8 @@ def get_staff_performance():
     
     if branch_id:
         retention_query = retention_query.filter(User.branch_id == branch_id)
+    elif accessible is not None:
+        retention_query = retention_query.filter(User.branch_id.in_(accessible))
     
     retention_data = {r[0]: r[1] for r in retention_query.group_by(User.id).all()}
     
@@ -339,32 +365,35 @@ def get_staff_performance():
 def get_all_alerts():
     """Get all smart alerts for the user"""
     user = get_current_user()
-    branch_id = user.branch_id if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT] else None
-    
+    accessible = get_accessible_branch_ids(user)  # None = unrestricted
+    branch_id = user.branch_id if accessible is not None else None
+
     from app.models import Complaint, Expense, Subscription
-    
-    # Expiring subscriptions (within 48 hours)
-    expiring_soon = get_expiring_subscriptions(days=2, branch_id=branch_id)
-    
-    # Expiring within week
-    expiring_week = get_expiring_subscriptions(days=7, branch_id=branch_id)
-    
+
+    # Expiring subscriptions (within 48 hours / within a week)
+    if accessible is not None:
+        expiring_soon = [s for b in accessible for s in get_expiring_subscriptions(days=2, branch_id=b)]
+        expiring_week = [s for b in accessible for s in get_expiring_subscriptions(days=7, branch_id=b)]
+    else:
+        expiring_soon = get_expiring_subscriptions(days=2)
+        expiring_week = get_expiring_subscriptions(days=7)
+
     # Open complaints
     complaints_query = Complaint.query.filter_by(status=ComplaintStatus.OPEN)
-    if branch_id:
-        complaints_query = complaints_query.filter_by(branch_id=branch_id)
+    if accessible is not None:
+        complaints_query = complaints_query.filter(Complaint.branch_id.in_(accessible))
     open_complaints = complaints_query.count()
-    
+
     # Pending expenses
     expenses_query = Expense.query.filter_by(status=ExpenseStatus.PENDING)
-    if branch_id:
-        expenses_query = expenses_query.filter_by(branch_id=branch_id)
+    if accessible is not None:
+        expenses_query = expenses_query.filter(Expense.branch_id.in_(accessible))
     pending_expenses = expenses_query.count()
-    
+
     # Blocked members (stopped subscriptions)
     blocked_query = Subscription.query.filter_by(status=SubscriptionStatus.STOPPED)
-    if branch_id:
-        blocked_query = blocked_query.filter_by(branch_id=branch_id)
+    if accessible is not None:
+        blocked_query = blocked_query.filter(Subscription.branch_id.in_(accessible))
     blocked_members = blocked_query.count()
     
     return success_response({

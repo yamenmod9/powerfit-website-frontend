@@ -11,7 +11,8 @@ from app.models.customer import Customer, Gender
 from app.models.subscription import Subscription
 from app.utils import (
     success_response, error_response, role_required,
-    paginate, format_pagination_response, get_current_user
+    paginate, format_pagination_response, get_current_user,
+    get_accessible_branch_ids, scope_query_to_branches
 )
 from app.models.user import UserRole
 from app.extensions import db
@@ -33,12 +34,8 @@ def get_customers():
     query = Customer.query
     
     # Branch filtering based on role
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id:
-            query = query.filter_by(branch_id=user.branch_id)
-    elif branch_id:
-        query = query.filter_by(branch_id=branch_id)
-    
+    query = scope_query_to_branches(query, Customer.branch_id, user, branch_id)
+
     # Search
     if search:
         query = query.filter(
@@ -83,9 +80,9 @@ def get_customer(customer_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and customer.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
+    _accessible = get_accessible_branch_ids(user)
+    if _accessible is not None and customer.branch_id not in _accessible:
+        return error_response("Access denied", 403)
     
     return success_response(customer.to_dict(include_temp_password=True))
 
@@ -101,9 +98,9 @@ def get_customer_by_phone(phone):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and customer.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
+    _accessible = get_accessible_branch_ids(user)
+    if _accessible is not None and customer.branch_id not in _accessible:
+        return error_response("Access denied", 403)
     
     return success_response(customer.to_dict(include_temp_password=True))
 
@@ -125,9 +122,9 @@ def create_customer():
     
     # Validate branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and data['branch_id'] != user.branch_id:
-            return error_response("Cannot create customer for another branch", 403)
+    _accessible = get_accessible_branch_ids(user)
+    if _accessible is not None and data['branch_id'] not in _accessible:
+        return error_response("Cannot create customer for another branch", 403)
     
     customer = Customer(**data)
     
@@ -173,13 +170,21 @@ def register_customer():
         # ✅ FIX: Always use the staff member's branch_id
         # Receptionists can only register for their own branch
         # Owners/Central accountants can register for any branch (if provided)
-        if user.role in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
+        if user.role in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
             # Owner/accountant can specify branch_id or use their own
             branch_id = data.get('branch_id', user.branch_id)
+        elif user.role == UserRole.REGIONAL_MANAGER:
+            # Regional manager can register into any branch of their group
+            branch_id = data.get('branch_id')
+            managed = user.managed_branch_ids
+            if branch_id and branch_id not in managed:
+                return error_response("Cannot register customer for another branch", 403)
+            if not branch_id and managed:
+                branch_id = managed[0]
         else:
             # Receptionist/Manager/Accountant - always use their branch
             branch_id = user.branch_id
-        
+
         if not branch_id:
             return error_response("branch_id is required", 400)
         
@@ -282,9 +287,9 @@ def update_customer(customer_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and customer.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
+    _accessible = get_accessible_branch_ids(user)
+    if _accessible is not None and customer.branch_id not in _accessible:
+        return error_response("Access denied", 403)
     
     try:
         schema = CustomerSchema(partial=True)
@@ -341,10 +346,7 @@ def search_customers():
     )
     
     # Role-based filtering
-    if current_user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        query = query.filter(Customer.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(Customer.branch_id == branch_id)
+    query = scope_query_to_branches(query, Customer.branch_id, current_user, branch_id)
     
     # Limit results
     customers = query.limit(limit).all()
@@ -368,9 +370,9 @@ def delete_customer(customer_id):
     
     # Check branch access
     user = get_current_user()
-    if user.role not in [UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if user.branch_id and customer.branch_id != user.branch_id:
-            return error_response("Access denied", 403)
+    _accessible = get_accessible_branch_ids(user)
+    if _accessible is not None and customer.branch_id not in _accessible:
+        return error_response("Access denied", 403)
     
     customer.is_active = False
     db.session.commit()

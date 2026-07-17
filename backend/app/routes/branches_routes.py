@@ -9,7 +9,7 @@ from app.models.branch import Branch
 from app.utils import (
     success_response, error_response, role_required,
     paginate, format_pagination_response, get_current_user,
-    get_current_gym_id
+    get_current_gym_id, get_accessible_branch_ids, user_can_access_branch
 )
 from app.models.user import UserRole
 from app.models.complaint import ComplaintStatus
@@ -34,7 +34,13 @@ def get_branches():
     # Scope to the user's gym (super admin sees all)
     if gym_id is not None:
         query = query.filter_by(gym_id=gym_id)
-    
+
+    # Branch-scoped roles only see the branches they actually run: a branch
+    # manager their own, a regional manager their group.
+    accessible = get_accessible_branch_ids(user)
+    if accessible is not None:
+        query = query.filter(Branch.id.in_(accessible))
+
     if is_active is not None:
         query = query.filter_by(is_active=is_active)
     
@@ -44,7 +50,7 @@ def get_branches():
     
     # Enhanced: Add more details for each branch
     branch_list = []
-    from app.models.user import UserRole, User
+    from app.models.user import User
     from app.models.subscription import SubscriptionStatus
     from app.models.transaction import Transaction
     from sqlalchemy import func, and_
@@ -90,10 +96,13 @@ def get_branches():
 def get_branch(branch_id):
     """Get branch by ID"""
     branch = db.session.get(Branch, branch_id)
-    
+
     if not branch:
         return error_response("Branch not found", 404)
-    
+
+    if not user_can_access_branch(branch):
+        return error_response("Access denied to this branch", 403)
+
     return success_response(branch.to_dict())
 
 
@@ -133,10 +142,14 @@ def create_branch():
 def update_branch(branch_id):
     """Update branch"""
     branch = db.session.get(Branch, branch_id)
-    
+
     if not branch:
         return error_response("Branch not found", 404)
-    
+
+    # Managers can only edit branches they actually run
+    if not user_can_access_branch(branch):
+        return error_response("Access denied to this branch", 403)
+
     try:
         schema = BranchSchema(partial=True)
         data = schema.load(request.json)
@@ -159,10 +172,13 @@ def update_branch(branch_id):
 def delete_branch(branch_id):
     """Deactivate branch (soft delete)"""
     branch = db.session.get(Branch, branch_id)
-    
+
     if not branch:
         return error_response("Branch not found", 404)
-    
+
+    if not user_can_access_branch(branch):
+        return error_response("Access denied to this branch", 403)
+
     branch.is_active = False
     db.session.commit()
     
@@ -189,10 +205,8 @@ def get_branch_performance(branch_id):
         return error_response("Branch not found", 404)
     
     # Check access
-    current_user = get_current_user()
-    if current_user.role not in [UserRole.SUPER_ADMIN, UserRole.OWNER, UserRole.CENTRAL_ACCOUNTANT]:
-        if current_user.branch_id and branch_id != current_user.branch_id:
-            return error_response("Access denied", 403)
+    if not user_can_access_branch(branch):
+        return error_response("Access denied", 403)
     
     month_str = request.args.get('month')
     
