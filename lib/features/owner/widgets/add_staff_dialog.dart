@@ -49,8 +49,9 @@ class _AddStaffDialogState extends State<AddStaffDialog> {
     {'value': 'regional_manager', 'label': S.regionalManager, 'icon': Icons.travel_explore, 'needsBranch': false, 'needsBranchGroup': true},
     {'value': 'branch_manager', 'label': S.branchManager, 'icon': Icons.manage_accounts, 'needsBranch': true},
     {'value': 'front_desk', 'label': S.frontDesk, 'icon': Icons.support_agent, 'needsBranch': true},
-    {'value': 'branch_accountant', 'label': S.branchAccountant, 'icon': Icons.account_balance, 'needsBranch': true},
     {'value': 'central_accountant', 'label': S.centralAccountant, 'icon': Icons.account_balance_wallet, 'needsBranch': false},
+    {'value': 'regional_accountant', 'label': S.regionalAccountant, 'icon': Icons.account_balance, 'needsBranch': false, 'needsBranchGroup': true},
+    {'value': 'branch_accountant', 'label': S.branchAccountant, 'icon': Icons.account_balance, 'needsBranch': true},
   ];
 
   /// Only offer roles the creator strictly outranks.

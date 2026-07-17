@@ -12,6 +12,7 @@ class RoleUtils {
     'regional_manager': 80,
     'branch_manager': 70,
     'central_accountant': 60,
+    'regional_accountant': 55,
     'branch_accountant': 50,
     'accountant': 50, // Legacy
     'front_desk': 10,
@@ -20,13 +21,42 @@ class RoleUtils {
 
   static int rankOf(String? role) => roleRank[role] ?? 0;
 
+  /// The dashboard route each role lands on after login/onboarding.
+  ///
+  /// This is the ONLY copy of the role→route switch. The app router, the web
+  /// router and the language-setup screen all call it — a role missing here
+  /// used to bounce staff back to /login from whichever copy forgot it.
+  static String dashboardRoute(String? role) {
+    switch (role) {
+      case 'super_admin':
+        return '/super-admin';
+      case 'owner':
+        return '/owner';
+      case 'regional_manager':
+        return '/regional-manager';
+      case 'branch_manager':
+        return '/branch-manager';
+      case 'front_desk':
+      case 'reception': // Legacy
+        return '/reception';
+      case 'central_accountant':
+      case 'regional_accountant':
+      case 'branch_accountant':
+      case 'accountant': // Legacy
+        return '/accountant';
+      default:
+        return '/login';
+    }
+  }
+
   /// True if [role] strictly outranks [otherRole].
   static bool outranks(String? role, String? otherRole) =>
       rankOf(role) > rankOf(otherRole);
 
-  /// Check if the role is any type of accountant (central or branch)
+  /// Check if the role is any type of accountant (central, regional or branch)
   static bool isAccountant(String? role) {
     return role == 'central_accountant' ||
+           role == 'regional_accountant' ||
            role == 'branch_accountant' ||
            role == 'accountant';  // Legacy support
   }
@@ -52,7 +82,7 @@ class RoleUtils {
 
   /// Check if the role manages a group of branches (managed_branch_ids)
   static bool hasBranchGroupAccess(String? role) {
-    return role == 'regional_manager';
+    return role == 'regional_manager' || role == 'regional_accountant';
   }
 
   /// Check if the role has system-wide access (no branch filtering)
@@ -78,6 +108,8 @@ class RoleUtils {
         return 'Front Desk';
       case 'central_accountant':
         return 'Central Accountant';
+      case 'regional_accountant':
+        return 'Regional Accountant';
       case 'branch_accountant':
         return 'Branch Accountant';
       default:

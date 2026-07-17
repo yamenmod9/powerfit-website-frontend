@@ -567,11 +567,37 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     );
   }
 
+  /// Tapping an owner opens their gym — the drill-down path the platform
+  /// admin actually uses: owner → gym (branches) → branch data.
+  void _openOwnerGym(
+      BuildContext context, OwnerModel owner, SuperAdminProvider provider) {
+    GymModel? gym;
+    for (final candidate in provider.gyms) {
+      if (candidate.ownerId == owner.id) {
+        gym = candidate;
+        break;
+      }
+    }
+    if (gym == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(S.noGymForOwner), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => GymDetailScreen(gym: gym!)),
+    ).then((_) => provider.refresh());
+  }
+
   Widget _buildOwnerCard(
       BuildContext context, OwnerModel owner, SuperAdminProvider provider) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _openOwnerGym(context, owner, provider),
+        child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
@@ -703,6 +729,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               ],
             ),
           ],
+        ),
         ),
       ),
     );

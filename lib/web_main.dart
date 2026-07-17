@@ -11,6 +11,7 @@ import 'core/auth/auth_provider.dart';
 import 'core/auth/biometric_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
+import 'core/utils/role_utils.dart';
 import 'firebase_options.dart';
 import 'core/providers/gym_branding_provider.dart';
 import 'core/providers/locale_provider.dart';
@@ -27,6 +28,7 @@ import 'features/auth/screens/unified_login_screen.dart';
 import 'features/auth/screens/gym_setup_wizard.dart';
 import 'features/auth/screens/staff_language_setup_screen.dart';
 import 'features/owner/screens/owner_dashboard.dart';
+import 'features/regional_manager/screens/regional_manager_dashboard.dart';
 import 'features/branch_manager/screens/branch_manager_dashboard.dart';
 import 'features/reception/screens/reception_main_screen.dart';
 import 'features/accountant/screens/accountant_dashboard.dart';
@@ -104,25 +106,10 @@ class _WebAppState extends State<WebApp> {
     _router = _buildRouter();
   }
 
-  String _staffDefaultRoute(String? role) {
-    switch (role) {
-      case AppConstants.roleOwner:
-        return '/owner';
-      case AppConstants.roleBranchManager:
-        return '/branch-manager';
-      case AppConstants.roleFrontDesk:
-      case 'reception':
-        return '/reception';
-      case AppConstants.roleCentralAccountant:
-      case AppConstants.roleBranchAccountant:
-      case 'accountant':
-        return '/accountant';
-      case AppConstants.roleSuperAdmin:
-        return '/super-admin';
-      default:
-        return '/login';
-    }
-  }
+  // Role→route lives in RoleUtils.dashboardRoute — the single copy shared
+  // with the mobile router and the language-setup screen, so a new role can
+  // never again reach one router but bounce off another.
+  String _staffDefaultRoute(String? role) => RoleUtils.dashboardRoute(role);
 
   GoRouter _buildRouter() {
     return GoRouter(
@@ -195,6 +182,9 @@ class _WebAppState extends State<WebApp> {
         if (loc.startsWith('/owner') && userRole != AppConstants.roleOwner) {
           return _staffDefaultRoute(userRole);
         }
+        if (loc.startsWith('/regional-manager') && userRole != AppConstants.roleRegionalManager) {
+          return _staffDefaultRoute(userRole);
+        }
         if (loc.startsWith('/branch-manager') && userRole != AppConstants.roleBranchManager) {
           return _staffDefaultRoute(userRole);
         }
@@ -203,10 +193,7 @@ class _WebAppState extends State<WebApp> {
             userRole != 'reception') {
           return _staffDefaultRoute(userRole);
         }
-        if (loc.startsWith('/accountant') &&
-            userRole != AppConstants.roleCentralAccountant &&
-            userRole != AppConstants.roleBranchAccountant &&
-            userRole != 'accountant') {
+        if (loc.startsWith('/accountant') && !RoleUtils.isAccountant(userRole)) {
           return _staffDefaultRoute(userRole);
         }
         if (loc.startsWith('/super-admin') && userRole != AppConstants.roleSuperAdmin) {
@@ -242,6 +229,10 @@ class _WebAppState extends State<WebApp> {
         GoRoute(
           path: '/owner',
           builder: (context, state) => const OwnerDashboard(),
+        ),
+        GoRoute(
+          path: '/regional-manager',
+          builder: (context, state) => const RegionalManagerDashboard(),
         ),
         GoRoute(
           path: '/branch-manager',

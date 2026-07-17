@@ -301,6 +301,7 @@ class S {
   static String get roleRequired => _t('الدور *', 'Role *');
   static String get branchManager => _t('مدير فرع', 'Branch manager');
   static String get regionalManager => _t('مدير إقليمي', 'Regional manager');
+  static String get regionalAccountant => _t('محاسب إقليمي', 'Regional accountant');
   static String get frontDesk => _t('الاستقبال', 'Front desk');
   static String get branchAccountant => _t('محاسب فرع', 'Branch accountant');
   static String get centralAccountant => _t('محاسب مركزي', 'Central accountant');
@@ -613,6 +614,7 @@ class S {
   static String get gymDeactivated => _t('تم إلغاء تفعيل النادي', 'Gym deactivated');
   static String get viewBranches => _t('عرض الفروع', 'View branches');
   static String get noBranchesInGym => _t('لا توجد فروع في هذا النادي', 'No branches in this gym');
+  static String get noGymForOwner => _t('لا يوجد نادٍ مرتبط بهذا المالك بعد', 'This owner has no gym yet');
 
   // ─── ACCOUNTANT DASHBOARD ──────────────────────────────────
   static String get accountantDashboard => _t('لوحة تحكم المحاسب', 'Accountant Dashboard');

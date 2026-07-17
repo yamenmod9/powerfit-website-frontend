@@ -4,6 +4,7 @@ import '../../../core/localization/app_strings.dart';
 import '../../../core/providers/gym_branding_provider.dart';
 import '../../../shared/models/gym_model.dart';
 import '../providers/super_admin_provider.dart';
+import 'super_admin_branch_detail_screen.dart';
 
 class GymDetailScreen extends StatefulWidget {
   final GymModel gym;
@@ -172,6 +173,13 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
                 Expanded(child: _buildStatTile(context, S.customers, '${gym.customerCount}', Icons.people, Colors.green)),
                 const SizedBox(width: 12),
                 Expanded(child: _buildStatTile(context, S.staff, '${gym.staffCount}', Icons.badge, Colors.purple)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatTile(
+                    context,
+                    S.activeSubs,
+                    '${_branches.fold<int>(0, (sum, b) => sum + ((b['active_subscriptions'] ?? 0) as int))}',
+                    Icons.card_membership,
+                    Colors.teal)),
               ],
             ),
 
@@ -205,6 +213,17 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
               ..._branches.map((b) => Card(
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SuperAdminBranchDetailScreen(
+                              branchId: b['id'] as int,
+                              branchName: (b['name'] ?? S.unknown).toString(),
+                            ),
+                          ),
+                        );
+                      },
                       leading: CircleAvatar(
                         backgroundColor: primaryColor.withOpacity(0.12),
                         child: Icon(Icons.store, color: primaryColor, size: 20),
@@ -225,7 +244,8 @@ class _GymDetailScreenState extends State<GymDetailScreen> {
                             fontSize: 12, color: Color(0xFF9AA3B8)),
                       ),
                       trailing: (b['is_active'] ?? true) == true
-                          ? null
+                          ? const Icon(Icons.chevron_right,
+                              color: Color(0xFF9AA3B8))
                           : Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 3),

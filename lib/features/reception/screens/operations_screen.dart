@@ -17,92 +17,53 @@ class OperationsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), // Extra bottom padding for navbar
         children: [
-          // Daily Closing Button
-          SizedBox(
-            height: 80,
-            child: Card(
-              elevation: 4,
-              color: Colors.purple,
-              child: InkWell(
-                onTap: () => _performDailyClosing(context),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.white, size: 40),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              S.dailyClosing,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Flexible(
-                              child: Text(
-                                S.finalizeTodayTransactions,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: Colors.white),
-                    ],
-                  ),
+          // Daily Closing — the day's headline action, kept visually distinct
+          Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: ListTile(
+              onTap: () => _performDailyClosing(context),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Icon(Icons.check_circle, color: Colors.purple, size: 22),
               ),
+              title: Text(S.dailyClosing,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(
+                S.finalizeTodayTransactions,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF9AA3B8)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: const Icon(Icons.chevron_right, color: Color(0xFF9AA3B8)),
             ),
           ),
-          const SizedBox(height: 24),
 
-          // Operations Grid
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.3, // Increased for more vertical space
-            children: [
-              _buildOperationCard(
-                context,
-                title: S.recordPayment,
-                icon: Icons.payment,
-                color: Colors.orange,
-                onTap: () => _showRecordPaymentDialog(context),
-              ),
-              _buildOperationCard(
-                context,
-                title: S.submitComplaint,
-                icon: Icons.report_problem,
-                color: Colors.deepOrange,
-                onTap: () => _showSubmitComplaintDialog(context),
-              ),
-            ],
+          // Operations
+          _buildOperationRow(
+            context,
+            title: S.recordPayment,
+            icon: Icons.payment,
+            color: Colors.orange,
+            onTap: () => _showRecordPaymentDialog(context),
+          ),
+          _buildOperationRow(
+            context,
+            title: S.submitComplaint,
+            icon: Icons.report_problem,
+            color: Colors.deepOrange,
+            onTap: () => _showSubmitComplaintDialog(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOperationCard(
+  Widget _buildOperationRow(
     BuildContext context, {
     required String title,
     required IconData icon,
@@ -110,39 +71,20 @@ class OperationsScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Card(
-      elevation: 2,
-      child: InkWell(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: Icon(icon, color: color, size: 22),
         ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        trailing: const Icon(Icons.chevron_right, color: Color(0xFF9AA3B8)),
       ),
     );
   }

@@ -14,35 +14,31 @@ class SubscriptionOperationsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(S.subscriptionOperations),
       ),
-      body: GridView.count(
+      body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), // Extra bottom padding for navbar
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.3, // Increased for more vertical space
         children: [
-          _buildOperationCard(
+          _buildOperationRow(
             context,
             title: S.activateSubscription,
             icon: Icons.card_membership,
             color: Colors.green,
             onTap: () => _showActivateSubscriptionDialog(context),
           ),
-          _buildOperationCard(
+          _buildOperationRow(
             context,
             title: S.renewSubscription,
             icon: Icons.refresh,
             color: Colors.teal,
             onTap: () => _showRenewSubscriptionDialog(context),
           ),
-          _buildOperationCard(
+          _buildOperationRow(
             context,
             title: S.freezeSubscription,
             icon: Icons.pause_circle,
             color: Colors.indigo,
             onTap: () => _showFreezeSubscriptionDialog(context),
           ),
-          _buildOperationCard(
+          _buildOperationRow(
             context,
             title: S.stopSubscription,
             icon: Icons.stop_circle,
@@ -54,7 +50,7 @@ class SubscriptionOperationsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOperationCard(
+  Widget _buildOperationRow(
     BuildContext context, {
     required String title,
     required IconData icon,
@@ -62,39 +58,20 @@ class SubscriptionOperationsScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Card(
-      elevation: 2,
-      child: InkWell(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: Icon(icon, color: color, size: 22),
         ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        trailing: const Icon(Icons.chevron_right, color: Color(0xFF9AA3B8)),
       ),
     );
   }

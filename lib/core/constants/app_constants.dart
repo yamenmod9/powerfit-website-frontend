@@ -12,6 +12,7 @@ class AppConstants {
   static const String roleBranchManager = 'branch_manager';
   static const String roleFrontDesk = 'front_desk';  // Changed from 'reception'
   static const String roleCentralAccountant = 'central_accountant';  // Specific for central
+  static const String roleRegionalAccountant = 'regional_accountant';  // Money over a branch group
   static const String roleBranchAccountant = 'branch_accountant';  // Specific for branch
 
   // Legacy/Alias for backward compatibility

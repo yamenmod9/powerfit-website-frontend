@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_provider.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/localization/app_strings.dart';
+import '../../../core/utils/role_utils.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../shared/widgets/loading_indicator.dart';
@@ -23,24 +23,6 @@ class _StaffLanguageSetupScreenState extends State<StaffLanguageSetupScreen> {
   String _selectedLanguage = 'ar';
   bool _isSaving = false;
 
-  String _defaultRouteFor(String? role) {
-    switch (role) {
-      case AppConstants.roleOwner:
-        return '/owner';
-      case AppConstants.roleBranchManager:
-        return '/branch-manager';
-      case AppConstants.roleFrontDesk:
-      case 'reception':
-        return '/reception';
-      case AppConstants.roleCentralAccountant:
-      case AppConstants.roleBranchAccountant:
-      case 'accountant':
-        return '/accountant';
-      default:
-        return '/login';
-    }
-  }
-
   Future<void> _confirm() async {
     setState(() => _isSaving = true);
     try {
@@ -50,7 +32,7 @@ class _StaffLanguageSetupScreenState extends State<StaffLanguageSetupScreen> {
         context.read<LocaleProvider>().setArabic(_selectedLanguage == 'ar');
       }
       if (mounted) {
-        context.go(_defaultRouteFor(authProvider.userRole));
+        context.go(RoleUtils.dashboardRoute(authProvider.userRole));
       }
     } catch (e) {
       if (mounted) {
