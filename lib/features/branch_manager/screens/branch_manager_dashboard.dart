@@ -10,7 +10,9 @@ import '../../../shared/widgets/dash_charts.dart';
 import '../../../core/utils/helpers.dart';
 import '../../finance/screens/money_management_view.dart';
 import '../../owner/widgets/add_staff_dialog.dart';
+import '../../owner/widgets/staff_actions.dart';
 import '../../reception/screens/customers_list_screen.dart';
+import '../../issues/screens/issues_screen.dart';
 import '../providers/branch_manager_provider.dart';
 import 'branch_manager_settings_screen.dart';
 
@@ -33,7 +35,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
   }
 
   static List<String> get _titles =>
-      [S.overview, S.members, S.staff, S.moneyManagement, S.complaints];
+      [S.overview, S.members, S.staff, S.moneyManagement, S.complaints, S.issues];
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +71,7 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         DashNavItem(Icons.badge_outlined, S.staff),
         DashNavItem(Icons.account_balance_wallet_outlined, S.moneyManagement),
         DashNavItem(Icons.report_problem_outlined, S.complaints),
+        DashNavItem(Icons.flag_outlined, S.issues),
       ],
       actions: [
         DashIconAction(
@@ -111,6 +114,8 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
         return _buildMoneyTab(context, provider, authProvider);
       case 4:
         return _buildComplaintsTab(provider);
+      case 5:
+        return const IssuesScreen(embedded: true);
       default:
         return const SizedBox();
     }
@@ -365,6 +370,12 @@ class _BranchManagerDashboardState extends State<BranchManagerDashboard> {
                         ],
                       ],
                     ),
+                  ),
+                  StaffActions(
+                    staff: Map<String, dynamic>.from(member as Map),
+                    apiService: provider.apiService,
+                    viewerRole: context.read<AuthProvider>().userRole,
+                    onChanged: () => provider.loadDashboardData(),
                   ),
                 ],
               ),

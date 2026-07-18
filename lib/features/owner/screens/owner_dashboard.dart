@@ -11,6 +11,8 @@ import '../../../core/utils/helpers.dart';
 import '../../finance/screens/money_management_view.dart';
 import '../providers/owner_dashboard_provider.dart';
 import '../widgets/add_staff_dialog.dart';
+import '../widgets/staff_actions.dart';
+import '../../issues/screens/issues_screen.dart';
 import 'smart_alerts_screen.dart';
 import 'staff_leaderboard_screen.dart';
 import 'branch_detail_screen.dart';
@@ -41,6 +43,7 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     S.branches,
     S.staff,
     S.finance,
+    S.complaints,
     S.issues,
   ];
 
@@ -77,7 +80,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         DashNavItem(Icons.store_outlined, S.branches),
         DashNavItem(Icons.people_outline, S.staff),
         DashNavItem(Icons.assessment_outlined, S.finance),
-        DashNavItem(Icons.report_problem_outlined, S.issues),
+        DashNavItem(Icons.report_problem_outlined, S.complaints),
+        DashNavItem(Icons.flag_outlined, S.issues),
       ],
       actions: [
         DashIconAction(
@@ -148,6 +152,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
         return _buildFinanceTab(context, provider);
       case 4:
         return _buildComplaintsTab(context, provider);
+      case 5:
+        return const IssuesScreen(embedded: true);
       default:
         return const SizedBox();
     }
@@ -773,6 +779,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
                         style: TextStyle(fontSize: 11, color: Color(0xFF6B7590)),
                       ),
                     ],
+                  ),
+                  StaffActions(
+                    staff: Map<String, dynamic>.from(employee as Map),
+                    apiService: provider.apiService,
+                    viewerRole: context.read<AuthProvider>().userRole,
+                    onChanged: () => provider.refresh(),
                   ),
                 ],
               ),

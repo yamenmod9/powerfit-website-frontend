@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/providers/gym_branding_provider.dart';
-import '../../finance/services/receipt_pdf.dart';
+import '../../finance/services/receipt_actions.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/error_display.dart';
 import '../../../core/utils/helpers.dart';
@@ -408,7 +407,7 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.receipt_long, size: 18),
-                    label: Text(S.printReceipt),
+                    label: Text(S.printOrShareReceipt),
                   ),
                 ),
               ],
@@ -445,13 +444,10 @@ class _TransactionLedgerScreenState extends State<TransactionLedgerScreen> {
       final data = Map<String, dynamic>.from(
         (response.data['data'] ?? response.data) as Map,
       );
-      final bytes = await ReceiptPdf.build(transaction: data, gymName: gymName);
       if (!mounted) return;
 
-      await Printing.layoutPdf(
-        onLayout: (_) => bytes,
-        name: ReceiptPdf.receiptNumber(data),
-      );
+      // Offer both print and share rather than jumping straight to print.
+      await ReceiptActions.show(context, transaction: data, gymName: gymName);
     } catch (e) {
       debugPrint('❌ Receipt failed: $e');
       if (mounted) _showReceiptError();

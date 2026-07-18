@@ -12,6 +12,7 @@ import '../../../shared/widgets/date_range_picker.dart';
 import '../../../core/utils/helpers.dart';
 import '../../finance/screens/money_management_view.dart';
 import '../providers/accountant_provider.dart';
+import '../../issues/screens/issues_screen.dart';
 import 'accountant_settings_screen.dart';
 import 'transaction_ledger_screen.dart';
 
@@ -71,6 +72,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
         DashNavItem(Icons.account_balance_wallet_outlined, S.moneyManagement),
         DashNavItem(Icons.store_outlined, S.branches),
         DashNavItem(Icons.assessment_outlined, S.reports),
+        DashNavItem(Icons.flag_outlined, S.issues),
       ],
       actions: [
         DashIconAction(
@@ -104,6 +106,7 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
     S.moneyManagement,
     S.branches,
     S.reports,
+    S.issues,
   ];
 
   Widget _buildCurrentTab(BuildContext context, AccountantProvider provider, AuthProvider authProvider) {
@@ -118,6 +121,8 @@ class _AccountantDashboardState extends State<AccountantDashboard> {
         return _buildBranchesTab(context, provider);
       case 4:
         return _buildReportsTab(context, provider);
+      case 5:
+        return const IssuesScreen(embedded: true);
       default:
         return const SizedBox();
     }

@@ -44,7 +44,6 @@ class _CustomerSearchFieldState extends State<CustomerSearchField> {
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(() => setState(() {}));
   }
 
   @override
@@ -86,8 +85,11 @@ class _CustomerSearchFieldState extends State<CustomerSearchField> {
   void _select(CustomerModel customer) {
     _controller.text = customer.fullName;
     setState(() => _results = []);
-    _focusNode.unfocus();
     widget.onSelected(customer);
+    // Drop focus AFTER the selection is committed. Unfocusing first would
+    // rebuild with the panel gone before this tap's onTap could run — the
+    // classic "clicking a result does nothing" bug on Flutter web.
+    _focusNode.unfocus();
   }
 
   void _clear() {
@@ -102,7 +104,12 @@ class _CustomerSearchFieldState extends State<CustomerSearchField> {
     final selected = widget.selected;
     if (selected != null) return _selectedCard(selected);
 
-    final showPanel = _focusNode.hasFocus && _controller.text.trim().isNotEmpty;
+    // Show the results while there is a query and something to show — NOT
+    // gated on focus. On web, clicking a result blurs the field first, and a
+    // focus-gated panel would unmount before the click's onTap fired, so the
+    // selection silently never happened. Decoupling from focus fixes it.
+    final showPanel = _controller.text.trim().isNotEmpty &&
+        (_isSearching || _results.isNotEmpty);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

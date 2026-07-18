@@ -6,7 +6,16 @@ import '../providers/reception_provider.dart';
 import '../../../core/localization/app_strings.dart';
 
 class CustomersListScreen extends StatefulWidget {
-  const CustomersListScreen({super.key});
+  /// View a specific branch's members. Null means "the signed-in user's own
+  /// branch" — the front-desk default.
+  final int? branchId;
+
+  /// When true, render just the search + list (no Scaffold/AppBar) so it can
+  /// sit inside another screen's tab — the owner and regional manager reuse
+  /// this exact list so every role sees identical member info.
+  final bool embedded;
+
+  const CustomersListScreen({super.key, this.branchId, this.embedded = false});
 
   @override
   State<CustomersListScreen> createState() => _CustomersListScreenState();
@@ -38,7 +47,9 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
 
     try {
       final provider = context.read<ReceptionProvider>();
-      final customers = await provider.getAllCustomersWithCredentials();
+      final customers = await provider.getAllCustomersWithCredentials(
+        forBranchId: widget.branchId,
+      );
 
       // Check mounted again after async operation
       if (!mounted) return;
@@ -97,17 +108,7 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(S.allCustomers),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadCustomers,
-          ),
-        ],
-      ),
-      body: Column(
+    final body = Column(
         children: [
           // Search bar
           Padding(
@@ -171,7 +172,23 @@ class _CustomersListScreenState extends State<CustomersListScreen> {
                       ),
           ),
         ],
+      );
+
+    // Embedded inside another screen's tab (owner / regional / branch detail):
+    // no chrome of its own, just the list.
+    if (widget.embedded) return body;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(S.allCustomers),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadCustomers,
+          ),
+        ],
       ),
+      body: body,
     );
   }
 

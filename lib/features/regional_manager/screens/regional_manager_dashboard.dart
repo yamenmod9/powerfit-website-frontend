@@ -11,8 +11,10 @@ import '../../../core/utils/helpers.dart';
 import '../../finance/screens/money_management_view.dart';
 import '../../owner/providers/owner_dashboard_provider.dart';
 import '../../owner/widgets/add_staff_dialog.dart';
+import '../../owner/widgets/staff_actions.dart';
 import '../../owner/screens/smart_alerts_screen.dart';
 import '../../owner/screens/branch_detail_screen.dart';
+import '../../issues/screens/issues_screen.dart';
 import '../../branch_manager/screens/branch_manager_settings_screen.dart';
 import '../../../core/localization/app_strings.dart';
 
@@ -44,6 +46,7 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
         S.branches,
         S.staff,
         S.finance,
+        S.complaints,
         S.issues,
       ];
 
@@ -80,7 +83,8 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
         DashNavItem(Icons.store_outlined, S.branches),
         DashNavItem(Icons.people_outline, S.staff),
         DashNavItem(Icons.assessment_outlined, S.finance),
-        DashNavItem(Icons.report_problem_outlined, S.issues),
+        DashNavItem(Icons.report_problem_outlined, S.complaints),
+        DashNavItem(Icons.flag_outlined, S.issues),
       ],
       actions: [
         DashIconAction(
@@ -133,6 +137,8 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
         return _buildFinanceTab(context, provider);
       case 4:
         return _buildComplaintsTab(context, provider);
+      case 5:
+        return const IssuesScreen(embedded: true);
       default:
         return const SizedBox();
     }
@@ -588,6 +594,12 @@ class _RegionalManagerDashboardState extends State<RegionalManagerDashboard> {
                             fontSize: 11, color: Color(0xFF6B7590)),
                       ),
                     ],
+                  ),
+                  StaffActions(
+                    staff: Map<String, dynamic>.from(employee as Map),
+                    apiService: provider.apiService,
+                    viewerRole: context.read<AuthProvider>().userRole,
+                    onChanged: () => provider.refresh(),
                   ),
                 ],
               ),

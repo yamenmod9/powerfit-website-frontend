@@ -7,6 +7,7 @@ import 'subscription_operations_screen.dart';
 import 'operations_screen.dart';
 import 'customers_list_screen.dart';
 import 'profile_settings_screen.dart';
+import '../../issues/screens/issues_screen.dart';
 import '../../../core/localization/app_strings.dart';
 
 /// Front-desk console. The five workspaces keep their own screen chrome, so
@@ -26,10 +27,12 @@ class _ReceptionMainScreenState extends State<ReceptionMainScreen> {
     SubscriptionOperationsScreen(),
     OperationsScreen(),
     CustomersListScreen(),
+    IssuesScreen(embedded: true),
     ProfileSettingsScreen(),
   ];
 
-  static List<String> get _titles => [S.home, S.subs, S.ops, S.clients, S.profile];
+  static List<String> get _titles =>
+      [S.home, S.subs, S.ops, S.clients, S.issues, S.profile];
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +53,7 @@ class _ReceptionMainScreenState extends State<ReceptionMainScreen> {
         DashNavItem(Icons.card_membership_outlined, S.subs),
         DashNavItem(Icons.assignment_outlined, S.ops),
         DashNavItem(Icons.people_outline, S.clients),
+        DashNavItem(Icons.flag_outlined, S.issues),
         DashNavItem(Icons.person_outline, S.profile),
       ],
       body: IndexedStack(index: _selectedIndex, children: _screens),

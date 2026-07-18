@@ -275,6 +275,39 @@ class ReceptionProvider extends ChangeNotifier {
     return results;
   }
 
+  /// Subscriptions belonging to one customer, newest first.
+  ///
+  /// The renew/freeze/stop flows need the member's actual subscription rather
+  /// than a subscription ID typed from memory, so the dialogs pick a customer
+  /// and then choose from this list.
+  Future<List<Map<String, dynamic>>> fetchCustomerSubscriptions(int customerId) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.subscriptions,
+        queryParameters: {'customer_id': customerId, 'per_page': 100},
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data['data'] ?? response.data;
+        List<dynamic> raw = [];
+        if (data is Map) {
+          raw = List<dynamic>.from(data['items'] ?? data['subscriptions'] ?? []);
+        } else if (data is List) {
+          raw = data;
+        }
+        final subs = raw
+            .whereType<Map>()
+            .map((s) => Map<String, dynamic>.from(s))
+            .toList();
+        subs.sort((a, b) =>
+            (b['id'] as int? ?? 0).compareTo(a['id'] as int? ?? 0));
+        return subs;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to fetch subscriptions for customer $customerId: $e');
+    }
+    return [];
+  }
+
   Future<Map<String, dynamic>> registerCustomer(CustomerModel customer) async {
     try {
       // Prepare data with branch_id
@@ -772,16 +805,21 @@ class ReceptionProvider extends ChangeNotifier {
     await loadInitialData();
   }
 
-  // Fetch all customers for the branch with credentials
-  Future<List<Map<String, dynamic>>> getAllCustomersWithCredentials() async {
+  // Fetch all customers for a branch with credentials.
+  //
+  // Defaults to the signed-in user's branch, but takes an explicit [forBranchId]
+  // so the owner and regional manager can view any branch's members through the
+  // same rich list the front desk uses.
+  Future<List<Map<String, dynamic>>> getAllCustomersWithCredentials({int? forBranchId}) async {
+    final targetBranchId = forBranchId ?? branchId;
     try {
-      debugPrint('📋 Fetching ALL customers for branch $branchId...');
+      debugPrint('📋 Fetching ALL customers for branch $targetBranchId...');
 
       // 1. Fetch customers
       final response = await _apiService.get(
         ApiEndpoints.customers,
         queryParameters: {
-          'branch_id': branchId,
+          'branch_id': targetBranchId,
           'per_page': 1000,
           'limit': 1000, // Keep backward compatibility with older backends
         },
@@ -829,7 +867,7 @@ class ReceptionProvider extends ChangeNotifier {
           final subResponse = await _apiService.get(
             ApiEndpoints.subscriptions,
             queryParameters: {
-              'branch_id': branchId,
+              'branch_id': targetBranchId,
               'status': 'ACTIVE',
               'per_page': 1000,
               'limit': 1000, // Keep backward compatibility with older backends

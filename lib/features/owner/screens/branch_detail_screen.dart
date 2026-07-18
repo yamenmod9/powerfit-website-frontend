@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/widgets/skeleton_loader.dart';
 import '../../../shared/widgets/dashboard_shell.dart';
-import '../../../shared/models/customer_model.dart';
 import '../../../core/utils/helpers.dart';
 import '../../../core/api/api_service.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/localization/app_strings.dart';
-import '../../reception/screens/customer_detail_screen.dart';
+import '../../reception/screens/customers_list_screen.dart';
 
 /// Full drill-down into one branch, opened from the owner's and regional
 /// manager's branch lists. Everything the branch holds is reachable from
@@ -35,24 +34,16 @@ class _BranchDetailScreenState extends State<BranchDetailScreen>
   Map<String, dynamic>? _branchData;
   String? _error;
 
-  // Members tab
-  List<Map<String, dynamic>> _members = [];
-  bool _membersLoading = true;
-  final _memberSearchController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _loadBranchData();
-    _loadMembers();
-    _memberSearchController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _memberSearchController.dispose();
     super.dispose();
   }
 
@@ -90,47 +81,6 @@ class _BranchDetailScreenState extends State<BranchDetailScreen>
     }
   }
 
-  Future<void> _loadMembers() async {
-    setState(() => _membersLoading = true);
-    try {
-      final apiService = context.read<ApiService>();
-      final response = await apiService.get(
-        ApiEndpoints.customers,
-        queryParameters: {'branch_id': widget.branchId, 'per_page': 200},
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        final d = response.data['data'] ?? response.data;
-        List<dynamic> raw = [];
-        if (d is Map) {
-          raw = List<dynamic>.from(d['items'] ?? []);
-        } else if (d is List) {
-          raw = d;
-        }
-        setState(() {
-          _members = raw
-              .whereType<Map>()
-              .map((m) => Map<String, dynamic>.from(m))
-              .toList();
-          _membersLoading = false;
-        });
-        return;
-      }
-    } catch (e) {
-      debugPrint('Branch members failed: $e');
-    }
-    if (mounted) setState(() => _membersLoading = false);
-  }
-
-  List<Map<String, dynamic>> get _filteredMembers {
-    final query = _memberSearchController.text.trim().toLowerCase();
-    if (query.isEmpty) return _members;
-    return _members.where((m) {
-      final name = (m['full_name'] ?? '').toString().toLowerCase();
-      final phone = (m['phone'] ?? '').toString();
-      return name.contains(query) || phone.contains(query);
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,10 +89,7 @@ class _BranchDetailScreenState extends State<BranchDetailScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _loadBranchData();
-              _loadMembers();
-            },
+            onPressed: _loadBranchData,
           ),
         ],
         bottom: TabBar(
@@ -272,113 +219,11 @@ class _BranchDetailScreenState extends State<BranchDetailScreen>
 
   // ─── MEMBERS ─────────────────────────────────────────────────────────
 
-  Widget _buildMembersTab() {
-    if (_membersLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final members = _filteredMembers;
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: TextField(
-            controller: _memberSearchController,
-            decoration: InputDecoration(
-              hintText: S.searchCustomers,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              isDense: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: Text(
-              '${members.length} / ${_members.length}',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF9AA3B8)),
-            ),
-          ),
-        ),
-        Expanded(
-          child: members.isEmpty
-              ? Center(
-                  child: Text(S.noCustomersFound,
-                      style: const TextStyle(color: Color(0xFF9AA3B8))))
-              : RefreshIndicator(
-                  onRefresh: _loadMembers,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: members.length,
-                    itemBuilder: (context, index) {
-                      final member = members[index];
-                      final name = (member['full_name'] ?? S.unknown).toString();
-                      final phone = (member['phone'] ?? '').toString();
-                      final hasActive = member['has_active_subscription'] == true;
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => CustomerDetailScreen(
-                                  customer: CustomerModel.fromJson(member),
-                                ),
-                              ),
-                            ).then((_) => _loadMembers());
-                          },
-                          leading: CircleAvatar(
-                            backgroundColor: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.12),
-                            child: Text(
-                              name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          title: Text(name,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text(phone,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Color(0xFF9AA3B8))),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: hasActive
-                                  ? Colors.green.withValues(alpha: 0.12)
-                                  : Colors.orange.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              hasActive ? S.active : S.inactive,
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      hasActive ? Colors.green : Colors.orange),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
+  // The exact member list the front desk and branch manager use, scoped to
+  // this branch — so every role sees identical member information, with the
+  // same tap-through to full member detail.
+  Widget _buildMembersTab() =>
+      CustomersListScreen(branchId: widget.branchId, embedded: true);
 
   // ─── REVENUE ─────────────────────────────────────────────────────────
 
