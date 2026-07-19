@@ -27,7 +27,8 @@ class FcmNotificationService {
   /// Get it from Firebase console → Project settings → Cloud Messaging → "Web
   /// Push certificates" → the key pair (generate one if none exists). It's the
   /// long string that begins with "B…".
-  static const String _fallbackVapidKey = '';
+  static const String _fallbackVapidKey =
+      'BOOrLSQzfgzVNPeNbRNh8UD7Dfr5V97Ad9EaV5aTnOnaPsBPuJnW6ZCxYOvF3Gce4ymgvn9UUN6_ROZmzoxvytM';
 
   static String get _webVapidKey {
     const fromDefine = String.fromEnvironment('FCM_VAPID_KEY');
