@@ -64,6 +64,15 @@ def _ensure_db_schema(app):
         from app.extensions import db
 
         try:
+            # Bootstrap a completely empty database (fresh Postgres/MySQL
+            # instance, e.g. a new Railway deploy) with the full schema.
+            # create_all() only creates tables that don't already exist, so
+            # this is a no-op — and safe to run on every boot — once the
+            # schema is in place; the column/index patches below still run
+            # after it for databases that predate a given model change.
+            import app.models  # noqa: F401 registers every model with db.metadata
+            db.create_all()
+
             inspector = sa_inspect(db.engine)
             existing_tables = inspector.get_table_names()
 

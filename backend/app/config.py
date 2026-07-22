@@ -5,13 +5,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _normalize_database_url(url):
+    """Railway/Heroku-style Postgres addons hand out `postgres://` URLs, but
+    SQLAlchemy 1.4+ only recognizes the `postgresql://` dialect prefix and
+    raises NoSuchModuleError on the old one."""
+    if url and url.startswith('postgres://'):
+        return url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+
 class Config:
     """Base configuration"""
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
-    
+
     # Database
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///gym_management.db')
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(
+        os.getenv('DATABASE_URL', 'sqlite:///gym_management.db')
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # pool_pre_ping pings each connection before reuse so a connection the DB
     # server already dropped (MySQL's wait_timeout, common on shared hosting
@@ -53,7 +64,9 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     # Override with environment variables in production
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///gym_management.db')
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(
+        os.getenv('DATABASE_URL', 'sqlite:///gym_management.db')
+    )
     # CORS: Allow all origins for now, restrict later for security
     # CORS_ORIGINS = ['https://your-frontend-domain.com', 'https://your-other-domain.com']
     CORS_ORIGINS = '*'  # Change to specific origins in production for better security
