@@ -34,19 +34,26 @@ def calculate_branch_revenue(branch_id, start_date=None, end_date=None):
 
 
 def get_expiring_subscriptions(days=7, branch_id=None):
-    """Get subscriptions expiring within X days"""
+    """Get subscriptions expiring within X days.
+
+    branch_id accepts either a single id or a list/tuple of ids, so callers
+    scoping to a branch group can do it in one query instead of one per branch.
+    """
     today = date.today()
     expiry_date = today + timedelta(days=days)
-    
+
     query = Subscription.query.filter(
         Subscription.status == SubscriptionStatus.ACTIVE,
         Subscription.end_date >= today,
         Subscription.end_date <= expiry_date
     )
-    
-    if branch_id:
-        query = query.filter_by(branch_id=branch_id)
-    
+
+    if branch_id is not None:
+        if isinstance(branch_id, (list, tuple, set)):
+            query = query.filter(Subscription.branch_id.in_(branch_id))
+        else:
+            query = query.filter_by(branch_id=branch_id)
+
     return query.all()
 
 
@@ -123,38 +130,79 @@ def get_active_customers_count(branch_id=None):
 
 
 def compare_branches_performance(start_date=None, end_date=None):
-    """Compare revenue performance across all branches"""
+    """Compare revenue performance across all branches.
+
+    One grouped query per metric across every branch, instead of the
+    previous 5-queries-per-branch loop (calculate_branch_revenue,
+    get_active_customers_count, plus 3 more .count() calls each) — this
+    runs on every owner-dashboard load.
+    """
     from app.models.branch import Branch
     from app.models.user import User
     from app.models.complaint import Complaint, ComplaintStatus
-    
+    from app.models.customer import Customer
+
     branches = Branch.query.filter_by(is_active=True).all()
+    branch_ids = [b.id for b in branches]
+    if not branch_ids:
+        return []
+
+    revenue_query = db.session.query(
+        Transaction.branch_id, func.sum(Transaction.amount)
+    ).filter(Transaction.branch_id.in_(branch_ids))
+    if start_date:
+        revenue_query = revenue_query.filter(Transaction.transaction_date >= start_date)
+    if end_date:
+        revenue_query = revenue_query.filter(Transaction.transaction_date <= end_date)
+    revenue_by_branch = dict(revenue_query.group_by(Transaction.branch_id).all())
+
+    active_customers_by_branch = dict(
+        db.session.query(Customer.branch_id, func.count(func.distinct(Customer.id)))
+        .join(Subscription, Subscription.customer_id == Customer.id)
+        .filter(Customer.branch_id.in_(branch_ids), Subscription.status == SubscriptionStatus.ACTIVE)
+        .group_by(Customer.branch_id).all()
+    )
+
+    customers_by_branch = dict(
+        db.session.query(Customer.branch_id, func.count(Customer.id))
+        .filter(Customer.branch_id.in_(branch_ids), Customer.is_active == True)
+        .group_by(Customer.branch_id).all()
+    )
+
+    active_subs_by_branch = dict(
+        db.session.query(Subscription.branch_id, func.count(Subscription.id))
+        .filter(Subscription.branch_id.in_(branch_ids), Subscription.status == SubscriptionStatus.ACTIVE)
+        .group_by(Subscription.branch_id).all()
+    )
+
+    staff_by_branch = dict(
+        db.session.query(User.branch_id, func.count(User.id))
+        .filter(User.branch_id.in_(branch_ids), User.is_active == True)
+        .group_by(User.branch_id).all()
+    )
+
+    complaints_by_branch = dict(
+        db.session.query(Complaint.branch_id, func.count(Complaint.id))
+        .filter(Complaint.branch_id.in_(branch_ids), Complaint.status == ComplaintStatus.OPEN)
+        .group_by(Complaint.branch_id).all()
+    )
+
     performance = []
-    
     for branch in branches:
-        revenue = calculate_branch_revenue(branch.id, start_date, end_date)
-        active_customers = get_active_customers_count(branch.id)
-        
-        # Additional fields for frontend dashboards
-        from app.models.customer import Customer
-        customers = Customer.query.filter_by(branch_id=branch.id, is_active=True).count()
-        active_subs = Subscription.query.filter_by(
-            branch_id=branch.id,
-            status=SubscriptionStatus.ACTIVE
-        ).count()
-        staff_count = User.query.filter_by(branch_id=branch.id, is_active=True).count()
-        open_complaints = Complaint.query.filter_by(
-            branch_id=branch.id,
-            status=ComplaintStatus.OPEN
-        ).count()
-        
+        revenue = float(revenue_by_branch.get(branch.id) or 0)
+        active_customers = active_customers_by_branch.get(branch.id, 0)
+        customers = customers_by_branch.get(branch.id, 0)
+        active_subs = active_subs_by_branch.get(branch.id, 0)
+        staff_count = staff_by_branch.get(branch.id, 0)
+        open_complaints = complaints_by_branch.get(branch.id, 0)
+
         # Simple performance score
         performance_score = min(100, int(
             (active_subs / max(customers, 1) * 50) +
             (revenue / 100000 * 30) +
             (max(0, 20 - open_complaints * 2))
         ))
-        
+
         performance.append({
             'branch_id': branch.id,
             'branch_name': branch.name,
@@ -169,10 +217,10 @@ def compare_branches_performance(start_date=None, end_date=None):
             'open_complaints': open_complaints,
             'performance_score': performance_score
         })
-    
+
     # Sort by revenue descending
     performance.sort(key=lambda x: x['revenue'], reverse=True)
-    
+
     return performance
 
 

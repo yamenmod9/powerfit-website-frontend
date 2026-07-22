@@ -39,8 +39,8 @@ class DashboardService:
 
         # Smart alerts
         if branch_ids is not None:
-            expiring_7 = sum(len(get_expiring_subscriptions(days=7, branch_id=b)) for b in branch_ids)
-            expiring_3 = sum(len(get_expiring_subscriptions(days=3, branch_id=b)) for b in branch_ids)
+            expiring_7 = len(get_expiring_subscriptions(days=7, branch_id=branch_ids))
+            expiring_3 = len(get_expiring_subscriptions(days=3, branch_id=branch_ids))
         else:
             expiring_7 = len(get_expiring_subscriptions(days=7))
             expiring_3 = len(get_expiring_subscriptions(days=3))

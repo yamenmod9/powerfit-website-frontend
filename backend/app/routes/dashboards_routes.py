@@ -64,20 +64,32 @@ def get_dashboard_overview():
     total_expenses = float(expenses_query) if expenses_query else 0.0
     net_profit = total_revenue - total_expenses
 
-    # Revenue by branch
+    # Revenue by branch — one grouped query per metric across all branches
+    # instead of 3 queries per branch.
+    revenue_by_branch_map = dict(
+        db.session.query(Transaction.branch_id, func.sum(Transaction.amount))
+        .filter(Transaction.branch_id.in_(branch_ids))
+        .group_by(Transaction.branch_id).all()
+    ) if branch_ids else {}
+
+    customers_by_branch_map = dict(
+        db.session.query(Customer.branch_id, func.count(Customer.id))
+        .filter(Customer.branch_id.in_(branch_ids))
+        .group_by(Customer.branch_id).all()
+    ) if branch_ids else {}
+
+    active_subs_by_branch_map = dict(
+        db.session.query(Subscription.branch_id, func.count(Subscription.id))
+        .filter(Subscription.branch_id.in_(branch_ids), Subscription.status == SubscriptionStatus.ACTIVE)
+        .group_by(Subscription.branch_id).all()
+    ) if branch_ids else {}
+
     revenue_by_branch = []
-    
     for branch in branches:
-        branch_revenue = db.session.query(func.sum(Transaction.amount)).filter(
-            Transaction.branch_id == branch.id
-        ).scalar()
-        
-        branch_customers = Customer.query.filter_by(branch_id=branch.id).count()
-        branch_active_subs = Subscription.query.filter_by(
-            branch_id=branch.id,
-            status=SubscriptionStatus.ACTIVE
-        ).count()
-        
+        branch_revenue = revenue_by_branch_map.get(branch.id)
+        branch_customers = customers_by_branch_map.get(branch.id, 0)
+        branch_active_subs = active_subs_by_branch_map.get(branch.id, 0)
+
         revenue_by_branch.append({
             'branch_id': branch.id,
             'branch_name': branch.name,
@@ -376,8 +388,8 @@ def get_all_alerts():
 
     # Expiring subscriptions (within 48 hours / within a week)
     if accessible is not None:
-        expiring_soon = [s for b in accessible for s in get_expiring_subscriptions(days=2, branch_id=b)]
-        expiring_week = [s for b in accessible for s in get_expiring_subscriptions(days=7, branch_id=b)]
+        expiring_soon = get_expiring_subscriptions(days=2, branch_id=accessible)
+        expiring_week = get_expiring_subscriptions(days=7, branch_id=accessible)
     else:
         expiring_soon = get_expiring_subscriptions(days=2)
         expiring_week = get_expiring_subscriptions(days=7)

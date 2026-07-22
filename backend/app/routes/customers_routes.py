@@ -5,6 +5,7 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 from datetime import datetime
 from app.schemas import CustomerSchema
 from app.models.customer import Customer, Gender
@@ -45,17 +46,18 @@ def get_customers():
             )
         )
     
-    query = query.order_by(Customer.created_at.desc())
-    
+    query = query.options(joinedload(Customer.branch)).order_by(Customer.created_at.desc())
+
     # Get paginated customers
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    
-    # has_active_subscription is already computed inside customer.to_dict()
-    # using the correct SubscriptionStatus.ACTIVE enum comparison.
-    customers_data = []
-    for customer in pagination.items:
-        customer_dict = customer.to_dict(include_temp_password=True)
-        customers_data.append(customer_dict)
+
+    # Batch has_active_subscription for the whole page in one query instead
+    # of letting each to_dict() run its own EXISTS query.
+    active_sub_ids = Customer.batch_has_active_subscription([c.id for c in pagination.items])
+    customers_data = [
+        customer.to_dict(include_temp_password=True, has_active_subscription=customer.id in active_sub_ids)
+        for customer in pagination.items
+    ]
     
     return success_response({
         'items': customers_data,
@@ -347,12 +349,17 @@ def search_customers():
     
     # Role-based filtering
     query = scope_query_to_branches(query, Customer.branch_id, current_user, branch_id)
-    
+
     # Limit results
-    customers = query.limit(limit).all()
-    
+    customers = query.options(joinedload(Customer.branch)).limit(limit).all()
+
+    active_sub_ids = Customer.batch_has_active_subscription([c.id for c in customers])
+
     return success_response({
-        'items': [c.to_dict(include_temp_password=True) for c in customers],
+        'items': [
+            c.to_dict(include_temp_password=True, has_active_subscription=c.id in active_sub_ids)
+            for c in customers
+        ],
         'total': len(customers),
         'query': query_string
     })

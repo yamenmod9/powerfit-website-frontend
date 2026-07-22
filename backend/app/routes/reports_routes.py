@@ -605,35 +605,64 @@ def get_branch_comparison():
         branch_query = branch_query.filter(Branch.id.in_(accessible))
 
     branches = branch_query.all()
+    branch_ids = [b.id for b in branches]
 
     branch_data = []
-    
-    for branch in branches:
-        # Revenue
-        transactions = Transaction.query.filter(
-            and_(
-                Transaction.branch_id == branch.id,
-                Transaction.created_at >= datetime.combine(month_start.date(), datetime.min.time()),
-                Transaction.created_at <= datetime.combine(month_end.date(), datetime.max.time())
-            )
-        ).all()
-        
-        revenue = float(sum(float(t.amount) - float(t.discount or 0) for t in transactions))
 
-        # Customers
-        customers = Customer.query.filter_by(branch_id=branch.id, is_active=True).count()
-        
-        # Active subscriptions
-        active_subs = Subscription.query.filter_by(
-            branch_id=branch.id,
-            status=SubscriptionStatus.ACTIVE
-        ).count()
-        
-        # Complaints
+    if branch_ids:
         from app.models import Complaint
-        from app.models.complaint import ComplaintStatus
-        complaints = Complaint.query.filter_by(branch_id=branch.id).count()
-        open_complaints = Complaint.query.filter_by(branch_id=branch.id, status=ComplaintStatus.OPEN).count()
+
+        window_start = datetime.combine(month_start.date(), datetime.min.time())
+        window_end = datetime.combine(month_end.date(), datetime.max.time())
+
+        revenue_by_branch = dict(
+            db.session.query(
+                Transaction.branch_id,
+                func.sum(Transaction.amount - func.coalesce(Transaction.discount, 0))
+            ).filter(
+                Transaction.branch_id.in_(branch_ids),
+                Transaction.created_at >= window_start,
+                Transaction.created_at <= window_end,
+            ).group_by(Transaction.branch_id).all()
+        )
+
+        customers_by_branch = dict(
+            db.session.query(Customer.branch_id, func.count(Customer.id))
+            .filter(Customer.branch_id.in_(branch_ids), Customer.is_active == True)
+            .group_by(Customer.branch_id).all()
+        )
+
+        active_subs_by_branch = dict(
+            db.session.query(Subscription.branch_id, func.count(Subscription.id))
+            .filter(Subscription.branch_id.in_(branch_ids), Subscription.status == SubscriptionStatus.ACTIVE)
+            .group_by(Subscription.branch_id).all()
+        )
+
+        complaints_by_branch = dict(
+            db.session.query(Complaint.branch_id, func.count(Complaint.id))
+            .filter(Complaint.branch_id.in_(branch_ids))
+            .group_by(Complaint.branch_id).all()
+        )
+
+        open_complaints_by_branch = dict(
+            db.session.query(Complaint.branch_id, func.count(Complaint.id))
+            .filter(Complaint.branch_id.in_(branch_ids), Complaint.status == ComplaintStatus.OPEN)
+            .group_by(Complaint.branch_id).all()
+        )
+
+        staff_by_branch = dict(
+            db.session.query(User.branch_id, func.count(User.id))
+            .filter(User.branch_id.in_(branch_ids), User.is_active == True)
+            .group_by(User.branch_id).all()
+        )
+
+    for branch in branches:
+        revenue = float(revenue_by_branch.get(branch.id) or 0)
+        customers = customers_by_branch.get(branch.id, 0)
+        active_subs = active_subs_by_branch.get(branch.id, 0)
+        complaints = complaints_by_branch.get(branch.id, 0)
+        open_complaints = open_complaints_by_branch.get(branch.id, 0)
+        staff_count = staff_by_branch.get(branch.id, 0)
 
         # Calculate performance score (simple metric)
         performance_score = min(100, int(
@@ -641,9 +670,6 @@ def get_branch_comparison():
             (revenue / 100000 * 30) +  # Revenue factor
             (max(0, 20 - open_complaints * 2))  # Penalty for complaints
         ))
-        
-        # Staff count
-        staff_count = User.query.filter_by(branch_id=branch.id, is_active=True).count()
 
         branch_data.append({
             'id': branch.id,
@@ -794,19 +820,23 @@ def get_employee_performance():
         report_today = date.today()
         ended_subs = [s for s in created_subs if s.end_date and s.end_date < report_today]
         retained = 0
-        for sub in ended_subs:
-            came_back = Subscription.query.filter(
-                and_(
-                    Subscription.customer_id == sub.customer_id,
-                    Subscription.id != sub.id,
-                    or_(
-                        Subscription.start_date >= sub.end_date,
-                        Subscription.status == SubscriptionStatus.ACTIVE,
-                    ),  # noqa: E501
+        if ended_subs:
+            # One query for every candidate "came back" subscription across
+            # this staffer's ended subs, instead of one query per ended sub.
+            customer_ids = list({s.customer_id for s in ended_subs})
+            candidates_by_customer = defaultdict(list)
+            for cs in Subscription.query.filter(Subscription.customer_id.in_(customer_ids)).all():
+                candidates_by_customer[cs.customer_id].append(cs)
+
+            for sub in ended_subs:
+                came_back = any(
+                    cs.id != sub.id and (
+                        cs.start_date >= sub.end_date or cs.status == SubscriptionStatus.ACTIVE
+                    )
+                    for cs in candidates_by_customer.get(sub.customer_id, [])
                 )
-            ).first() is not None
-            if came_back:
-                retained += 1
+                if came_back:
+                    retained += 1
         retention_rate = (retained / len(ended_subs) * 100) if ended_subs else None
 
         performance_data.append({

@@ -31,7 +31,7 @@ class DailyClosing(db.Model):
     total_revenue = db.Column(db.Numeric(10, 2), nullable=False)
     
     # Closed by
-    closed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    closed_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     closed_by_user = db.relationship('User', back_populates='daily_closings')
     
     # Notes

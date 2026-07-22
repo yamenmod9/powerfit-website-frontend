@@ -61,9 +61,6 @@ class Subscription(db.Model):
 
     # Who created this subscription (staff member)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
-    
-    # Who created this subscription (staff member)
-    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
 
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

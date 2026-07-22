@@ -13,6 +13,15 @@ class Config:
     # Database
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///gym_management.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # pool_pre_ping pings each connection before reuse so a connection the DB
+    # server already dropped (MySQL's wait_timeout, common on shared hosting
+    # like PythonAnywhere) gets silently replaced instead of surfacing as a
+    # 500 on the next request. pool_recycle forces a refresh before that
+    # timeout is hit at all.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
+    }
     
     # JWT Configuration
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=12)

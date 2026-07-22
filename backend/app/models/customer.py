@@ -109,6 +109,29 @@ class Customer(db.Model):
                 # Multiply by activity factor (1.55 for moderate activity)
                 self.daily_calories = round(self.bmr * 1.55)
 
+    @staticmethod
+    def batch_has_active_subscription(customer_ids):
+        """Which of these customer ids have an active subscription, in one query.
+
+        Use this + to_dict(has_active_subscription=...) when rendering a page
+        of customers instead of letting each to_dict() run its own EXISTS query.
+        """
+        if not customer_ids:
+            return set()
+
+        from app.models.subscription import Subscription, SubscriptionStatus
+        from datetime import date
+
+        rows = db.session.query(Subscription.customer_id).filter(
+            Subscription.customer_id.in_(customer_ids),
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            db.or_(
+                Subscription.subscription_type == 'coins',
+                Subscription.end_date >= date.today()
+            )
+        ).distinct().all()
+        return {row[0] for row in rows}
+
     @property
     def age(self):
         """Calculate age from date_of_birth"""
@@ -144,31 +167,35 @@ class Customer(db.Model):
         self.password_changed = False
         return temp_pass
 
-    def to_dict(self, include_temp_password=True):
+    def to_dict(self, include_temp_password=True, has_active_subscription=None):
         """Convert to dictionary
-        
+
         Args:
             include_temp_password: If True, includes temp_password for staff viewing
                                   Set to False for client-facing endpoints
+            has_active_subscription: Pass a precomputed bool to skip the
+                                  per-row EXISTS query when the caller already
+                                  batched this check for a page of customers
+                                  (see Customer.batch_has_active_subscription).
         """
-        # Check if customer has active subscription
-        from app.models.subscription import Subscription, SubscriptionStatus
-        from datetime import date
-        
-        # Active subscription = status is ACTIVE AND (coins type OR not expired)
-        has_active_subscription = db.session.query(
-            db.exists().where(
-                db.and_(
-                    Subscription.customer_id == self.id,
-                    Subscription.status == SubscriptionStatus.ACTIVE,
-                    db.or_(
-                        Subscription.subscription_type == 'coins',  # Coins never expire by date
-                        Subscription.end_date >= date.today()  # Time-based must not be expired
+        if has_active_subscription is None:
+            from app.models.subscription import Subscription, SubscriptionStatus
+            from datetime import date
+
+            # Active subscription = status is ACTIVE AND (coins type OR not expired)
+            has_active_subscription = db.session.query(
+                db.exists().where(
+                    db.and_(
+                        Subscription.customer_id == self.id,
+                        Subscription.status == SubscriptionStatus.ACTIVE,
+                        db.or_(
+                            Subscription.subscription_type == 'coins',  # Coins never expire by date
+                            Subscription.end_date >= date.today()  # Time-based must not be expired
+                        )
                     )
                 )
-            )
-        ).scalar()
-        
+            ).scalar()
+
         data = {
             'id': self.id,
             'full_name': self.full_name,

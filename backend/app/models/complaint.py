@@ -41,7 +41,7 @@ class Complaint(db.Model):
     branch = db.relationship('Branch', back_populates='complaints')
     
     # Customer (optional - can be anonymous)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'), nullable=True, index=True)
     customer_name = db.Column(db.String(150), nullable=True)  # If not registered
     customer_phone = db.Column(db.String(20), nullable=True)
     
