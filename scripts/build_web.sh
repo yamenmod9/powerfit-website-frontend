@@ -18,7 +18,7 @@ fi
 
 # Keep the build configurable without changing Flutter source code.
 ENVIRONMENT="${ENVIRONMENT:-production}"
-API_BASE_URL="${API_BASE_URL:-https://yamenmod91.pythonanywhere.com}"
+API_BASE_URL="${API_BASE_URL:-https://gym-management-system-production-cda3.up.railway.app}"
 # Web Push (VAPID) public key. Set FCM_VAPID_KEY in the deploy environment to
 # turn on browser notifications; leave it unset and web push simply stays off.
 FCM_VAPID_KEY="${FCM_VAPID_KEY:-}"
